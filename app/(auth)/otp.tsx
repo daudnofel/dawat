@@ -54,8 +54,8 @@ export default function OtpScreen() {
       return;
     }
 
-    // Check if user has a profile in our users table
     if (data.user) {
+      // Check if user has a profile
       const { data: profile } = await supabase
         .from('users')
         .select('id')
@@ -73,12 +73,7 @@ export default function OtpScreen() {
   const handleResend = async () => {
     if (countdown > 0) return;
     setCountdown(60);
-
-    await supabase.auth.signInWithOtp({
-      email: email ?? '',
-      options: { shouldCreateUser: true },
-    });
-
+    await supabase.auth.signInWithOtp({ email: email ?? '' });
     Alert.alert('Code resent', `A new code was sent to ${email}`);
   };
 
@@ -97,9 +92,7 @@ export default function OtpScreen() {
         </Pressable>
 
         <Text style={styles.title}>Enter verification code</Text>
-        <Text style={styles.subtitle}>
-          We sent a 6-digit code to {maskedEmail}
-        </Text>
+        <Text style={styles.subtitle}>We sent a 6-digit code to {maskedEmail}</Text>
 
         <TextInput
           ref={inputRef}

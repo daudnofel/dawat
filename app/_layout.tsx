@@ -3,9 +3,15 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { View, ActivityIndicator, StatusBar } from 'react-native';
+import { View, ActivityIndicator, StatusBar, LogBox } from 'react-native';
 
 import { COLORS } from '../lib/theme';
+
+// Suppress known non-fatal RN 0.77 / Expo Go SDK 54 warnings
+LogBox.ignoreLogs([
+  'Could not access feature flag',
+  'disableEventLoopOnBridgeless',
+]);
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -57,13 +63,6 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.dark } }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen
-          name="create"
-          options={{
-            presentation: 'modal',
-            animation: 'slide_from_bottom',
-          }}
-        />
       </Stack>
     </ThemeProvider>
   );

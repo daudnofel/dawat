@@ -62,7 +62,8 @@ export default function TabLayout() {
         listeners={{
           tabPress: (e) => {
             e.preventDefault();
-            router.push('/create/step1-theme');
+            // TODO: re-enable when create flow is fixed
+            // router.push('/create/step1-theme');
           },
         }}
       />

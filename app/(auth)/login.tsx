@@ -1,10 +1,17 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button } from 'heroui-native/button';
-import { TextField } from 'heroui-native/text-field';
-import { Input } from 'heroui-native/input';
-import { COLORS, FONTS, SPACING } from '../../lib/theme';
+import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 
 export default function LoginScreen() {
@@ -44,41 +51,45 @@ export default function LoginScreen() {
 
         <View style={styles.inputBlock}>
           <Text style={styles.label}>Enter your email</Text>
-          <TextField
+          <TextInput
+            style={styles.input}
             value={email}
-            onChange={setEmail}
+            onChangeText={setEmail}
             placeholder="amira@example.com"
+            placeholderTextColor={COLORS.hint}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
-            size="lg"
           />
         </View>
 
-        <Button
-          color="warning"
-          size="lg"
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            !isValid && styles.buttonDisabled,
+            pressed && { transform: [{ scale: 0.97 }], opacity: 0.9 },
+          ]}
           onPress={handleContinue}
-          isDisabled={!isValid}
-          isLoading={loading}
-          fullWidth
+          disabled={!isValid || loading}
         >
-          Continue
-        </Button>
+          {loading ? (
+            <ActivityIndicator color={COLORS.dark} />
+          ) : (
+            <Text style={styles.buttonText}>Continue</Text>
+          )}
+        </Pressable>
 
         <Text style={styles.legal}>
           By continuing, you agree to our Terms of Service & Privacy Policy
         </Text>
 
         {__DEV__ && (
-          <Button
-            variant="ghost"
-            size="sm"
+          <Pressable
+            style={styles.devSkip}
             onPress={() => router.replace('/(tabs)')}
-            style={{ marginTop: SPACING.xl }}
           >
-            Skip login (dev mode)
-          </Button>
+            <Text style={styles.devSkipText}>Skip login (dev mode)</Text>
+          </Pressable>
         )}
       </View>
     </KeyboardAvoidingView>
@@ -94,8 +105,21 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: COLORS.muted, ...FONTS.regular, marginTop: SPACING.sm },
   inputBlock: { marginBottom: SPACING.xl },
   label: { fontSize: 16, color: COLORS.white, ...FONTS.semibold, marginBottom: SPACING.md },
+  input: {
+    backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1,
+    borderColor: COLORS.border, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.lg,
+    color: COLORS.white, fontSize: 18, ...FONTS.medium,
+  },
+  button: {
+    backgroundColor: COLORS.gold, borderRadius: RADIUS.md, paddingVertical: SPACING.lg,
+    alignItems: 'center', justifyContent: 'center', height: 52,
+  },
+  buttonDisabled: { opacity: 0.4 },
+  buttonText: { color: COLORS.dark, fontSize: 16, ...FONTS.bold },
   legal: {
     color: COLORS.hint, fontSize: 12, ...FONTS.regular,
     textAlign: 'center', marginTop: SPACING.xl, lineHeight: 18,
   },
+  devSkip: { marginTop: SPACING.xxl, alignItems: 'center', paddingVertical: SPACING.md },
+  devSkipText: { color: COLORS.muted, fontSize: 13, ...FONTS.regular, textDecorationLine: 'underline' },
 });

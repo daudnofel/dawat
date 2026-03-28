@@ -40,7 +40,7 @@
 | 12 | `app/(tabs)/trending.tsx` | Trending (empty state placeholder) | ✅ DONE |
 | 13 | `app/(tabs)/events.tsx` | My events (empty state placeholder) | ✅ DONE |
 | 14 | `app/(tabs)/profile.tsx` | Profile (empty state placeholder) | ✅ DONE |
-| 15 | Supabase setup | Create tables + RLS policies (manual in dashboard) | ⬜ TODO |
+| 15 | Supabase setup | Create tables + RLS policies (manual in dashboard) | ✅ DONE |
 
 ---
 

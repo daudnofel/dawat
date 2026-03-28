@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Switch } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Switch, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { format } from 'date-fns';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { useEventStore } from '../../store/useEventStore';
 
@@ -16,8 +18,22 @@ export default function Step3Details() {
   const { draft, updateDraft, nextStep, prevStep } = useEventStore();
   const [customPrice, setCustomPrice] = useState('');
   const [showCustom, setShowCustom] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const canContinue = draft.location_name.trim().length >= 2 || draft.date_tbd;
+
+  const selectedDate = draft.date_time ?? new Date();
+
+  const onDateChange = (_: any, date?: Date) => {
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (date) updateDraft({ date_time: date });
+  };
+
+  const onTimeChange = (_: any, date?: Date) => {
+    if (Platform.OS === 'android') setShowTimePicker(false);
+    if (date) updateDraft({ date_time: date });
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -35,12 +51,8 @@ export default function Step3Details() {
         ))}
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Date TBD toggle */}
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        {/* Date & Time */}
         <Text style={styles.label}>When is it?</Text>
         <View style={styles.toggleRow}>
           <Text style={styles.toggleLabel}>Date TBD</Text>
@@ -53,9 +65,42 @@ export default function Step3Details() {
         </View>
 
         {!draft.date_tbd && (
-          <Text style={styles.hint}>
-            Date & time picker will use native controls when Supabase is connected
-          </Text>
+          <View>
+            <Pressable style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+              <Text style={styles.dateIcon}>📅</Text>
+              <Text style={styles.dateText}>
+                {draft.date_time ? format(selectedDate, 'EEEE, MMMM d, yyyy') : 'Select date'}
+              </Text>
+            </Pressable>
+
+            <Pressable style={styles.dateButton} onPress={() => setShowTimePicker(true)}>
+              <Text style={styles.dateIcon}>⏰</Text>
+              <Text style={styles.dateText}>
+                {draft.date_time ? format(selectedDate, 'h:mm a') : 'Select time'}
+              </Text>
+            </Pressable>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onDateChange}
+                minimumDate={new Date()}
+                themeVariant="dark"
+              />
+            )}
+
+            {showTimePicker && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onTimeChange}
+                themeVariant="dark"
+              />
+            )}
+          </View>
         )}
 
         {/* Location */}
@@ -78,7 +123,6 @@ export default function Step3Details() {
           />
         </View>
 
-        {/* Halal venue */}
         <View style={styles.toggleRow}>
           <Text style={styles.toggleLabel}>Halal-certified venue</Text>
           <Switch
@@ -96,10 +140,7 @@ export default function Step3Details() {
             <Pressable
               key={opt.value}
               style={[styles.pricePill, draft.price === opt.value && !showCustom && styles.pricePillActive]}
-              onPress={() => {
-                setShowCustom(false);
-                updateDraft({ price: opt.value });
-              }}
+              onPress={() => { setShowCustom(false); updateDraft({ price: opt.value }); }}
             >
               <Text style={[styles.priceText, draft.price === opt.value && !showCustom && styles.priceTextActive]}>
                 {opt.label}
@@ -148,11 +189,7 @@ export default function Step3Details() {
 
       <View style={styles.bottomBar}>
         <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            !canContinue && styles.buttonDisabled,
-            pressed && { transform: [{ scale: 0.97 }], opacity: 0.9 },
-          ]}
+          style={({ pressed }) => [styles.button, !canContinue && styles.buttonDisabled, pressed && { transform: [{ scale: 0.97 }] }]}
           onPress={() => nextStep()}
           disabled={!canContinue}
         >
@@ -165,51 +202,33 @@ export default function Step3Details() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.dark },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md,
-  },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md },
   backText: { color: COLORS.gold, fontSize: 16, ...FONTS.medium },
   stepLabel: { color: COLORS.muted, fontSize: 13, ...FONTS.medium },
-  progressRow: {
-    flexDirection: 'row', justifyContent: 'center', gap: SPACING.sm, marginBottom: SPACING.lg,
-  },
+  progressRow: { flexDirection: 'row', justifyContent: 'center', gap: SPACING.sm, marginBottom: SPACING.lg },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.border },
   dotActive: { backgroundColor: COLORS.gold },
   dotCurrent: { width: 24 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: SPACING.xl, paddingBottom: 40 },
-  label: {
-    fontSize: 16, color: COLORS.white, ...FONTS.semibold,
-    marginBottom: SPACING.sm, marginTop: SPACING.xl,
+  label: { fontSize: 16, color: COLORS.white, ...FONTS.semibold, marginBottom: SPACING.sm, marginTop: SPACING.xl },
+  input: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md + 2, color: COLORS.white, fontSize: 16, ...FONTS.medium },
+  dateButton: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
+    backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md + 2, marginBottom: SPACING.sm,
   },
-  hint: { color: COLORS.hint, fontSize: 13, ...FONTS.regular, marginTop: SPACING.sm },
-  input: {
-    backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1,
-    borderColor: COLORS.border, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md + 2,
-    color: COLORS.white, fontSize: 16, ...FONTS.medium,
-  },
-  toggleRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: SPACING.md, marginTop: SPACING.sm,
-  },
+  dateIcon: { fontSize: 18 },
+  dateText: { fontSize: 16, color: COLORS.white, ...FONTS.medium },
+  toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: SPACING.md, marginTop: SPACING.sm },
   toggleLabel: { color: COLORS.white, fontSize: 15, ...FONTS.medium },
   priceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  pricePill: {
-    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm + 2,
-    borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.input,
-  },
+  pricePill: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm + 2, borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.input },
   pricePillActive: { borderColor: COLORS.gold, backgroundColor: COLORS.card2 },
   priceText: { color: COLORS.muted, fontSize: 14, ...FONTS.medium },
   priceTextActive: { color: COLORS.gold },
-  bottomBar: {
-    paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg,
-    borderTopWidth: 1, borderTopColor: COLORS.border,
-  },
-  button: {
-    backgroundColor: COLORS.gold, borderRadius: RADIUS.md,
-    paddingVertical: SPACING.lg, alignItems: 'center', height: 52, justifyContent: 'center',
-  },
+  bottomBar: { paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg, borderTopWidth: 1, borderTopColor: COLORS.border },
+  button: { backgroundColor: COLORS.gold, borderRadius: RADIUS.md, paddingVertical: SPACING.lg, alignItems: 'center', height: 52, justifyContent: 'center' },
   buttonDisabled: { opacity: 0.4 },
   buttonText: { color: COLORS.dark, fontSize: 16, ...FONTS.bold },
 });

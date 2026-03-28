@@ -9,6 +9,8 @@ import { User } from '../../types';
 export default function ProfileScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<User | null>(null);
+  const [hostedCount, setHostedCount] = useState(0);
+  const [attendingCount, setAttendingCount] = useState(0);
 
   useEffect(() => {
     fetchProfile();
@@ -25,6 +27,19 @@ export default function ProfileScreen() {
       .single();
 
     if (data) setProfile(data as User);
+
+    const { count: hosted } = await supabase
+      .from('events')
+      .select('*', { count: 'exact', head: true })
+      .eq('host_id', user.id);
+    setHostedCount(hosted ?? 0);
+
+    const { count: attending } = await supabase
+      .from('rsvps')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .in('status', ['yes', 'inshallah']);
+    setAttendingCount(attending ?? 0);
   };
 
   const handleSignOut = async () => {
@@ -58,6 +73,17 @@ export default function ProfileScreen() {
           <Text style={styles.city}>{profile.location_city}</Text>
         )}
 
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNum}>{hostedCount}</Text>
+            <Text style={styles.statLabel}>Hosted</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statNum}>{attendingCount}</Text>
+            <Text style={styles.statLabel}>Attending</Text>
+          </View>
+        </View>
+
         <Pressable
           style={({ pressed }) => [styles.signOutButton, pressed && { opacity: 0.8 }]}
           onPress={handleSignOut}
@@ -82,7 +108,11 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 28, color: COLORS.dark, ...FONTS.bold },
   name: { fontSize: 20, color: COLORS.white, ...FONTS.bold, marginBottom: SPACING.xs },
   username: { fontSize: 14, color: COLORS.muted, ...FONTS.regular, marginBottom: SPACING.sm },
-  city: { fontSize: 13, color: COLORS.hint, ...FONTS.regular, marginBottom: SPACING.xxl },
+  city: { fontSize: 13, color: COLORS.hint, ...FONTS.regular, marginBottom: SPACING.lg },
+  statsRow: { flexDirection: 'row', gap: SPACING.xxl, marginBottom: SPACING.xxl },
+  statItem: { alignItems: 'center' },
+  statNum: { fontSize: 20, color: COLORS.white, ...FONTS.bold },
+  statLabel: { fontSize: 12, color: COLORS.muted, ...FONTS.regular, marginTop: 2 },
   signOutButton: {
     backgroundColor: COLORS.card2, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md,
     borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, marginTop: SPACING.xl,

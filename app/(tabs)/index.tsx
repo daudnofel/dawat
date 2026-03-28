@@ -1,31 +1,65 @@
-import { StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { COLORS, FONTS, SPACING } from '../../lib/theme';
 
-import EditScreenInfo from '@/components/EditScreenInfo';
-import { Text, View } from '@/components/Themed';
-
-export default function TabOneScreen() {
+export default function HomeScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Tab One</Text>
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-      <EditScreenInfo path="app/(tabs)/index.tsx" />
-    </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.header}>
+        <Text style={styles.brandArabic}>دعوت</Text>
+        <Text style={styles.brandEnglish}>DAWAT</Text>
+      </View>
+      <View style={styles.empty}>
+        <Text style={styles.emptyEmoji}>🌙</Text>
+        <Text style={styles.emptyTitle}>No events yet</Text>
+        <Text style={styles.emptySubtitle}>Events in your community will appear here</Text>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: COLORS.dark,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+  },
+  brandArabic: {
+    fontSize: 22,
+    color: COLORS.gold,
+    ...FONTS.bold,
+  },
+  brandEnglish: {
+    fontSize: 18,
+    color: COLORS.white,
+    ...FONTS.bold,
+    letterSpacing: 3,
+  },
+  empty: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingBottom: 100,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  emptyEmoji: {
+    fontSize: 48,
+    marginBottom: SPACING.lg,
   },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
+  emptyTitle: {
+    fontSize: 18,
+    color: COLORS.white,
+    ...FONTS.semibold,
+    marginBottom: SPACING.sm,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: COLORS.muted,
+    ...FONTS.regular,
   },
 });

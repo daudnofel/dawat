@@ -4,3 +4,4 @@
 - [Testing Setup](testing_setup.md) — Expo Go QR code on Mac, test on iPhone, no deployment until ship-ready
 - [Git Workflow](git_workflow.md) — Push to github.com/daudnofel/dawat, commit per file, always pull before new work
 - [SDK Compat](sdk_compat.md) — Expo Go SDK 54: no haptics, no Reanimated, no AsyncStorage imports
+- [Liquid Glass](liquid_glass.md) — Add iOS 26 Liquid Glass tab bar when switching to custom dev build

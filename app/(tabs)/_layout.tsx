@@ -2,12 +2,13 @@ import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { COLORS, FONTS, SPACING } from '../../lib/theme';
 
-function TabIcon({ icon, iconFilled, focused }: { icon: string; iconFilled: string; focused: boolean }) {
+function TabIcon({ icon, iconFilled, label, focused }: { icon: string; iconFilled: string; label: string; focused: boolean }) {
   return (
     <View style={styles.iconWrap}>
       <Text style={[styles.icon, focused && styles.iconActive]}>
         {focused ? iconFilled : icon}
       </Text>
+      <Text style={[styles.label, focused && styles.labelActive]}>{label}</Text>
       {focused && <View style={styles.activeDot} />}
     </View>
   );
@@ -15,8 +16,11 @@ function TabIcon({ icon, iconFilled, focused }: { icon: string; iconFilled: stri
 
 function CreateIcon({ focused }: { focused: boolean }) {
   return (
-    <View style={[styles.createWrap, focused && styles.createWrapActive]}>
-      <Text style={[styles.createPlus, focused && styles.createPlusActive]}>+</Text>
+    <View style={styles.createOuter}>
+      <View style={[styles.createWrap, focused && styles.createWrapActive]}>
+        <Text style={[styles.createPlus, focused && styles.createPlusActive]}>+</Text>
+      </View>
+      <Text style={[styles.label, focused && styles.labelActive, { marginTop: 4 }]}>Create</Text>
     </View>
   );
 }
@@ -36,7 +40,7 @@ export default function TabLayout() {
         name="index"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="⌂" iconFilled="⌂" focused={focused} />
+            <TabIcon icon="⌂" iconFilled="⌂" label="Home" focused={focused} />
           ),
         }}
       />
@@ -44,7 +48,7 @@ export default function TabLayout() {
         name="trending"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="◇" iconFilled="◆" focused={focused} />
+            <TabIcon icon="◇" iconFilled="◆" label="Trending" focused={focused} />
           ),
         }}
       />
@@ -58,7 +62,7 @@ export default function TabLayout() {
         name="events"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="▫" iconFilled="▪" focused={focused} />
+            <TabIcon icon="▫" iconFilled="▪" label="Events" focused={focused} />
           ),
         }}
       />
@@ -66,7 +70,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="○" iconFilled="●" focused={focused} />
+            <TabIcon icon="○" iconFilled="●" label="Profile" focused={focused} />
           ),
         }}
       />
@@ -79,8 +83,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.dark,
     borderTopColor: COLORS.border,
     borderTopWidth: StyleSheet.hairlineWidth,
-    height: 85,
-    paddingTop: 12,
+    height: 88,
+    paddingTop: 8,
     paddingBottom: 20,
     elevation: 0,
     shadowOpacity: 0,
@@ -88,14 +92,24 @@ const styles = StyleSheet.create({
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    height: 36,
+    minWidth: 50,
   },
   icon: {
-    fontSize: 24,
+    fontSize: 22,
     color: COLORS.hint,
-    lineHeight: 28,
+    lineHeight: 26,
   },
   iconActive: {
+    color: COLORS.white,
+  },
+  label: {
+    fontSize: 10,
+    color: COLORS.hint,
+    marginTop: 2,
+    letterSpacing: 0.3,
+    ...FONTS.medium,
+  },
+  labelActive: {
     color: COLORS.white,
   },
   activeDot: {
@@ -103,27 +117,30 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: COLORS.gold,
-    marginTop: 4,
+    marginTop: 3,
+  },
+  createOuter: {
+    alignItems: 'center',
+    marginTop: -6,
   },
   createWrap: {
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
     borderRadius: 14,
     backgroundColor: COLORS.card2,
     borderWidth: 1,
     borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -8,
   },
   createWrapActive: {
     backgroundColor: COLORS.gold,
     borderColor: COLORS.gold,
   },
   createPlus: {
-    fontSize: 26,
+    fontSize: 24,
     color: COLORS.muted,
-    lineHeight: 30,
+    lineHeight: 28,
     ...FONTS.regular,
   },
   createPlusActive: {

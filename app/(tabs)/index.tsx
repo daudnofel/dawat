@@ -64,26 +64,28 @@ export default function HomeScreen() {
       </View>
 
       {/* Gender Filter Tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
-      >
-        {FILTER_TABS.map((tab) => {
-          const isActive = activeFilter === tab.value;
-          return (
-            <Pressable
-              key={tab.value}
-              style={[styles.filterPill, isActive && styles.filterPillActive]}
-              onPress={() => setFilter(tab.value)}
-            >
-              <Text style={[styles.filterText, isActive && styles.filterTextActive]}>
-                {tab.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      <View style={styles.filterWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+        >
+          {FILTER_TABS.map((tab) => {
+            const isActive = activeFilter === tab.value;
+            return (
+              <Pressable
+                key={tab.value}
+                style={[styles.filterPill, isActive && styles.filterPillActive]}
+                onPress={() => setFilter(tab.value)}
+              >
+                <Text style={[styles.filterText, isActive && styles.filterTextActive]}>
+                  {tab.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {/* Event Feed */}
       <ScrollView
@@ -115,8 +117,11 @@ const styles = StyleSheet.create({
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   brandArabic: { fontSize: 22, color: COLORS.gold, ...FONTS.bold },
   brandEnglish: { fontSize: 18, color: COLORS.white, ...FONTS.bold, letterSpacing: 3 },
+  filterWrapper: {
+    height: 44,
+  },
   filterRow: {
-    paddingHorizontal: SPACING.xl, paddingBottom: SPACING.md, gap: SPACING.sm,
+    paddingHorizontal: SPACING.xl, gap: SPACING.sm, alignItems: 'center', height: 44,
   },
   filterPill: {
     paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm,

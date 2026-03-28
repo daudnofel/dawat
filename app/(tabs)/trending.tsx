@@ -23,16 +23,18 @@ export default function TrendingScreen() {
         <Text style={styles.title}>Trending in London</Text>
       </View>
 
-      <ScrollView
-        horizontal showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
-      >
-        {ETHNIC_FILTERS.map((f, i) => (
-          <Pressable key={f} style={[styles.filterPill, i === 0 && styles.filterPillActive]}>
-            <Text style={[styles.filterText, i === 0 && styles.filterTextActive]}>{f}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+      <View style={styles.filterWrapper}>
+        <ScrollView
+          horizontal showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+        >
+          {ETHNIC_FILTERS.map((f, i) => (
+            <Pressable key={f} style={[styles.filterPill, i === 0 && styles.filterPillActive]}>
+              <Text style={[styles.filterText, i === 0 && styles.filterTextActive]}>{f}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
 
       <ScrollView style={styles.list} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
         {TRENDING_EVENTS.map((event) => {
@@ -79,7 +81,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.dark },
   header: { paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md },
   title: { fontSize: 22, color: COLORS.white, ...FONTS.bold },
-  filterRow: { paddingHorizontal: SPACING.xl, paddingBottom: SPACING.md, gap: SPACING.sm },
+  filterWrapper: { height: 44 },
+  filterRow: { paddingHorizontal: SPACING.xl, gap: SPACING.sm, alignItems: 'center', height: 44 },
   filterPill: {
     paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm,
     borderRadius: RADIUS.full, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border,

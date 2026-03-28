@@ -10,17 +10,11 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+import { useAuthStore } from '../../store/useAuthStore';
 
 export default function LoginScreen() {
   const [countryCode, setCountryCode] = useState('+44');
@@ -28,11 +22,6 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const phoneInputRef = useRef<TextInput>(null);
   const router = useRouter();
-
-  const buttonScale = useSharedValue(1);
-  const buttonAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: buttonScale.value }],
-  }));
 
   const isValid = phone.replace(/\D/g, '').length >= 7;
 
@@ -89,21 +78,18 @@ export default function LoginScreen() {
               placeholder="7700 900 000"
               placeholderTextColor={COLORS.hint}
               keyboardType="phone-pad"
-              autoFocus
               maxLength={15}
             />
           </View>
         </View>
 
         {/* Continue Button */}
-        <AnimatedPressable
-          style={[styles.button, !isValid && styles.buttonDisabled, buttonAnimStyle]}
-          onPressIn={() => {
-            buttonScale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
-          }}
-          onPressOut={() => {
-            buttonScale.value = withSpring(1, { damping: 15, stiffness: 300 });
-          }}
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            !isValid && styles.buttonDisabled,
+            pressed && { transform: [{ scale: 0.97 }], opacity: 0.9 },
+          ]}
           onPress={handleContinue}
           disabled={!isValid || loading}
         >
@@ -112,12 +98,25 @@ export default function LoginScreen() {
           ) : (
             <Text style={styles.buttonText}>Continue</Text>
           )}
-        </AnimatedPressable>
+        </Pressable>
 
         {/* Legal */}
         <Text style={styles.legal}>
           By continuing, you agree to our Terms of Service & Privacy Policy
         </Text>
+
+        {/* DEV ONLY — remove when Supabase is connected */}
+        {__DEV__ && (
+          <Pressable
+            style={styles.devSkip}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              useAuthStore.getState().setDevBypass(true);
+            }}
+          >
+            <Text style={styles.devSkipText}>Skip login (dev mode)</Text>
+          </Pressable>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
@@ -216,5 +215,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: SPACING.xl,
     lineHeight: 18,
+  },
+  devSkip: {
+    marginTop: SPACING.xxl,
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+  },
+  devSkipText: {
+    color: COLORS.muted,
+    fontSize: 13,
+    ...FONTS.regular,
+    textDecorationLine: 'underline',
   },
 });

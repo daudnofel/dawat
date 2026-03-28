@@ -8,10 +8,12 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   isNewUser: boolean;
+  devBypass: boolean;
 
   setSession: (session: Session | null) => void;
   setUser: (user: User | null) => void;
   setIsNewUser: (isNew: boolean) => void;
+  setDevBypass: (bypass: boolean) => void;
 
   initialize: () => Promise<void>;
   fetchUser: (userId: string) => Promise<void>;
@@ -23,10 +25,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   loading: true,
   isNewUser: false,
+  devBypass: false,
 
   setSession: (session) => set({ session }),
   setUser: (user) => set({ user }),
   setIsNewUser: (isNew) => set({ isNewUser: isNew }),
+  setDevBypass: (bypass) => set({ devBypass: bypass }),
 
   initialize: async () => {
     set({ loading: true });

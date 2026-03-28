@@ -1,13 +1,11 @@
 import { View, Text, Pressable, StyleSheet, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { useEventStore } from '../../store/useEventStore';
 import { generateSlug } from '../../lib/slugify';
 
-export default function SuccessScreen() {
+export default function SuccessScreen({ onDone }: { onDone?: () => void }) {
   const { draft, reset } = useEventStore();
-  const router = useRouter();
 
   const slug = generateSlug(draft.title || 'event');
   const link = `dawatapp.com/e/${slug}`;
@@ -18,7 +16,7 @@ export default function SuccessScreen() {
 
   const handleViewEvent = () => {
     reset();
-    router.replace('/(tabs)');
+    onDone?.();
   };
 
   return (

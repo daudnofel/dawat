@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { useEventStore } from '../../store/useEventStore';
 
@@ -14,17 +13,16 @@ const PRICE_OPTIONS = [
 ];
 
 export default function Step3Details() {
-  const { draft, updateDraft } = useEventStore();
+  const { draft, updateDraft, nextStep, prevStep } = useEventStore();
   const [customPrice, setCustomPrice] = useState('');
   const [showCustom, setShowCustom] = useState(false);
-  const router = useRouter();
 
   const canContinue = draft.location_name.trim().length >= 2 || draft.date_tbd;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
+        <Pressable onPress={() => prevStep()}>
           <Text style={styles.backText}>Back</Text>
         </Pressable>
         <Text style={styles.stepLabel}>Step 3 of 4</Text>
@@ -155,7 +153,7 @@ export default function Step3Details() {
             !canContinue && styles.buttonDisabled,
             pressed && { transform: [{ scale: 0.97 }], opacity: 0.9 },
           ]}
-          onPress={() => router.push('/create/step4-settings')}
+          onPress={() => nextStep()}
           disabled={!canContinue}
         >
           <Text style={styles.buttonText}>Continue</Text>

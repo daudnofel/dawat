@@ -59,12 +59,6 @@ export default function TabLayout() {
         options={{
           tabBarIcon: () => <CreateIcon />,
         }}
-        listeners={{
-          tabPress: (e) => {
-            e.preventDefault();
-            router.push('/create/step1-theme');
-          },
-        }}
       />
       <Tabs.Screen
         name="events"

@@ -1,6 +1,5 @@
 import { View, Text, Pressable, StyleSheet, Switch, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { useEventStore } from '../../store/useEventStore';
 import { GenderMode } from '../../types';
@@ -12,16 +11,15 @@ const GENDER_OPTIONS = [
   { label: 'Family', subtitle: 'Parents + kids', emoji: '👨‍👩‍👧', value: GenderMode.Family },
 ];
 
-export default function Step4Settings() {
-  const { draft, updateDraft } = useEventStore();
-  const router = useRouter();
+export default function Step4Settings({ onPublish }: { onPublish?: () => void }) {
+  const { draft, updateDraft, prevStep } = useEventStore();
 
   const needsIdNote = draft.gender_mode === GenderMode.SistersOnly || draft.gender_mode === GenderMode.BrothersOnly;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
+        <Pressable onPress={() => prevStep()}>
           <Text style={styles.backText}>Back</Text>
         </Pressable>
         <Text style={styles.stepLabel}>Step 4 of 4</Text>
@@ -92,7 +90,7 @@ export default function Step4Settings() {
             styles.publishButton,
             pressed && { transform: [{ scale: 0.97 }], opacity: 0.9 },
           ]}
-          onPress={() => router.replace('/create/success')}
+          onPress={() => onPublish?.()}
         >
           <Text style={styles.publishText}>Publish Event</Text>
         </Pressable>

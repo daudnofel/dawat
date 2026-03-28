@@ -12,9 +12,7 @@ export default function Step1Theme() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => reset()}>
-          <Text style={styles.backText}>Cancel</Text>
-        </Pressable>
+        <View style={{ width: 50 }} />
         <Text style={styles.stepLabel}>Step 1 of 4</Text>
         <View style={{ width: 50 }} />
       </View>

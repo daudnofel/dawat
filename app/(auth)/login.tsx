@@ -7,16 +7,39 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
+import { supabase } from '../../lib/supabase';
 
 export default function LoginScreen() {
-  const [countryCode, setCountryCode] = useState('+1');
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const isValid = phone.replace(/\D/g, '').length >= 7;
+  const isValid = email.includes('@') && email.includes('.');
+
+  const handleContinue = async () => {
+    if (!isValid || loading) return;
+    setLoading(true);
+
+    const { error } = await supabase.auth.signInWithOtp({ email });
+
+    setLoading(false);
+
+    if (error) {
+      Alert.alert('Error', error.message);
+      return;
+    }
+
+    Alert.alert(
+      'Check your email',
+      `We sent a login link to ${email}. Tap it to sign in.`,
+      [{ text: 'OK' }],
+    );
+  };
 
   return (
     <KeyboardAvoidingView
@@ -31,26 +54,17 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.inputBlock}>
-          <Text style={styles.label}>Enter your phone number</Text>
-          <View style={styles.phoneRow}>
-            <TextInput
-              style={styles.countryInput}
-              value={countryCode}
-              onChangeText={setCountryCode}
-              keyboardType="phone-pad"
-              maxLength={4}
-              placeholderTextColor={COLORS.hint}
-            />
-            <TextInput
-              style={styles.phoneInput}
-              value={phone}
-              onChangeText={setPhone}
-              placeholder="7700 900 000"
-              placeholderTextColor={COLORS.hint}
-              keyboardType="phone-pad"
-              maxLength={15}
-            />
-          </View>
+          <Text style={styles.label}>Enter your email</Text>
+          <TextInput
+            style={styles.emailInput}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="amira@example.com"
+            placeholderTextColor={COLORS.hint}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
         </View>
 
         <Pressable
@@ -59,10 +73,14 @@ export default function LoginScreen() {
             !isValid && styles.buttonDisabled,
             pressed && { transform: [{ scale: 0.97 }], opacity: 0.9 },
           ]}
-          onPress={() => router.push({ pathname: '/(auth)/otp', params: { phone: `${countryCode}${phone.replace(/\D/g, '')}` } })}
-          disabled={!isValid}
+          onPress={handleContinue}
+          disabled={!isValid || loading}
         >
-          <Text style={styles.buttonText}>Continue</Text>
+          {loading ? (
+            <ActivityIndicator color={COLORS.dark} />
+          ) : (
+            <Text style={styles.buttonText}>Continue</Text>
+          )}
         </Pressable>
 
         <Text style={styles.legal}>
@@ -123,25 +141,7 @@ const styles = StyleSheet.create({
     ...FONTS.semibold,
     marginBottom: SPACING.md,
   },
-  phoneRow: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-  },
-  countryInput: {
-    backgroundColor: COLORS.input,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.lg,
-    color: COLORS.white,
-    fontSize: 18,
-    ...FONTS.medium,
-    width: 72,
-    textAlign: 'center',
-  },
-  phoneInput: {
-    flex: 1,
+  emailInput: {
     backgroundColor: COLORS.input,
     borderRadius: RADIUS.md,
     borderWidth: 1,

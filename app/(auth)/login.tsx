@@ -59,7 +59,7 @@ export default function LoginScreen() {
             !isValid && styles.buttonDisabled,
             pressed && { transform: [{ scale: 0.97 }], opacity: 0.9 },
           ]}
-          onPress={() => router.replace('/(tabs)')}
+          onPress={() => router.push({ pathname: '/(auth)/otp', params: { phone: `${countryCode}${phone.replace(/\D/g, '')}` } })}
           disabled={!isValid}
         >
           <Text style={styles.buttonText}>Continue</Text>

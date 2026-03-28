@@ -33,7 +33,7 @@
 | 5 | `store/useAuthStore.ts` | Auth state (Zustand) | ✅ DONE |
 | 6 | `app/_layout.tsx` | Root layout — auth gate + font loading | ✅ DONE |
 | 7 | `app/(auth)/login.tsx` | Phone number entry screen | ✅ DONE |
-| 8 | `app/(auth)/otp.tsx` | 6-digit OTP verification | ⬜ TODO |
+| 8 | `app/(auth)/otp.tsx` | 6-digit OTP verification | ✅ DONE |
 | 9 | `app/(auth)/onboarding.tsx` | Profile setup (new users only) | ⬜ TODO |
 | 10 | `app/(tabs)/_layout.tsx` | Bottom tab navigator (Home/Create/Profile) | ✅ DONE |
 | 11 | `app/(tabs)/index.tsx` | Home feed (empty state placeholder) | ✅ DONE |
@@ -143,4 +143,8 @@
 
 ## Notes & Decisions
 
-- (none yet — will log key decisions here as we go)
+- **SDK 54** is what Expo Go on the App Store supports (as of 2026-03-27). Do NOT use canary/SDK 55.
+- **Supabase + AsyncStorage** causes native module crash in Expo Go SDK 54 — using in-memory storage fallback for now. Will re-add AsyncStorage when Supabase project is connected.
+- **expo-haptics** crashes in this Expo Go build — removed for now, add back when building native dev client.
+- **react-native-reanimated** import crashes — removed for now, same reason. Will use Pressable `style` prop for press animations instead.
+- Auth gate temporarily simplified — no Supabase auth, dev skip goes directly to tabs via router.replace.

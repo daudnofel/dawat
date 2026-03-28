@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,6 +17,7 @@ const TRENDING_EVENTS = [
 
 export default function TrendingScreen() {
   const router = useRouter();
+  const [activeFilter, setActiveFilter] = useState('All');
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -28,9 +30,9 @@ export default function TrendingScreen() {
           horizontal showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterRow}
         >
-          {ETHNIC_FILTERS.map((f, i) => (
-            <Pressable key={f} style={[styles.filterPill, i === 0 && styles.filterPillActive]}>
-              <Text style={[styles.filterText, i === 0 && styles.filterTextActive]}>{f}</Text>
+          {ETHNIC_FILTERS.map((f) => (
+            <Pressable key={f} style={[styles.filterPill, activeFilter === f && styles.filterPillActive]} onPress={() => setActiveFilter(f)}>
+              <Text style={[styles.filterText, activeFilter === f && styles.filterTextActive]}>{f}</Text>
             </Pressable>
           ))}
         </ScrollView>

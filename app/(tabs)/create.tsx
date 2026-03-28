@@ -1,19 +1,8 @@
-import { useEffect } from 'react';
-import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 import { COLORS } from '../../lib/theme';
-import { useEventStore } from '../../store/useEventStore';
 
-export default function CreateScreen() {
-  const router = useRouter();
-  const reset = useEventStore((s) => s.reset);
-
-  useEffect(() => {
-    // Reset draft and navigate to step 1
-    reset();
-    router.push('/create/step1-theme');
-  }, []);
-
-  // Brief blank screen while redirecting
+// This screen is never shown — the Create tab intercepts the press
+// and navigates to /create/step1-theme instead (see _layout.tsx)
+export default function CreatePlaceholder() {
   return <View style={{ flex: 1, backgroundColor: COLORS.dark }} />;
 }

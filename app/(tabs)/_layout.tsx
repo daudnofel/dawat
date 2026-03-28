@@ -1,6 +1,7 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
-import { COLORS, FONTS, SPACING } from '../../lib/theme';
+import { COLORS, FONTS } from '../../lib/theme';
+import { useEventStore } from '../../store/useEventStore';
 
 function TabIcon({ icon, iconFilled, label, focused }: { icon: string; iconFilled: string; label: string; focused: boolean }) {
   return (
@@ -14,18 +15,21 @@ function TabIcon({ icon, iconFilled, label, focused }: { icon: string; iconFille
   );
 }
 
-function CreateIcon({ focused }: { focused: boolean }) {
+function CreateIcon() {
   return (
     <View style={styles.createOuter}>
-      <View style={[styles.createWrap, focused && styles.createWrapActive]}>
-        <Text style={[styles.createPlus, focused && styles.createPlusActive]}>+</Text>
+      <View style={styles.createWrap}>
+        <Text style={styles.createPlus}>+</Text>
       </View>
-      <Text style={[styles.label, focused && styles.labelActive, { marginTop: 4 }]}>Create</Text>
+      <Text style={[styles.label, { marginTop: 4 }]}>Create</Text>
     </View>
   );
 }
 
 export default function TabLayout() {
+  const router = useRouter();
+  const resetDraft = useEventStore((s) => s.reset);
+
   return (
     <Tabs
       screenOptions={{
@@ -55,7 +59,16 @@ export default function TabLayout() {
       <Tabs.Screen
         name="create"
         options={{
-          tabBarIcon: ({ focused }) => <CreateIcon focused={focused} />,
+          tabBarIcon: () => <CreateIcon />,
+        }}
+        listeners={{
+          tabPress: (e) => {
+            // Prevent navigating to the create tab screen
+            e.preventDefault();
+            // Reset draft and open the creation flow
+            resetDraft();
+            router.push('/create/step1-theme');
+          },
         }}
       />
       <Tabs.Screen
@@ -133,17 +146,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  createWrapActive: {
-    backgroundColor: COLORS.gold,
-    borderColor: COLORS.gold,
-  },
   createPlus: {
     fontSize: 24,
     color: COLORS.muted,
     lineHeight: 28,
     ...FONTS.regular,
-  },
-  createPlusActive: {
-    color: COLORS.dark,
   },
 });

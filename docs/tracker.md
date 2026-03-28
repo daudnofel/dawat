@@ -51,15 +51,15 @@
 | # | File | Purpose | Status |
 |---|------|---------|--------|
 | 1 | `lib/themes.ts` | All 20 Islamic themes with CSS gradients | ✅ DONE |
-| 2 | `store/useEventStore.ts` | Event creation state (Zustand) | ⬜ TODO |
+| 2 | `store/useEventStore.ts` | Event creation state (Zustand) | ✅ DONE |
 | 3 | `components/ThemePicker.tsx` | Theme selection grid | ⬜ TODO |
 | 4 | `app/create/step1-theme.tsx` | Step 1: Choose theme | ⬜ TODO |
 | 5 | `app/create/step2-basics.tsx` | Step 2: Title, host, description | ⬜ TODO |
 | 6 | `app/create/step3-details.tsx` | Step 3: Date, location, price | ⬜ TODO |
 | 7 | `app/create/step4-settings.tsx` | Step 4: Gender mode, ID req | ⬜ TODO |
 | 8 | `app/create/success.tsx` | Confetti + share screen | ⬜ TODO |
-| 9 | `lib/slugify.ts` | Slug generation for event URLs | ⬜ TODO |
-| 10 | `lib/prayer-times.ts` | Prayer time calc (adhan.js) | ⬜ TODO |
+| 9 | `lib/slugify.ts` | Slug generation for event URLs | ✅ DONE |
+| 10 | `lib/prayer-times.ts` | Prayer time calc (adhan.js) | ✅ DONE |
 | 11 | `components/PrayerTimeWarning.tsx` | Inline scheduling warning | ⬜ TODO |
 
 ---

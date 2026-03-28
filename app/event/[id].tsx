@@ -1,50 +1,126 @@
-import { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Share } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, Pressable, StyleSheet, ScrollView, Share, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { RsvpStatus, GenderMode } from '../../types';
+import { supabase } from '../../lib/supabase';
 import RsvpButtons from '../../components/RsvpButtons';
 import { getThemeById } from '../../lib/themes';
 
-// Mock event data for dev — will be replaced with Supabase query
-const MOCK_EVENT = {
-  id: '1',
-  title: 'Eid Gala 2026',
-  description: 'Join us for an evening of celebration, food, and community. Dress code: formal. Doors open at 6pm, program starts at 7pm.\n\nFood will be provided. Please RSVP so we can plan accordingly.',
-  theme_id: 'eid_gala',
-  gender_mode: GenderMode.Mixed,
-  date_time: '2026-04-15T19:00:00Z',
-  location_name: 'Grand Hall, Islamic Center',
-  location_address: '5515 W Lovers Ln, Dallas, TX',
-  is_location_hidden: false,
-  is_halal_venue: true,
-  price: 0,
-  capacity: 200,
-  host_name: 'Islamic Center of Dallas',
-  yes_count: 87,
-  inshallah_count: 34,
-  slug: 'eid-gala-2026-k3x9p',
-};
+interface EventDetail {
+  id: string;
+  title: string;
+  description: string | null;
+  theme_id: string;
+  gender_mode: GenderMode;
+  date_time: string | null;
+  date_tbd: boolean;
+  location_name: string | null;
+  location_address: string | null;
+  is_location_hidden: boolean;
+  is_halal_venue: boolean;
+  price: number;
+  capacity: number | null;
+  slug: string;
+  host_id: string;
+}
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const [event, setEvent] = useState<EventDetail | null>(null);
+  const [loading, setLoading] = useState(true);
   const [rsvpStatus, setRsvpStatus] = useState<RsvpStatus | null>(null);
+  const [yesCount, setYesCount] = useState(0);
+  const [inshallahCount, setInshallahCount] = useState(0);
 
-  const event = MOCK_EVENT;
-  const theme = getThemeById(event.theme_id);
+  useEffect(() => {
+    fetchEvent();
+  }, [id]);
 
-  const handleRsvp = (status: RsvpStatus) => {
+  const fetchEvent = async () => {
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (!error && data) {
+      setEvent(data as EventDetail);
+    }
+
+    // Fetch RSVP counts
+    const { count: yc } = await supabase
+      .from('rsvps')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', id)
+      .eq('status', 'yes');
+
+    const { count: ic } = await supabase
+      .from('rsvps')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', id)
+      .eq('status', 'inshallah');
+
+    setYesCount(yc ?? 0);
+    setInshallahCount(ic ?? 0);
+
+    // Check current user's RSVP
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: rsvp } = await supabase
+        .from('rsvps')
+        .select('status')
+        .eq('event_id', id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (rsvp) {
+        setRsvpStatus(rsvp.status as RsvpStatus);
+      }
+    }
+
+    setLoading(false);
+  };
+
+  const handleRsvp = async (status: RsvpStatus) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      Alert.alert('Sign in required', 'Please sign in to RSVP.');
+      return;
+    }
+
+    const { error } = await supabase.from('rsvps').upsert({
+      event_id: id,
+      user_id: user.id,
+      status,
+    }, { onConflict: 'event_id,user_id' });
+
+    if (error) {
+      Alert.alert('Error', error.message);
+      return;
+    }
+
     setRsvpStatus(status);
+    fetchEvent(); // Refresh counts
   };
 
   const handleShare = () => {
-    Share.share({
-      message: `Check out ${event.title} on Dawat: dawatapp.com/e/${event.slug}`,
-    });
+    if (event) {
+      Share.share({ message: `Check out ${event.title} on Dawat: dawatapp.com/e/${event.slug}` });
+    }
   };
 
+  if (loading || !event) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <ActivityIndicator size="large" color={COLORS.gold} style={{ marginTop: 100 }} />
+      </SafeAreaView>
+    );
+  }
+
+  const theme = getThemeById(event.theme_id);
   const genderLabel = {
     [GenderMode.Mixed]: '🌟 Mixed',
     [GenderMode.SistersOnly]: '🌸 Sisters Only',
@@ -55,7 +131,6 @@ export default function EventDetailScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
         <View style={styles.topBar}>
           <Pressable onPress={() => router.back()}>
             <Text style={styles.backText}>← Back</Text>
@@ -65,7 +140,6 @@ export default function EventDetailScreen() {
           </Pressable>
         </View>
 
-        {/* Banner */}
         <View style={[styles.banner, { backgroundColor: theme?.bannerBg ?? COLORS.card }]}>
           <Text style={styles.bannerEmoji}>{theme?.defaultEmoji ?? '🌙'}</Text>
           <View style={styles.badgeRow}>
@@ -81,35 +155,28 @@ export default function EventDetailScreen() {
         </View>
 
         <View style={styles.body}>
-          {/* Title */}
           <Text style={styles.title}>{event.title}</Text>
-          <Pressable onPress={() => {}}>
-            <Text style={styles.orgName}>{event.host_name}</Text>
-          </Pressable>
-
-          {/* Attendance */}
           <Text style={styles.attendance}>
-            {event.yes_count} confirmed · {event.inshallah_count} Inshallah
+            {yesCount} confirmed · {inshallahCount} Inshallah
           </Text>
           {event.capacity && (
             <View style={styles.capacityBar}>
-              <View style={[styles.capacityFill, { width: `${Math.min((event.yes_count / event.capacity) * 100, 100)}%` }]} />
+              <View style={[styles.capacityFill, { width: `${Math.min((yesCount / event.capacity) * 100, 100)}%` }]} />
             </View>
           )}
 
-          {/* Info Card */}
           <View style={styles.infoCard}>
-            <InfoRow icon="📅" text="Wednesday, 15 April 2026" />
-            <InfoRow icon="⏰" text="7:00 PM" />
-            <InfoRow icon="📍" text={event.is_location_hidden ? 'Address revealed on RSVP' : `${event.location_name} — ${event.location_address}`} />
-            <InfoRow icon="💷" text={event.price === 0 ? 'Free' : `$${(event.price / 100).toFixed(2)}`} />
+            <InfoRow icon="📅" text={event.date_tbd ? 'Date TBD' : (event.date_time ? new Date(event.date_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'Date TBD')} />
+            {event.date_time && <InfoRow icon="⏰" text={new Date(event.date_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} />}
+            <InfoRow icon="📍" text={event.is_location_hidden ? 'Address revealed on RSVP' : (event.location_name ?? 'Location TBD')} />
+            <InfoRow icon="💵" text={event.price === 0 ? 'Free' : `$${(event.price / 100).toFixed(2)}`} />
             {event.is_halal_venue && <InfoRow icon="✅" text="Halal venue" />}
           </View>
 
-          {/* Description */}
-          <Text style={styles.description}>{event.description}</Text>
+          {event.description && (
+            <Text style={styles.description}>{event.description}</Text>
+          )}
 
-          {/* RSVP */}
           <View style={styles.rsvpSection}>
             <RsvpButtons currentStatus={rsvpStatus} onSelect={handleRsvp} />
             {rsvpStatus === RsvpStatus.Yes && (
@@ -142,32 +209,17 @@ const styles = StyleSheet.create({
   },
   backText: { color: COLORS.gold, fontSize: 16, ...FONTS.medium },
   shareText: { color: COLORS.gold, fontSize: 16, ...FONTS.medium },
-  banner: {
-    height: 160, alignItems: 'center', justifyContent: 'center',
-    position: 'relative',
-  },
+  banner: { height: 160, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   bannerEmoji: { fontSize: 56 },
-  badgeRow: {
-    position: 'absolute', bottom: SPACING.md, left: SPACING.lg,
-    flexDirection: 'row', gap: SPACING.sm,
-  },
-  genderBadge: {
-    backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs, borderRadius: RADIUS.full,
-  },
+  badgeRow: { position: 'absolute', bottom: SPACING.md, left: SPACING.lg, flexDirection: 'row', gap: SPACING.sm },
+  genderBadge: { backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: RADIUS.full },
   genderBadgeText: { color: COLORS.white, fontSize: 12, ...FONTS.medium },
-  halalBadge: {
-    backgroundColor: 'rgba(76,175,80,0.2)', paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs, borderRadius: RADIUS.full,
-  },
+  halalBadge: { backgroundColor: 'rgba(76,175,80,0.2)', paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: RADIUS.full },
   halalBadgeText: { color: COLORS.green, fontSize: 12, ...FONTS.medium },
   body: { paddingHorizontal: SPACING.xl, paddingTop: SPACING.lg },
-  title: { fontSize: 24, color: COLORS.white, ...FONTS.bold, marginBottom: SPACING.xs },
-  orgName: { fontSize: 14, color: COLORS.gold, ...FONTS.medium, marginBottom: SPACING.md },
+  title: { fontSize: 24, color: COLORS.white, ...FONTS.bold, marginBottom: SPACING.sm },
   attendance: { fontSize: 14, color: COLORS.muted, ...FONTS.regular, marginBottom: SPACING.sm },
-  capacityBar: {
-    height: 4, backgroundColor: COLORS.border, borderRadius: 2, marginBottom: SPACING.lg,
-  },
+  capacityBar: { height: 4, backgroundColor: COLORS.border, borderRadius: 2, marginBottom: SPACING.lg },
   capacityFill: { height: 4, backgroundColor: COLORS.gold, borderRadius: 2 },
   infoCard: {
     backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1,
@@ -176,14 +228,7 @@ const styles = StyleSheet.create({
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
   infoIcon: { fontSize: 16 },
   infoText: { fontSize: 14, color: COLORS.white, ...FONTS.regular, flex: 1 },
-  description: {
-    fontSize: 14, color: COLORS.muted, ...FONTS.regular, lineHeight: 22, marginBottom: SPACING.lg,
-  },
-  rsvpSection: {
-    borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: SPACING.md,
-    marginBottom: SPACING.xxl + SPACING.xxl,
-  },
-  rsvpConfirm: {
-    fontSize: 14, color: COLORS.green, ...FONTS.medium, textAlign: 'center', marginTop: SPACING.sm,
-  },
+  description: { fontSize: 14, color: COLORS.muted, ...FONTS.regular, lineHeight: 22, marginBottom: SPACING.lg },
+  rsvpSection: { borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: SPACING.md, marginBottom: SPACING.xxl + SPACING.xxl },
+  rsvpConfirm: { fontSize: 14, color: COLORS.green, ...FONTS.medium, textAlign: 'center', marginTop: SPACING.sm },
 });

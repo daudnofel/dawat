@@ -20,12 +20,20 @@ export default function Step4Settings({ onPublish }: { onPublish?: () => void })
 
   const handlePublish = async () => {
     setPublishing(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      Alert.alert('Error', 'You must be signed in to publish an event.');
+      setPublishing(false);
+      return;
+    }
+
     const slug = generateSlug(draft.title);
 
     const { error } = await supabase.from('events').insert({
       title: draft.title,
       description: draft.description || null,
-      host_id: '00000000-0000-0000-0000-000000000000', // placeholder until auth works
+      host_id: user.id,
       theme_id: draft.theme_id,
       gender_mode: draft.gender_mode,
       is_id_required: draft.is_id_required,

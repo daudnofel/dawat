@@ -1,8 +1,10 @@
-import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { GenderMode } from '../../types';
 import { useFeedStore } from '../../store/useFeedStore';
+import { supabase } from '../../lib/supabase';
 import EventCard from '../../components/EventCard';
 
 const FILTER_TABS = [
@@ -12,50 +14,64 @@ const FILTER_TABS = [
   { label: 'Family', value: GenderMode.Family },
 ];
 
-// Mock events for dev — will be replaced with Supabase query
-const MOCK_EVENTS = [
-  {
-    id: '1', title: 'Eid Gala 2026', theme_id: 'eid_gala',
-    org_name: 'Islamic Center of Dallas', date_label: 'Apr 15 · 7:00 PM',
-    location_name: 'Grand Hall', price: 0, gender_mode: GenderMode.Mixed,
-    is_halal_venue: true, yes_count: 87, inshallah_count: 34, capacity: 200,
-  },
-  {
-    id: '2', title: 'Sisters Halaqa — Tafsir Night', theme_id: 'sisters_halaqa',
-    org_name: 'Al-Noor Academy', date_label: 'Apr 10 · 6:30 PM',
-    location_name: 'Community Room', price: 0, gender_mode: GenderMode.SistersOnly,
-    is_halal_venue: false, yes_count: 24, inshallah_count: 12, capacity: 40,
-  },
-  {
-    id: '3', title: 'Brothers Night Out', theme_id: 'brothers_night',
-    org_name: 'Youth Circle', date_label: 'Apr 12 · 8:00 PM',
-    location_name: 'The Halal Guys — Houston', price: 2500, gender_mode: GenderMode.BrothersOnly,
-    is_halal_venue: true, yes_count: 18, inshallah_count: 7, capacity: null,
-  },
-  {
-    id: '4', title: 'Family Iftar & Games', theme_id: 'family_picnic',
-    org_name: 'Crescent Community', date_label: 'Apr 8 · 5:30 PM',
-    location_name: 'Central Park, NYC', price: 0, gender_mode: GenderMode.Family,
-    is_halal_venue: false, yes_count: 52, inshallah_count: 19, capacity: 100,
-  },
-  {
-    id: '5', title: 'Ramadan Fundraiser Dinner', theme_id: 'ramadan_kareem',
-    org_name: 'Islamic Relief USA', date_label: 'Apr 5 · 7:30 PM',
-    location_name: 'Hilton Anatole, Dallas', price: 4500, gender_mode: GenderMode.Mixed,
-    is_halal_venue: true, yes_count: 145, inshallah_count: 63, capacity: 300,
-  },
-];
+interface FeedEvent {
+  id: string;
+  title: string;
+  theme_id: string;
+  gender_mode: GenderMode;
+  is_halal_venue: boolean;
+  price: number;
+  capacity: number | null;
+  date_time: string | null;
+  location_name: string | null;
+  host_id: string;
+  slug: string;
+  organisations: { name: string }[] | { name: string } | null;
+}
 
 export default function HomeScreen() {
   const { activeFilter, setFilter } = useFeedStore();
+  const [events, setEvents] = useState<FeedEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const filteredEvents = activeFilter === 'all'
-    ? MOCK_EVENTS
-    : MOCK_EVENTS.filter((e) => e.gender_mode === activeFilter || e.gender_mode === GenderMode.Mixed);
+  const fetchEvents = useCallback(async () => {
+    let query = supabase
+      .from('events')
+      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, organisations(name)')
+      .eq('is_published', true)
+      .eq('is_cancelled', false)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (activeFilter !== 'all') {
+      query = query.in('gender_mode', [activeFilter, 'mixed']);
+    }
+
+    const { data, error } = await query;
+
+    if (!error && data) {
+      setEvents(data as FeedEvent[]);
+    }
+    setLoading(false);
+    setRefreshing(false);
+  }, [activeFilter]);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchEvents();
+  }, [fetchEvents]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchEvents();
+  };
+
+  // Get RSVP counts (simplified — counts from rsvps table)
+  // For now we show 0 since events are newly created
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.brandRow}>
           <Text style={styles.brandArabic}>دعوت</Text>
@@ -63,7 +79,6 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Gender Filter Tabs */}
       <View style={styles.filterWrapper}>
         <ScrollView
           horizontal
@@ -87,21 +102,41 @@ export default function HomeScreen() {
         </ScrollView>
       </View>
 
-      {/* Event Feed */}
       <ScrollView
         style={styles.feed}
         contentContainerStyle={styles.feedContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gold} />
+        }
       >
-        {filteredEvents.map((event) => (
-          <EventCard key={event.id} {...event} />
+        {loading && (
+          <ActivityIndicator size="large" color={COLORS.gold} style={{ marginTop: 60 }} />
+        )}
+
+        {!loading && events.map((event) => (
+          <EventCard
+            key={event.id}
+            id={event.id}
+            title={event.title}
+            theme_id={event.theme_id}
+            org_name={Array.isArray(event.organisations) ? event.organisations[0]?.name ?? 'Personal Event' : event.organisations?.name ?? 'Personal Event'}
+            date_label={event.date_time ? new Date(event.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Date TBD'}
+            location_name={event.location_name ?? 'Location TBD'}
+            price={event.price}
+            gender_mode={event.gender_mode as GenderMode}
+            is_halal_venue={event.is_halal_venue}
+            yes_count={0}
+            inshallah_count={0}
+            capacity={event.capacity}
+          />
         ))}
 
-        {filteredEvents.length === 0 && (
+        {!loading && events.length === 0 && (
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>🌙</Text>
-            <Text style={styles.emptyTitle}>No events found</Text>
-            <Text style={styles.emptySubtitle}>Try a different filter</Text>
+            <Text style={styles.emptyTitle}>No events yet</Text>
+            <Text style={styles.emptySubtitle}>Create the first event for your community</Text>
           </View>
         )}
       </ScrollView>
@@ -111,18 +146,12 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.dark },
-  header: {
-    paddingHorizontal: SPACING.xl, paddingTop: SPACING.sm, paddingBottom: SPACING.md,
-  },
+  header: { paddingHorizontal: SPACING.xl, paddingTop: SPACING.sm, paddingBottom: SPACING.md },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   brandArabic: { fontSize: 22, color: COLORS.gold, ...FONTS.bold },
   brandEnglish: { fontSize: 18, color: COLORS.white, ...FONTS.bold, letterSpacing: 3 },
-  filterWrapper: {
-    height: 44,
-  },
-  filterRow: {
-    paddingHorizontal: SPACING.xl, gap: SPACING.sm, alignItems: 'center', height: 44,
-  },
+  filterWrapper: { height: 44 },
+  filterRow: { paddingHorizontal: SPACING.xl, gap: SPACING.sm, alignItems: 'center', height: 44 },
   filterPill: {
     paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm,
     borderRadius: RADIUS.full, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border,

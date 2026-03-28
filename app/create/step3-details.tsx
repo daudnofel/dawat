@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Switch, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Switch, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
@@ -18,21 +18,20 @@ export default function Step3Details() {
   const { draft, updateDraft, nextStep, prevStep } = useEventStore();
   const [customPrice, setCustomPrice] = useState('');
   const [showCustom, setShowCustom] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState<'date' | 'time' | null>(null);
+  const [tempDate, setTempDate] = useState(new Date());
 
   const canContinue = draft.location_name.trim().length >= 2 || draft.date_tbd;
-
   const selectedDate = draft.date_time ?? new Date();
 
-  const onDateChange = (_: any, date?: Date) => {
-    if (Platform.OS === 'android') setShowDatePicker(false);
-    if (date) updateDraft({ date_time: date });
+  const openPicker = (mode: 'date' | 'time') => {
+    setTempDate(draft.date_time ?? new Date());
+    setPickerMode(mode);
   };
 
-  const onTimeChange = (_: any, date?: Date) => {
-    if (Platform.OS === 'android') setShowTimePicker(false);
-    if (date) updateDraft({ date_time: date });
+  const confirmPicker = () => {
+    updateDraft({ date_time: tempDate });
+    setPickerMode(null);
   };
 
   return (
@@ -52,7 +51,6 @@ export default function Step3Details() {
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* Date & Time */}
         <Text style={styles.label}>When is it?</Text>
         <View style={styles.toggleRow}>
           <Text style={styles.toggleLabel}>Date TBD</Text>
@@ -65,137 +63,101 @@ export default function Step3Details() {
         </View>
 
         {!draft.date_tbd && (
-          <View>
-            <Pressable style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+          <View style={{ gap: SPACING.sm }}>
+            <Pressable style={({ pressed }) => [styles.dateButton, pressed && { opacity: 0.8 }]} onPress={() => openPicker('date')}>
               <Text style={styles.dateIcon}>📅</Text>
               <Text style={styles.dateText}>
                 {draft.date_time ? format(selectedDate, 'EEEE, MMMM d, yyyy') : 'Select date'}
               </Text>
+              <Text style={styles.dateChevron}>›</Text>
             </Pressable>
 
-            <Pressable style={styles.dateButton} onPress={() => setShowTimePicker(true)}>
+            <Pressable style={({ pressed }) => [styles.dateButton, pressed && { opacity: 0.8 }]} onPress={() => openPicker('time')}>
               <Text style={styles.dateIcon}>⏰</Text>
               <Text style={styles.dateText}>
                 {draft.date_time ? format(selectedDate, 'h:mm a') : 'Select time'}
               </Text>
+              <Text style={styles.dateChevron}>›</Text>
             </Pressable>
-
-            {showDatePicker && (
-              <DateTimePicker
-                value={selectedDate}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={onDateChange}
-                minimumDate={new Date()}
-                themeVariant="dark"
-              />
-            )}
-
-            {showTimePicker && (
-              <DateTimePicker
-                value={selectedDate}
-                mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={onTimeChange}
-                themeVariant="dark"
-              />
-            )}
           </View>
         )}
 
-        {/* Location */}
         <Text style={styles.label}>Where?</Text>
         <TextInput
-          style={styles.input}
-          value={draft.location_name}
+          style={styles.input} value={draft.location_name}
           onChangeText={(t) => updateDraft({ location_name: t })}
-          placeholder="Venue or address"
-          placeholderTextColor={COLORS.hint}
+          placeholder="Venue or address" placeholderTextColor={COLORS.hint}
         />
 
         <View style={styles.toggleRow}>
           <Text style={styles.toggleLabel}>Hide address from non-RSVPs</Text>
-          <Switch
-            value={draft.is_location_hidden}
-            onValueChange={(v) => updateDraft({ is_location_hidden: v })}
-            trackColor={{ false: COLORS.border, true: COLORS.gold }}
-            thumbColor={COLORS.white}
-          />
+          <Switch value={draft.is_location_hidden} onValueChange={(v) => updateDraft({ is_location_hidden: v })} trackColor={{ false: COLORS.border, true: COLORS.gold }} thumbColor={COLORS.white} />
         </View>
 
         <View style={styles.toggleRow}>
           <Text style={styles.toggleLabel}>Halal-certified venue</Text>
-          <Switch
-            value={draft.is_halal_venue}
-            onValueChange={(v) => updateDraft({ is_halal_venue: v })}
-            trackColor={{ false: COLORS.border, true: COLORS.green }}
-            thumbColor={COLORS.white}
-          />
+          <Switch value={draft.is_halal_venue} onValueChange={(v) => updateDraft({ is_halal_venue: v })} trackColor={{ false: COLORS.border, true: COLORS.green }} thumbColor={COLORS.white} />
         </View>
 
-        {/* Price */}
         <Text style={styles.label}>How much?</Text>
         <View style={styles.priceRow}>
           {PRICE_OPTIONS.map((opt) => (
-            <Pressable
-              key={opt.value}
-              style={[styles.pricePill, draft.price === opt.value && !showCustom && styles.pricePillActive]}
-              onPress={() => { setShowCustom(false); updateDraft({ price: opt.value }); }}
-            >
-              <Text style={[styles.priceText, draft.price === opt.value && !showCustom && styles.priceTextActive]}>
-                {opt.label}
-              </Text>
+            <Pressable key={opt.value} style={[styles.pricePill, draft.price === opt.value && !showCustom && styles.pricePillActive]}
+              onPress={() => { setShowCustom(false); updateDraft({ price: opt.value }); }}>
+              <Text style={[styles.priceText, draft.price === opt.value && !showCustom && styles.priceTextActive]}>{opt.label}</Text>
             </Pressable>
           ))}
-          <Pressable
-            style={[styles.pricePill, showCustom && styles.pricePillActive]}
-            onPress={() => setShowCustom(true)}
-          >
+          <Pressable style={[styles.pricePill, showCustom && styles.pricePillActive]} onPress={() => setShowCustom(true)}>
             <Text style={[styles.priceText, showCustom && styles.priceTextActive]}>Custom</Text>
           </Pressable>
         </View>
 
         {showCustom && (
-          <TextInput
-            style={[styles.input, { marginTop: SPACING.sm }]}
-            value={customPrice}
-            onChangeText={(t) => {
-              setCustomPrice(t);
-              const cents = Math.round(parseFloat(t || '0') * 100);
-              updateDraft({ price: isNaN(cents) ? 0 : cents });
-            }}
-            placeholder="Enter price"
-            placeholderTextColor={COLORS.hint}
-            keyboardType="decimal-pad"
-          />
+          <TextInput style={[styles.input, { marginTop: SPACING.sm }]} value={customPrice}
+            onChangeText={(t) => { setCustomPrice(t); const cents = Math.round(parseFloat(t || '0') * 100); updateDraft({ price: isNaN(cents) ? 0 : cents }); }}
+            placeholder="Enter price" placeholderTextColor={COLORS.hint} keyboardType="decimal-pad" />
         )}
 
-        {/* Capacity */}
         <Text style={styles.label}>How many spots? (optional)</Text>
-        <TextInput
-          style={styles.input}
-          value={draft.capacity ? String(draft.capacity) : ''}
-          onChangeText={(t) => {
-            const num = parseInt(t, 10);
-            updateDraft({ capacity: isNaN(num) ? null : num });
-          }}
-          placeholder="Leave empty for unlimited"
-          placeholderTextColor={COLORS.hint}
-          keyboardType="number-pad"
-        />
+        <TextInput style={styles.input} value={draft.capacity ? String(draft.capacity) : ''}
+          onChangeText={(t) => { const num = parseInt(t, 10); updateDraft({ capacity: isNaN(num) ? null : num }); }}
+          placeholder="Leave empty for unlimited" placeholderTextColor={COLORS.hint} keyboardType="number-pad" />
 
         <View style={{ height: 40 }} />
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <Pressable
-          style={({ pressed }) => [styles.button, !canContinue && styles.buttonDisabled, pressed && { transform: [{ scale: 0.97 }] }]}
-          onPress={() => nextStep()}
-          disabled={!canContinue}
-        >
+        <Pressable style={({ pressed }) => [styles.button, !canContinue && styles.buttonDisabled, pressed && { transform: [{ scale: 0.97 }] }]}
+          onPress={() => nextStep()} disabled={!canContinue}>
           <Text style={styles.buttonText}>Continue</Text>
         </Pressable>
       </View>
+
+      {/* Date/Time Picker Modal */}
+      <Modal visible={pickerMode !== null} transparent animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={() => setPickerMode(null)} />
+        <View style={styles.modalSheet}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>
+              {pickerMode === 'date' ? 'Select Date' : 'Select Time'}
+            </Text>
+            <Pressable onPress={confirmPicker}>
+              <Text style={styles.modalDone}>Done</Text>
+            </Pressable>
+          </View>
+          {pickerMode && (
+            <DateTimePicker
+              value={tempDate}
+              mode={pickerMode}
+              display="spinner"
+              onChange={(_, date) => { if (date) setTempDate(date); }}
+              minimumDate={pickerMode === 'date' ? new Date() : undefined}
+              themeVariant="dark"
+              style={{ height: 200 }}
+            />
+          )}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -215,11 +177,12 @@ const styles = StyleSheet.create({
   input: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md + 2, color: COLORS.white, fontSize: 16, ...FONTS.medium },
   dateButton: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
-    backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
-    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md + 2, marginBottom: SPACING.sm,
+    backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.lg,
   },
   dateIcon: { fontSize: 18 },
-  dateText: { fontSize: 16, color: COLORS.white, ...FONTS.medium },
+  dateText: { flex: 1, fontSize: 16, color: COLORS.white, ...FONTS.medium },
+  dateChevron: { fontSize: 20, color: COLORS.hint, ...FONTS.regular },
   toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: SPACING.md, marginTop: SPACING.sm },
   toggleLabel: { color: COLORS.white, fontSize: 15, ...FONTS.medium },
   priceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
@@ -231,4 +194,17 @@ const styles = StyleSheet.create({
   button: { backgroundColor: COLORS.gold, borderRadius: RADIUS.md, paddingVertical: SPACING.lg, alignItems: 'center', height: 52, justifyContent: 'center' },
   buttonDisabled: { opacity: 0.4 },
   buttonText: { color: COLORS.dark, fontSize: 16, ...FONTS.bold },
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalSheet: {
+    backgroundColor: COLORS.card, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  modalTitle: { fontSize: 17, color: COLORS.white, ...FONTS.bold },
+  modalDone: { fontSize: 17, color: COLORS.gold, ...FONTS.bold },
 });

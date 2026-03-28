@@ -12,25 +12,24 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
+import { supabase } from '../../lib/supabase';
 
 const OTP_LENGTH = 6;
 
 export default function OtpScreen() {
-  const { phone } = useLocalSearchParams<{ phone: string }>();
+  const { email } = useLocalSearchParams<{ email: string }>();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(60);
   const inputRef = useRef<TextInput>(null);
   const router = useRouter();
 
-  // Countdown timer for resend
   useEffect(() => {
     if (countdown <= 0) return;
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  // Auto-submit when 6 digits entered
   useEffect(() => {
     if (code.length === OTP_LENGTH) {
       handleVerify();
@@ -41,30 +40,51 @@ export default function OtpScreen() {
     if (code.length !== OTP_LENGTH || loading) return;
     setLoading(true);
 
-    // TODO: Replace with real Supabase verifyOtp when connected
-    // const { error } = await supabase.auth.verifyOtp({
-    //   phone: phone ?? '',
-    //   token: code,
-    //   type: 'sms',
-    // });
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: email ?? '',
+      token: code,
+      type: 'email',
+    });
 
-    // Simulate verification for dev
-    await new Promise((resolve) => setTimeout(resolve, 500));
     setLoading(false);
 
-    // In dev mode, simulate new user → onboarding
-    router.replace('/(auth)/onboarding');
+    if (error) {
+      Alert.alert('Verification failed', error.message);
+      setCode('');
+      return;
+    }
+
+    // Check if user has a profile in our users table
+    if (data.user) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profile) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/(auth)/onboarding');
+      }
+    }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (countdown > 0) return;
     setCountdown(60);
-    Alert.alert('Code resent', `A new code was sent to ${phone ?? 'your phone'}`);
+
+    await supabase.auth.signInWithOtp({
+      email: email ?? '',
+      options: { shouldCreateUser: true },
+    });
+
+    Alert.alert('Code resent', `A new code was sent to ${email}`);
   };
 
-  const maskedPhone = phone
-    ? phone.slice(0, 4) + '****' + phone.slice(-3)
-    : '****';
+  const maskedEmail = email
+    ? email.slice(0, 3) + '***@' + email.split('@')[1]
+    : '***';
 
   return (
     <KeyboardAvoidingView
@@ -78,10 +98,9 @@ export default function OtpScreen() {
 
         <Text style={styles.title}>Enter verification code</Text>
         <Text style={styles.subtitle}>
-          We sent a 6-digit code to {maskedPhone}
+          We sent a 6-digit code to {maskedEmail}
         </Text>
 
-        {/* Hidden input that captures keyboard */}
         <TextInput
           ref={inputRef}
           style={styles.hiddenInput}
@@ -92,7 +111,6 @@ export default function OtpScreen() {
           maxLength={OTP_LENGTH}
         />
 
-        {/* Visual digit boxes */}
         <Pressable style={styles.codeRow} onPress={() => inputRef.current?.focus()}>
           {Array.from({ length: OTP_LENGTH }).map((_, i) => (
             <View
@@ -103,27 +121,18 @@ export default function OtpScreen() {
                 code.length > i && styles.digitBoxFilled,
               ]}
             >
-              <Text style={styles.digitText}>
-                {code[i] ?? ''}
-              </Text>
+              <Text style={styles.digitText}>{code[i] ?? ''}</Text>
             </View>
           ))}
         </Pressable>
 
         {loading && (
-          <ActivityIndicator
-            size="small"
-            color={COLORS.gold}
-            style={{ marginTop: SPACING.xl }}
-          />
+          <ActivityIndicator size="small" color={COLORS.gold} style={{ marginTop: SPACING.xl }} />
         )}
 
-        {/* Resend */}
         <View style={styles.resendRow}>
           {countdown > 0 ? (
-            <Text style={styles.resendTimer}>
-              Resend code in {countdown}s
-            </Text>
+            <Text style={styles.resendTimer}>Resend code in {countdown}s</Text>
           ) : (
             <Pressable onPress={handleResend}>
               <Text style={styles.resendLink}>Resend code</Text>
@@ -136,80 +145,23 @@ export default function OtpScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.dark,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: SPACING.xl,
-    paddingTop: 80,
-  },
-  backButton: {
-    marginBottom: SPACING.xxl,
-  },
-  backText: {
-    color: COLORS.gold,
-    fontSize: 16,
-    ...FONTS.medium,
-  },
-  title: {
-    fontSize: 24,
-    color: COLORS.white,
-    ...FONTS.bold,
-    marginBottom: SPACING.sm,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: COLORS.muted,
-    ...FONTS.regular,
-    marginBottom: SPACING.xxl,
-  },
-  hiddenInput: {
-    position: 'absolute',
-    opacity: 0,
-    height: 0,
-    width: 0,
-  },
-  codeRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-  },
+  container: { flex: 1, backgroundColor: COLORS.dark },
+  content: { flex: 1, paddingHorizontal: SPACING.xl, paddingTop: 80 },
+  backButton: { marginBottom: SPACING.xxl },
+  backText: { color: COLORS.gold, fontSize: 16, ...FONTS.medium },
+  title: { fontSize: 24, color: COLORS.white, ...FONTS.bold, marginBottom: SPACING.sm },
+  subtitle: { fontSize: 14, color: COLORS.muted, ...FONTS.regular, marginBottom: SPACING.xxl },
+  hiddenInput: { position: 'absolute', opacity: 0, height: 0, width: 0 },
+  codeRow: { flexDirection: 'row', justifyContent: 'center', gap: SPACING.sm },
   digitBox: {
-    width: 48,
-    height: 56,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.input,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 48, height: 56, borderRadius: RADIUS.md, borderWidth: 1.5,
+    borderColor: COLORS.border, backgroundColor: COLORS.input,
+    alignItems: 'center', justifyContent: 'center',
   },
-  digitBoxActive: {
-    borderColor: COLORS.gold,
-  },
-  digitBoxFilled: {
-    borderColor: COLORS.gold,
-    backgroundColor: COLORS.card2,
-  },
-  digitText: {
-    fontSize: 24,
-    color: COLORS.white,
-    ...FONTS.bold,
-  },
-  resendRow: {
-    alignItems: 'center',
-    marginTop: SPACING.xxl,
-  },
-  resendTimer: {
-    color: COLORS.hint,
-    fontSize: 14,
-    ...FONTS.regular,
-  },
-  resendLink: {
-    color: COLORS.gold,
-    fontSize: 14,
-    ...FONTS.semibold,
-  },
+  digitBoxActive: { borderColor: COLORS.gold },
+  digitBoxFilled: { borderColor: COLORS.gold, backgroundColor: COLORS.card2 },
+  digitText: { fontSize: 24, color: COLORS.white, ...FONTS.bold },
+  resendRow: { alignItems: 'center', marginTop: SPACING.xxl },
+  resendTimer: { color: COLORS.hint, fontSize: 14, ...FONTS.regular },
+  resendLink: { color: COLORS.gold, fontSize: 14, ...FONTS.semibold },
 });

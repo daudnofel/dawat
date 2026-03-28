@@ -14,7 +14,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.dawatapp.dawat"
+      "bundleIdentifier": "com.dawatapp.dawat",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.dawatapp.dawat",
@@ -35,6 +38,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "fb9b2cac-d926-4f7d-a7f4-71ed7dcc549d"
+      }
     }
   }
 }

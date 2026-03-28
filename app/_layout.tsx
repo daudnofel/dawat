@@ -1,13 +1,3 @@
-// Patch console.error BEFORE any other imports to suppress RN 0.77 bridgeless warning
-const origConsoleError = console.error;
-console.error = (...args: any[]) => {
-  const msg = typeof args[0] === 'string' ? args[0] : '';
-  if (msg.includes('disableEventLoopOnBridgeless') || msg.includes('Could not access feature flag')) {
-    return; // Suppress — non-fatal Expo Go SDK 54 noise
-  }
-  origConsoleError(...args);
-};
-
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';

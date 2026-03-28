@@ -53,7 +53,7 @@
 | 1 | `lib/themes.ts` | All 20 Islamic themes with CSS gradients | ✅ DONE |
 | 2 | `store/useEventStore.ts` | Event creation state (Zustand) | ✅ DONE |
 | 3 | `components/ThemePicker.tsx` | Theme selection grid | ✅ DONE |
-| 4 | `app/create/step1-theme.tsx` | Step 1: Choose theme | ⬜ TODO |
+| 4 | `app/create/step1-theme.tsx` | Step 1: Choose theme | ✅ DONE |
 | 5 | `app/create/step2-basics.tsx` | Step 2: Title, host, description | ⬜ TODO |
 | 6 | `app/create/step3-details.tsx` | Step 3: Date, location, price | ⬜ TODO |
 | 7 | `app/create/step4-settings.tsx` | Step 4: Gender mode, ID req | ⬜ TODO |

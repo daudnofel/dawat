@@ -10,7 +10,7 @@
 | Sprint | Focus | Status | Notes |
 |--------|-------|--------|-------|
 | 1 | Foundation: project setup, Supabase, auth, nav shell | ✅ DONE | Supabase tables deferred |
-| 2 | Event creation: 4-step flow + 20 Islamic themes | 🟡 IN PROGRESS | Starting now |
+| 2 | Event creation: 4-step flow + 20 Islamic themes | ✅ DONE | All 4 steps + success |
 | 3 | RSVP system: Yes/Inshallah/No + shareable web page | ⬜ NOT STARTED | |
 | 4 | Home feed: EventCard, gender filter tabs, halal spots | ⬜ NOT STARTED | |
 | 5 | Trending + discovery: RSVP velocity sort, ethnic filters | ⬜ NOT STARTED | |
@@ -54,10 +54,10 @@
 | 2 | `store/useEventStore.ts` | Event creation state (Zustand) | ✅ DONE |
 | 3 | `components/ThemePicker.tsx` | Theme selection grid | ✅ DONE |
 | 4 | `app/create/step1-theme.tsx` | Step 1: Choose theme | ✅ DONE |
-| 5 | `app/create/step2-basics.tsx` | Step 2: Title, host, description | ⬜ TODO |
-| 6 | `app/create/step3-details.tsx` | Step 3: Date, location, price | ⬜ TODO |
-| 7 | `app/create/step4-settings.tsx` | Step 4: Gender mode, ID req | ⬜ TODO |
-| 8 | `app/create/success.tsx` | Confetti + share screen | ⬜ TODO |
+| 5 | `app/create/step2-basics.tsx` | Step 2: Title, host, description | ✅ DONE |
+| 6 | `app/create/step3-details.tsx` | Step 3: Date, location, price | ✅ DONE |
+| 7 | `app/create/step4-settings.tsx` | Step 4: Gender mode, ID req | ✅ DONE |
+| 8 | `app/create/success.tsx` | Confetti + share screen | ✅ DONE |
 | 9 | `lib/slugify.ts` | Slug generation for event URLs | ✅ DONE |
 | 10 | `lib/prayer-times.ts` | Prayer time calc (adhan.js) | ✅ DONE |
 | 11 | `components/PrayerTimeWarning.tsx` | Inline scheduling warning | ✅ DONE |

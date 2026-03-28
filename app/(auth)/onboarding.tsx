@@ -8,11 +8,14 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
 import { Gender, GenderPref } from '../../types';
+import { supabase } from '../../lib/supabase';
 
 const GENDER_OPTIONS = [
   { label: 'Male', value: Gender.Male },
@@ -45,17 +48,40 @@ export default function OnboardingScreen() {
     }
   };
 
-  const handleComplete = () => {
-    if (!isValid) return;
+  const [saving, setSaving] = useState(false);
 
-    // TODO: Save profile to Supabase when connected
-    // await supabase.from('users').update({
-    //   display_name: displayName,
-    //   username,
-    //   gender,
-    //   gender_pref: feedPref,
-    //   location_city: city,
-    // }).eq('id', user.id);
+  const handleComplete = async () => {
+    if (!isValid || saving) return;
+    setSaving(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      Alert.alert('Error', 'Not authenticated. Please sign in again.');
+      setSaving(false);
+      router.replace('/(auth)/login');
+      return;
+    }
+
+    const { error } = await supabase.from('users').insert({
+      id: user.id,
+      display_name: displayName.trim(),
+      username: username.trim(),
+      gender,
+      gender_pref: feedPref,
+      location_city: city.trim() || null,
+    });
+
+    setSaving(false);
+
+    if (error) {
+      if (error.code === '23505') {
+        Alert.alert('Username taken', 'That username is already in use. Try another.');
+      } else {
+        Alert.alert('Error', error.message);
+      }
+      return;
+    }
 
     router.replace('/(tabs)');
   };
@@ -124,7 +150,7 @@ export default function OnboardingScreen() {
             style={styles.input}
             value={city}
             onChangeText={setCity}
-            placeholder="London, UK"
+            placeholder="Dallas, TX"
             placeholderTextColor={COLORS.hint}
           />
 
@@ -152,9 +178,13 @@ export default function OnboardingScreen() {
               pressed && { transform: [{ scale: 0.97 }], opacity: 0.9 },
             ]}
             onPress={handleComplete}
-            disabled={!isValid}
+            disabled={!isValid || saving}
           >
-            <Text style={styles.buttonText}>Complete Profile</Text>
+            {saving ? (
+              <ActivityIndicator color={COLORS.dark} />
+            ) : (
+              <Text style={styles.buttonText}>Complete Profile</Text>
+            )}
           </Pressable>
 
           <Text style={styles.footer}>

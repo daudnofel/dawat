@@ -30,7 +30,7 @@
 | 2 | `types/index.ts` | All shared TypeScript interfaces & enums | ✅ DONE |
 | 3 | `lib/theme.ts` | Design tokens (COLORS, FONTS, RADIUS, SPACING) | ✅ DONE |
 | 4 | `lib/supabase.ts` | Supabase client with AsyncStorage session | ✅ DONE |
-| 5 | `store/useAuthStore.ts` | Auth state (Zustand) | ⬜ TODO |
+| 5 | `store/useAuthStore.ts` | Auth state (Zustand) | ✅ DONE |
 | 6 | `app/_layout.tsx` | Root layout — auth gate + font loading | ⬜ TODO |
 | 7 | `app/(auth)/login.tsx` | Phone number entry screen | ⬜ TODO |
 | 8 | `app/(auth)/otp.tsx` | 6-digit OTP verification | ⬜ TODO |

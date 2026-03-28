@@ -26,7 +26,7 @@ interface FeedEvent {
   location_name: string | null;
   host_id: string;
   slug: string;
-  org_name?: string;
+  rsvps: { status: string }[] | null;
 }
 
 export default function HomeScreen() {
@@ -38,7 +38,7 @@ export default function HomeScreen() {
   const fetchEvents = useCallback(async () => {
     let query = supabase
       .from('events')
-      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug')
+      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status)')
       .eq('is_published', true)
       .eq('is_cancelled', false)
       .order('created_at', { ascending: false })
@@ -117,23 +117,28 @@ export default function HomeScreen() {
           <ActivityIndicator size="large" color={COLORS.gold} style={{ marginTop: 60 }} />
         )}
 
-        {!loading && events.map((event) => (
-          <EventCard
-            key={event.id}
-            id={event.id}
-            title={event.title}
-            theme_id={event.theme_id}
-            org_name="Personal Event"
-            date_label={event.date_time ? new Date(event.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Date TBD'}
-            location_name={event.location_name ?? 'Location TBD'}
-            price={event.price}
-            gender_mode={event.gender_mode as GenderMode}
-            is_halal_venue={event.is_halal_venue}
-            yes_count={0}
-            inshallah_count={0}
-            capacity={event.capacity}
-          />
-        ))}
+        {!loading && events.map((event) => {
+          const rsvps = event.rsvps ?? [];
+          const yesCount = rsvps.filter((r) => r.status === 'yes').length;
+          const inshallahCount = rsvps.filter((r) => r.status === 'inshallah').length;
+          return (
+            <EventCard
+              key={event.id}
+              id={event.id}
+              title={event.title}
+              theme_id={event.theme_id}
+              org_name="Personal Event"
+              date_label={event.date_time ? new Date(event.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Date TBD'}
+              location_name={event.location_name ?? 'Location TBD'}
+              price={event.price}
+              gender_mode={event.gender_mode as GenderMode}
+              is_halal_venue={event.is_halal_venue}
+              yes_count={yesCount}
+              inshallah_count={inshallahCount}
+              capacity={event.capacity}
+            />
+          );
+        })}
 
         {!loading && events.length === 0 && (
           <View style={styles.empty}>

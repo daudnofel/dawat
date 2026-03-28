@@ -34,7 +34,7 @@
 | 6 | `app/_layout.tsx` | Root layout — auth gate + font loading | ✅ DONE |
 | 7 | `app/(auth)/login.tsx` | Phone number entry screen | ✅ DONE |
 | 8 | `app/(auth)/otp.tsx` | 6-digit OTP verification | ✅ DONE |
-| 9 | `app/(auth)/onboarding.tsx` | Profile setup (new users only) | ⬜ TODO |
+| 9 | `app/(auth)/onboarding.tsx` | Profile setup (new users only) | ✅ DONE |
 | 10 | `app/(tabs)/_layout.tsx` | Bottom tab navigator (Home/Create/Profile) | ✅ DONE |
 | 11 | `app/(tabs)/index.tsx` | Home feed (empty state placeholder) | ✅ DONE |
 | 12 | `app/(tabs)/trending.tsx` | Trending (empty state placeholder) | ✅ DONE |

@@ -52,8 +52,8 @@ export default function OtpScreen() {
     await new Promise((resolve) => setTimeout(resolve, 500));
     setLoading(false);
 
-    // In dev mode, go straight to tabs
-    router.replace('/(tabs)');
+    // In dev mode, simulate new user → onboarding
+    router.replace('/(auth)/onboarding');
   };
 
   const handleResend = () => {

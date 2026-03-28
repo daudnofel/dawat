@@ -1,0 +1,5 @@
+- [User Profile](user_profile.md) — Building Dawat, Muslim community events platform (Partiful for Muslims)
+- [Project Overview](project_dawat.md) — Greenfield React Native + Expo + Supabase app, 8-sprint MVP plan
+- [Session Protocol](session_protocol.md) — MUST read docs/tracker.md at every session start and before every new task
+- [Testing Setup](testing_setup.md) — Expo Go QR code on Mac, test on iPhone, no deployment until ship-ready
+- [Git Workflow](git_workflow.md) — Push to github.com/daudnofel/dawat, commit per file, always pull before new work

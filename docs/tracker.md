@@ -32,7 +32,7 @@
 | 4 | `lib/supabase.ts` | Supabase client with AsyncStorage session | ✅ DONE |
 | 5 | `store/useAuthStore.ts` | Auth state (Zustand) | ✅ DONE |
 | 6 | `app/_layout.tsx` | Root layout — auth gate + font loading | ✅ DONE |
-| 7 | `app/(auth)/login.tsx` | Phone number entry screen | ⬜ TODO |
+| 7 | `app/(auth)/login.tsx` | Phone number entry screen | ✅ DONE |
 | 8 | `app/(auth)/otp.tsx` | 6-digit OTP verification | ⬜ TODO |
 | 9 | `app/(auth)/onboarding.tsx` | Profile setup (new users only) | ⬜ TODO |
 | 10 | `app/(tabs)/_layout.tsx` | Bottom tab navigator (Home/Create/Profile) | ⬜ TODO |

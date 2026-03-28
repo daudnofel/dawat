@@ -1,7 +1,10 @@
-import { View, Text, Pressable, StyleSheet, Switch, ScrollView } from 'react-native';
+import { useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Switch, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { useEventStore } from '../../store/useEventStore';
+import { supabase } from '../../lib/supabase';
+import { generateSlug } from '../../lib/slugify';
 import { GenderMode } from '../../types';
 
 const GENDER_OPTIONS = [
@@ -13,6 +16,42 @@ const GENDER_OPTIONS = [
 
 export default function Step4Settings({ onPublish }: { onPublish?: () => void }) {
   const { draft, updateDraft, prevStep } = useEventStore();
+  const [publishing, setPublishing] = useState(false);
+
+  const handlePublish = async () => {
+    setPublishing(true);
+    const slug = generateSlug(draft.title);
+
+    const { error } = await supabase.from('events').insert({
+      title: draft.title,
+      description: draft.description || null,
+      host_id: '00000000-0000-0000-0000-000000000000', // placeholder until auth works
+      theme_id: draft.theme_id,
+      gender_mode: draft.gender_mode,
+      is_id_required: draft.is_id_required,
+      date_time: draft.date_time?.toISOString() ?? null,
+      date_tbd: draft.date_tbd,
+      location_name: draft.location_name || null,
+      location_address: draft.location_address || null,
+      location_lat: draft.location_lat,
+      location_lng: draft.location_lng,
+      is_location_hidden: draft.is_location_hidden,
+      is_halal_venue: draft.is_halal_venue,
+      price: draft.price,
+      capacity: draft.capacity,
+      slug,
+      is_published: true,
+    });
+
+    setPublishing(false);
+
+    if (error) {
+      Alert.alert('Error publishing', error.message);
+      return;
+    }
+
+    onPublish?.();
+  };
 
   const needsIdNote = draft.gender_mode === GenderMode.SistersOnly || draft.gender_mode === GenderMode.BrothersOnly;
 
@@ -90,9 +129,14 @@ export default function Step4Settings({ onPublish }: { onPublish?: () => void })
             styles.publishButton,
             pressed && { transform: [{ scale: 0.97 }], opacity: 0.9 },
           ]}
-          onPress={() => onPublish?.()}
+          onPress={handlePublish}
+          disabled={publishing}
         >
-          <Text style={styles.publishText}>Publish Event</Text>
+          {publishing ? (
+            <ActivityIndicator color={COLORS.dark} />
+          ) : (
+            <Text style={styles.publishText}>Publish Event</Text>
+          )}
         </Pressable>
       </View>
     </SafeAreaView>

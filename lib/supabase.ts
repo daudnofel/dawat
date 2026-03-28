@@ -1,10 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder-anon-key';
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
-// Simple in-memory storage fallback for dev
-// Replace with AsyncStorage when Supabase is connected
+// In-memory storage for Expo Go (AsyncStorage crashes in SDK 54)
+// Replace with AsyncStorage when using custom dev build
 const memoryStorage: Record<string, string> = {};
 const storage = {
   getItem: (key: string) => Promise.resolve(memoryStorage[key] ?? null),

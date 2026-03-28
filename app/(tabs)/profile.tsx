@@ -2,19 +2,9 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
-import { useAuthStore } from '../../store/useAuthStore';
 
 export default function ProfileScreen() {
-  const { user, signOut, devBypass, setDevBypass } = useAuthStore();
   const router = useRouter();
-
-  const handleSignOut = async () => {
-    if (devBypass) {
-      setDevBypass(false);
-    } else {
-      await signOut();
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -25,12 +15,12 @@ export default function ProfileScreen() {
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>👤</Text>
         </View>
-        <Text style={styles.name}>{user?.display_name ?? 'Guest User'}</Text>
-        <Text style={styles.username}>@{user?.username ?? 'guest'}</Text>
+        <Text style={styles.name}>Guest User</Text>
+        <Text style={styles.username}>@guest</Text>
 
         <Pressable
           style={({ pressed }) => [styles.signOutButton, pressed && { opacity: 0.8 }]}
-          onPress={handleSignOut}
+          onPress={() => router.replace('/(auth)/login')}
         >
           <Text style={styles.signOutText}>Sign Out</Text>
         </Pressable>

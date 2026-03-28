@@ -1,7 +1,6 @@
 import { Tabs, useRouter } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { COLORS, FONTS } from '../../lib/theme';
-import { useEventStore } from '../../store/useEventStore';
 
 function TabIcon({ icon, iconFilled, label, focused }: { icon: string; iconFilled: string; label: string; focused: boolean }) {
   return (
@@ -28,7 +27,6 @@ function CreateIcon() {
 
 export default function TabLayout() {
   const router = useRouter();
-  const resetDraft = useEventStore((s) => s.reset);
 
   return (
     <Tabs
@@ -63,10 +61,7 @@ export default function TabLayout() {
         }}
         listeners={{
           tabPress: (e) => {
-            // Prevent navigating to the create tab screen
             e.preventDefault();
-            // Reset draft and open the creation flow
-            resetDraft();
             router.push('/create/step1-theme');
           },
         }}

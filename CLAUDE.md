@@ -238,6 +238,46 @@ Read `docs/Dawat_PRD_v3.md` for full specs. Sprints in order:
 
 ---
 
+## Design Ethos — The Partiful Standard
+
+Every component must feel custom-built, not like a default React Native element.
+
+**Tab Bar:**
+- No emoji icons — use custom minimal line icons (SF Symbols style)
+- No text labels — icons only, clean and minimal
+- Active state: filled icon + gold accent dot below
+- Create button: larger, centred, elevated with gold accent
+- Tab bar background: solid dark with subtle top border, no blur
+
+**Buttons:**
+- Scale 0.97 on press (Pressable style prop)
+- Never use default OS button styles
+- Primary: gold bg, dark text, rounded corners (RADIUS.md)
+- Secondary: transparent with border
+
+**Cards:**
+- Always have subtle border (COLORS.border)
+- Rounded corners (RADIUS.lg)
+- Never flat — use card/card2 surface colours for depth
+
+**Inputs:**
+- Dark input background (COLORS.input)
+- Subtle border, rounded
+- Never use default white inputs
+
+**Lists:**
+- Always FlashList
+- Pull to refresh
+- Skeleton loading, never spinners on dark backgrounds
+
+**General:**
+- No default OS styling should be visible anywhere
+- Every interactive element needs a press state
+- Spacing should feel generous, not cramped
+- Icons should be thin/line style, not filled/chunky emoji
+
+---
+
 ## The Feeling We Are Building Towards
 
 Every interaction in Dawat should feel like a premium iPhone app.

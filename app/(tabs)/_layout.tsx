@@ -1,12 +1,23 @@
 import { Tabs } from 'expo-router';
-import { Text, StyleSheet } from 'react-native';
-import { COLORS, FONTS } from '../../lib/theme';
+import { View, Text, StyleSheet } from 'react-native';
+import { COLORS, FONTS, SPACING } from '../../lib/theme';
 
-function TabIcon({ label, focused }: { label: string; focused: boolean }) {
+function TabIcon({ icon, iconFilled, focused }: { icon: string; iconFilled: string; focused: boolean }) {
   return (
-    <Text style={[styles.icon, focused && styles.iconActive]}>
-      {label}
-    </Text>
+    <View style={styles.iconWrap}>
+      <Text style={[styles.icon, focused && styles.iconActive]}>
+        {focused ? iconFilled : icon}
+      </Text>
+      {focused && <View style={styles.activeDot} />}
+    </View>
+  );
+}
+
+function CreateIcon({ focused }: { focused: boolean }) {
+  return (
+    <View style={[styles.createWrap, focused && styles.createWrapActive]}>
+      <Text style={[styles.createPlus, focused && styles.createPlusActive]}>+</Text>
+    </View>
   );
 }
 
@@ -15,45 +26,48 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarShowLabel: false,
         tabBarStyle: styles.tabBar,
         tabBarActiveTintColor: COLORS.gold,
         tabBarInactiveTintColor: COLORS.hint,
-        tabBarLabelStyle: styles.tabLabel,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ focused }) => <TabIcon label="🏠" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="⌂" iconFilled="⌂" focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="trending"
         options={{
-          title: 'Trending',
-          tabBarIcon: ({ focused }) => <TabIcon label="🔥" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="◇" iconFilled="◆" focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="create"
         options={{
-          title: 'Create',
-          tabBarIcon: ({ focused }) => <TabIcon label="➕" focused={focused} />,
+          tabBarIcon: ({ focused }) => <CreateIcon focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="events"
         options={{
-          title: 'Events',
-          tabBarIcon: ({ focused }) => <TabIcon label="📅" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="▫" iconFilled="▪" focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ focused }) => <TabIcon label="👤" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="○" iconFilled="●" focused={focused} />
+          ),
         }}
       />
     </Tabs>
@@ -62,21 +76,57 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: COLORS.card,
+    backgroundColor: COLORS.dark,
     borderTopColor: COLORS.border,
-    borderTopWidth: 1,
-    height: 88,
-    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    height: 85,
+    paddingTop: 12,
+    paddingBottom: 20,
+    elevation: 0,
+    shadowOpacity: 0,
   },
-  tabLabel: {
-    fontSize: 11,
-    ...FONTS.medium,
+  iconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 36,
   },
   icon: {
-    fontSize: 22,
-    opacity: 0.5,
+    fontSize: 24,
+    color: COLORS.hint,
+    lineHeight: 28,
   },
   iconActive: {
-    opacity: 1,
+    color: COLORS.white,
+  },
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.gold,
+    marginTop: 4,
+  },
+  createWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: COLORS.card2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -8,
+  },
+  createWrapActive: {
+    backgroundColor: COLORS.gold,
+    borderColor: COLORS.gold,
+  },
+  createPlus: {
+    fontSize: 26,
+    color: COLORS.muted,
+    lineHeight: 30,
+    ...FONTS.regular,
+  },
+  createPlusActive: {
+    color: COLORS.dark,
   },
 });

@@ -9,8 +9,8 @@
 
 | Sprint | Focus | Status | Notes |
 |--------|-------|--------|-------|
-| 1 | Foundation: project setup, Supabase, auth, nav shell | 🟡 IN PROGRESS | Starting now |
-| 2 | Event creation: 4-step flow + 20 Islamic themes | ⬜ NOT STARTED | |
+| 1 | Foundation: project setup, Supabase, auth, nav shell | ✅ DONE | Supabase tables deferred |
+| 2 | Event creation: 4-step flow + 20 Islamic themes | 🟡 IN PROGRESS | Starting now |
 | 3 | RSVP system: Yes/Inshallah/No + shareable web page | ⬜ NOT STARTED | |
 | 4 | Home feed: EventCard, gender filter tabs, halal spots | ⬜ NOT STARTED | |
 | 5 | Trending + discovery: RSVP velocity sort, ethnic filters | ⬜ NOT STARTED | |
@@ -50,7 +50,7 @@
 
 | # | File | Purpose | Status |
 |---|------|---------|--------|
-| 1 | `lib/themes.ts` | All 20 Islamic themes with CSS gradients | ⬜ TODO |
+| 1 | `lib/themes.ts` | All 20 Islamic themes with CSS gradients | ✅ DONE |
 | 2 | `store/useEventStore.ts` | Event creation state (Zustand) | ⬜ TODO |
 | 3 | `components/ThemePicker.tsx` | Theme selection grid | ⬜ TODO |
 | 4 | `app/create/step1-theme.tsx` | Step 1: Choose theme | ⬜ TODO |

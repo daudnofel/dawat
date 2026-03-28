@@ -26,7 +26,7 @@ interface FeedEvent {
   location_name: string | null;
   host_id: string;
   slug: string;
-  organisations: { name: string }[] | { name: string } | null;
+  org_name?: string;
 }
 
 export default function HomeScreen() {
@@ -38,7 +38,7 @@ export default function HomeScreen() {
   const fetchEvents = useCallback(async () => {
     let query = supabase
       .from('events')
-      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, organisations(name)')
+      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug')
       .eq('is_published', true)
       .eq('is_cancelled', false)
       .order('created_at', { ascending: false })
@@ -50,7 +50,10 @@ export default function HomeScreen() {
 
     const { data, error } = await query;
 
-    if (!error && data) {
+    if (error) {
+      console.log('Feed error:', error.message);
+    }
+    if (data) {
       setEvents(data as FeedEvent[]);
     }
     setLoading(false);
@@ -120,7 +123,7 @@ export default function HomeScreen() {
             id={event.id}
             title={event.title}
             theme_id={event.theme_id}
-            org_name={Array.isArray(event.organisations) ? event.organisations[0]?.name ?? 'Personal Event' : event.organisations?.name ?? 'Personal Event'}
+            org_name="Personal Event"
             date_label={event.date_time ? new Date(event.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Date TBD'}
             location_name={event.location_name ?? 'Location TBD'}
             price={event.price}

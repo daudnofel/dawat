@@ -1,6 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -10,7 +9,6 @@ export default function ProfileScreen() {
   const router = useRouter();
 
   const handleSignOut = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (devBypass) {
       setDevBypass(false);
     } else {

@@ -35,24 +35,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initialize: async () => {
     set({ loading: true });
 
-    const { data: { session } } = await supabase.auth.getSession();
-    set({ session });
-
-    if (session?.user?.id) {
-      await get().fetchUser(session.user.id);
-    }
-
-    set({ loading: false });
-
-    supabase.auth.onAuthStateChange(async (_event, session) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
       set({ session });
 
       if (session?.user?.id) {
         await get().fetchUser(session.user.id);
-      } else {
-        set({ user: null });
       }
-    });
+    } catch {
+      // Supabase unreachable (placeholder keys or no network)
+      set({ session: null, user: null });
+    }
+
+    set({ loading: false });
+
+    try {
+      supabase.auth.onAuthStateChange(async (_event, session) => {
+        set({ session });
+
+        if (session?.user?.id) {
+          await get().fetchUser(session.user.id);
+        } else {
+          set({ user: null });
+        }
+      });
+    } catch {
+      // Ignore listener setup failure
+    }
   },
 
   fetchUser: async (userId: string) => {

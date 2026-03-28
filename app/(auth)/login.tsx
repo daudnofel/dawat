@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -7,43 +7,16 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
-  ActivityIndicator,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
-import { supabase } from '../../lib/supabase';
-import { useAuthStore } from '../../store/useAuthStore';
 
 export default function LoginScreen() {
   const [countryCode, setCountryCode] = useState('+44');
   const [phone, setPhone] = useState('');
-  const [loading, setLoading] = useState(false);
-  const phoneInputRef = useRef<TextInput>(null);
   const router = useRouter();
 
   const isValid = phone.replace(/\D/g, '').length >= 7;
-
-  const handleContinue = async () => {
-    if (!isValid || loading) return;
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setLoading(true);
-
-    const fullPhone = `${countryCode}${phone.replace(/\D/g, '')}`;
-
-    const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
-
-    setLoading(false);
-
-    if (error) {
-      Alert.alert('Error', error.message);
-      return;
-    }
-
-    router.push({ pathname: '/(auth)/otp', params: { phone: fullPhone } });
-  };
 
   return (
     <KeyboardAvoidingView
@@ -51,14 +24,12 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        {/* Branding */}
         <View style={styles.brandingBlock}>
           <Text style={styles.arabicTitle}>دعوت</Text>
           <Text style={styles.englishTitle}>DAWAT</Text>
           <Text style={styles.subtitle}>The Muslim Events Platform</Text>
         </View>
 
-        {/* Phone Input */}
         <View style={styles.inputBlock}>
           <Text style={styles.label}>Enter your phone number</Text>
           <View style={styles.phoneRow}>
@@ -71,7 +42,6 @@ export default function LoginScreen() {
               placeholderTextColor={COLORS.hint}
             />
             <TextInput
-              ref={phoneInputRef}
               style={styles.phoneInput}
               value={phone}
               onChangeText={setPhone}
@@ -83,36 +53,26 @@ export default function LoginScreen() {
           </View>
         </View>
 
-        {/* Continue Button */}
         <Pressable
           style={({ pressed }) => [
             styles.button,
             !isValid && styles.buttonDisabled,
             pressed && { transform: [{ scale: 0.97 }], opacity: 0.9 },
           ]}
-          onPress={handleContinue}
-          disabled={!isValid || loading}
+          onPress={() => router.replace('/(tabs)')}
+          disabled={!isValid}
         >
-          {loading ? (
-            <ActivityIndicator color={COLORS.dark} />
-          ) : (
-            <Text style={styles.buttonText}>Continue</Text>
-          )}
+          <Text style={styles.buttonText}>Continue</Text>
         </Pressable>
 
-        {/* Legal */}
         <Text style={styles.legal}>
           By continuing, you agree to our Terms of Service & Privacy Policy
         </Text>
 
-        {/* DEV ONLY — remove when Supabase is connected */}
         {__DEV__ && (
           <Pressable
             style={styles.devSkip}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              useAuthStore.getState().setDevBypass(true);
-            }}
+            onPress={() => router.replace('/(tabs)')}
           >
             <Text style={styles.devSkipText}>Skip login (dev mode)</Text>
           </Pressable>

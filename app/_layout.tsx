@@ -1,56 +1,104 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { View, ActivityIndicator, StatusBar } from 'react-native';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/components/useColorScheme';
+import { COLORS } from '../lib/theme';
+import { useAuthStore } from '../store/useAuthStore';
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
+export { ErrorBoundary } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
   initialRouteName: '(tabs)',
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
+// Force dark theme with Dawat colours
+const DawatDarkTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: COLORS.gold,
+    background: COLORS.dark,
+    card: COLORS.card,
+    text: COLORS.white,
+    border: COLORS.border,
+    notification: COLORS.gold,
+  },
+};
+
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
+  const { loading, initialize } = useAuthStore();
 
   useEffect(() => {
-    if (loaded) {
+    initialize();
+  }, []);
+
+  useEffect(() => {
+    if (fontError) throw fontError;
+  }, [fontError]);
+
+  useEffect(() => {
+    if (fontsLoaded && !loading) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [fontsLoaded, loading]);
 
-  if (!loaded) {
-    return null;
+  if (!fontsLoaded || loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: COLORS.dark, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={COLORS.gold} />
+      </View>
+    );
   }
 
   return <RootLayoutNav />;
 }
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+  const { session, user, isNewUser } = useAuthStore();
+  const segments = useSegments() as string[];
+  const router = useRouter();
+
+  useEffect(() => {
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (!session) {
+      // Not logged in — send to login
+      if (!inAuthGroup) {
+        router.replace('/(auth)/login');
+      }
+    } else if (isNewUser || !user) {
+      // Logged in but no profile — send to onboarding
+      const secondSegment = segments.length > 1 ? segments[1] : undefined;
+      if (secondSegment !== 'onboarding') {
+        router.replace('/(auth)/onboarding');
+      }
+    } else {
+      // Logged in with profile — send to main app
+      if (inAuthGroup) {
+        router.replace('/(tabs)');
+      }
+    }
+  }, [session, user, isNewUser, segments]);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+    <ThemeProvider value={DawatDarkTheme}>
+      <StatusBar barStyle="light-content" />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.dark } }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="event/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="org/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="create" options={{ headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );

@@ -7,10 +7,10 @@ import EventCard from '../../components/EventCard';
 import { GenderMode } from '../../types';
 
 const MOCK_ORG = {
-  name: 'Islamic Center of London',
-  handle: 'icl_london',
+  name: 'Islamic Center of Dallas',
+  handle: 'icd_dallas',
   is_verified: true,
-  description: 'Serving the Muslim community of London since 1977. Weekly halaqas, Jummah prayers, and community events.',
+  description: 'Serving the Muslim community of Dallas since 1977. Weekly halaqas, Jummah prayers, and community events.',
   follower_count: 2340,
   event_count: 47,
 };
@@ -18,7 +18,7 @@ const MOCK_ORG = {
 const MOCK_ORG_EVENTS = [
   {
     id: '1', title: 'Eid Gala 2026', theme_id: 'eid_gala',
-    org_name: 'Islamic Center of London', date_label: 'Apr 15 · 7:00 PM',
+    org_name: 'Islamic Center of Dallas', date_label: 'Apr 15 · 7:00 PM',
     location_name: 'Grand Hall', price: 0, gender_mode: GenderMode.Mixed,
     is_halal_venue: true, yes_count: 87, inshallah_count: 34, capacity: 200,
   },

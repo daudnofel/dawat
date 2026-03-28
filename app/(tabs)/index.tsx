@@ -16,7 +16,7 @@ const FILTER_TABS = [
 const MOCK_EVENTS = [
   {
     id: '1', title: 'Eid Gala 2026', theme_id: 'eid_gala',
-    org_name: 'Islamic Center of London', date_label: 'Apr 15 · 7:00 PM',
+    org_name: 'Islamic Center of Dallas', date_label: 'Apr 15 · 7:00 PM',
     location_name: 'Grand Hall', price: 0, gender_mode: GenderMode.Mixed,
     is_halal_venue: true, yes_count: 87, inshallah_count: 34, capacity: 200,
   },
@@ -29,19 +29,19 @@ const MOCK_EVENTS = [
   {
     id: '3', title: 'Brothers Night Out', theme_id: 'brothers_night',
     org_name: 'Youth Circle', date_label: 'Apr 12 · 8:00 PM',
-    location_name: 'The Halal Kitchen', price: 2500, gender_mode: GenderMode.BrothersOnly,
+    location_name: 'The Halal Guys — Houston', price: 2500, gender_mode: GenderMode.BrothersOnly,
     is_halal_venue: true, yes_count: 18, inshallah_count: 7, capacity: null,
   },
   {
     id: '4', title: 'Family Iftar & Games', theme_id: 'family_picnic',
     org_name: 'Crescent Community', date_label: 'Apr 8 · 5:30 PM',
-    location_name: 'Regent Park', price: 0, gender_mode: GenderMode.Family,
+    location_name: 'Central Park, NYC', price: 0, gender_mode: GenderMode.Family,
     is_halal_venue: false, yes_count: 52, inshallah_count: 19, capacity: 100,
   },
   {
     id: '5', title: 'Ramadan Fundraiser Dinner', theme_id: 'ramadan_kareem',
-    org_name: 'Islamic Relief UK', date_label: 'Apr 5 · 7:30 PM',
-    location_name: 'Hilton Metropole', price: 4500, gender_mode: GenderMode.Mixed,
+    org_name: 'Islamic Relief USA', date_label: 'Apr 5 · 7:30 PM',
+    location_name: 'Hilton Anatole, Dallas', price: 4500, gender_mode: GenderMode.Mixed,
     is_halal_venue: true, yes_count: 145, inshallah_count: 63, capacity: 300,
   },
 ];

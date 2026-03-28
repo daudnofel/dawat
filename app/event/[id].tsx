@@ -16,12 +16,12 @@ const MOCK_EVENT = {
   gender_mode: GenderMode.Mixed,
   date_time: '2026-04-15T19:00:00Z',
   location_name: 'Grand Hall, Islamic Center',
-  location_address: '123 Main Street, London',
+  location_address: '5515 W Lovers Ln, Dallas, TX',
   is_location_hidden: false,
   is_halal_venue: true,
   price: 0,
   capacity: 200,
-  host_name: 'Islamic Center of London',
+  host_name: 'Islamic Center of Dallas',
   yes_count: 87,
   inshallah_count: 34,
   slug: 'eid-gala-2026-k3x9p',
@@ -102,7 +102,7 @@ export default function EventDetailScreen() {
             <InfoRow icon="📅" text="Wednesday, 15 April 2026" />
             <InfoRow icon="⏰" text="7:00 PM" />
             <InfoRow icon="📍" text={event.is_location_hidden ? 'Address revealed on RSVP' : `${event.location_name} — ${event.location_address}`} />
-            <InfoRow icon="💷" text={event.price === 0 ? 'Free' : `£${(event.price / 100).toFixed(2)}`} />
+            <InfoRow icon="💷" text={event.price === 0 ? 'Free' : `$${(event.price / 100).toFixed(2)}`} />
             {event.is_halal_venue && <InfoRow icon="✅" text="Halal venue" />}
           </View>
 

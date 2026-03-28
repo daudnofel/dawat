@@ -6,10 +6,10 @@ import { useEventStore } from '../../store/useEventStore';
 
 const PRICE_OPTIONS = [
   { label: 'Free', value: 0 },
-  { label: '£10', value: 1000 },
-  { label: '£25', value: 2500 },
-  { label: '£45', value: 4500 },
-  { label: '£100', value: 10000 },
+  { label: '$10', value: 1000 },
+  { label: '$25', value: 2500 },
+  { label: '$45', value: 4500 },
+  { label: '$100', value: 10000 },
 ];
 
 export default function Step3Details() {

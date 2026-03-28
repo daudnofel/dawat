@@ -8,8 +8,8 @@ import { getThemeById } from '../../lib/themes';
 const ETHNIC_FILTERS = ['All', 'South Asian', 'Arab', 'Somali', 'West African', 'Turkish', 'Other'];
 
 const TRENDING_EVENTS = [
-  { id: '5', rank: 1, title: 'Ramadan Fundraiser Dinner', theme_id: 'ramadan_kareem', org: 'Islamic Relief UK', date: 'Apr 5', going: 145, hot: true },
-  { id: '1', rank: 2, title: 'Eid Gala 2026', theme_id: 'eid_gala', org: 'Islamic Center of London', date: 'Apr 15', going: 87, hot: true },
+  { id: '5', rank: 1, title: 'Ramadan Fundraiser Dinner', theme_id: 'ramadan_kareem', org: 'Islamic Relief USA', date: 'Apr 5', going: 145, hot: true },
+  { id: '1', rank: 2, title: 'Eid Gala 2026', theme_id: 'eid_gala', org: 'Islamic Center of Dallas', date: 'Apr 15', going: 87, hot: true },
   { id: '4', rank: 3, title: 'Family Iftar & Games', theme_id: 'family_picnic', org: 'Crescent Community', date: 'Apr 8', going: 52, hot: false },
   { id: '2', rank: 4, title: 'Sisters Halaqa — Tafsir Night', theme_id: 'sisters_halaqa', org: 'Al-Noor Academy', date: 'Apr 10', going: 24, hot: false },
   { id: '3', rank: 5, title: 'Brothers Night Out', theme_id: 'brothers_night', org: 'Youth Circle', date: 'Apr 12', going: 18, hot: false },
@@ -22,7 +22,7 @@ export default function TrendingScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Trending in London</Text>
+        <Text style={styles.title}>Trending in Dallas</Text>
       </View>
 
       <View style={styles.filterWrapper}>

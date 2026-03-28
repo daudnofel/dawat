@@ -55,7 +55,7 @@ export default function EventCard(props: EventCardProps) {
           {props.price > 0 && (
             <>
               <Text style={styles.metaDot}>·</Text>
-              <Text style={styles.meta}>£{(props.price / 100).toFixed(0)}</Text>
+              <Text style={styles.meta}>${(props.price / 100).toFixed(0)}</Text>
             </>
           )}
         </View>

@@ -5,3 +5,4 @@
 - [Git Workflow](git_workflow.md) — Push to github.com/daudnofel/dawat, commit per file, always pull before new work
 - [SDK Compat](sdk_compat.md) — Expo Go SDK 54: no haptics, no Reanimated, no AsyncStorage imports
 - [Liquid Glass](liquid_glass.md) — Add iOS 26 Liquid Glass tab bar when switching to custom dev build
+- [Target Market](target_market.md) — US is primary market, not UK. Use +1, USD, American cities

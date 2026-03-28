@@ -12,7 +12,7 @@ import { useRouter } from 'expo-router';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
 
 export default function LoginScreen() {
-  const [countryCode, setCountryCode] = useState('+44');
+  const [countryCode, setCountryCode] = useState('+1');
   const [phone, setPhone] = useState('');
   const router = useRouter();
 

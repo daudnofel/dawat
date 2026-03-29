@@ -7,6 +7,7 @@ import { GenderMode } from '../../types';
 import { useFeedStore } from '../../store/useFeedStore';
 import { supabase } from '../../lib/supabase';
 import EventCard from '../../components/EventCard';
+import SkeletonCard from '../../components/SkeletonCard';
 
 const FILTER_TABS = [
   { label: 'All Events', value: 'all' as const },
@@ -115,7 +116,11 @@ export default function HomeScreen() {
         }
       >
         {loading && (
-          <ActivityIndicator size="large" color={COLORS.gold} style={{ marginTop: 60 }} />
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
         )}
 
         {!loading && events.map((event) => {

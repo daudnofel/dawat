@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Share, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { RsvpStatus, GenderMode } from '../../types';
 import { supabase } from '../../lib/supabase';
@@ -85,6 +87,11 @@ export default function EventDetailScreen() {
   };
 
   const handleRsvp = async (status: RsvpStatus) => {
+    Haptics.notificationAsync(
+      status === RsvpStatus.Yes ? Haptics.NotificationFeedbackType.Success :
+      status === RsvpStatus.No ? Haptics.NotificationFeedbackType.Warning :
+      Haptics.NotificationFeedbackType.Success
+    );
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       Alert.alert('Sign in required', 'Please sign in to RSVP.');
@@ -107,6 +114,7 @@ export default function EventDetailScreen() {
   };
 
   const handleShare = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (event) {
       Share.share({ message: `Check out ${event.title} on Dawat: dawatapp.com/e/${event.slug}` });
     }

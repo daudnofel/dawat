@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { RsvpStatus, GenderMode } from '../../types';
 import { supabase } from '../../lib/supabase';
@@ -148,7 +149,16 @@ export default function EventDetailScreen() {
           </Pressable>
         </View>
 
-        <View style={[styles.banner, { backgroundColor: theme?.bannerBg ?? COLORS.card }]}>
+        <View style={styles.banner}>
+          <Svg style={StyleSheet.absoluteFill} preserveAspectRatio="none">
+            <Defs>
+              <LinearGradient id="detailGrad" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0" stopColor={theme?.bannerBg ?? COLORS.card2} />
+                <Stop offset="1" stopColor={COLORS.card} />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="100%" height="100%" fill="url(#detailGrad)" />
+          </Svg>
           <Text style={styles.bannerEmoji}>{theme?.defaultEmoji ?? '🌙'}</Text>
           <View style={styles.badgeRow}>
             <View style={styles.genderBadge}>

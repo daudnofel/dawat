@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import AnimatedPress from './AnimatedPress';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
 import { GenderMode } from '../types';
@@ -22,26 +23,54 @@ interface EventCardProps {
   capacity: number | null;
 }
 
+// Parse the theme's bannerBgImage gradient into color stops
+function getGradientColors(theme: any): [string, string, string] {
+  if (!theme?.bannerBgImage) return [theme?.bannerBg ?? COLORS.card2, COLORS.card2, COLORS.card];
+  // Extract colors from "linear-gradient(135deg, #0A1628 0%, #1A2744 50%, #0D1B33 100%)"
+  const matches = theme.bannerBgImage.match(/#[0-9A-Fa-f]{6}/g);
+  if (matches && matches.length >= 2) {
+    return [matches[0], matches[1], matches[matches.length - 1]];
+  }
+  return [theme.bannerBg, theme.bannerBg, COLORS.card];
+}
+
 export default function EventCard(props: EventCardProps) {
   const router = useRouter();
   const theme = getThemeById(props.theme_id);
+  const [gradStart, gradMid, gradEnd] = getGradientColors(theme);
 
   const spotsLeft = props.capacity ? props.capacity - props.yes_count : null;
   const showUrgency = spotsLeft !== null && spotsLeft < 20 && spotsLeft > 0;
+  const totalGoing = props.yes_count + props.inshallah_count;
 
   return (
     <AnimatedPress
       style={styles.card}
       onPress={() => router.push(`/event/${props.id}`)}
     >
-      {/* Banner */}
-      <View style={[styles.banner, { backgroundColor: theme?.bannerBg ?? COLORS.card2 }]}>
+      {/* Gradient Banner */}
+      <View style={styles.banner}>
+        <Svg style={StyleSheet.absoluteFill} preserveAspectRatio="none">
+          <Defs>
+            <LinearGradient id={`grad-${props.id}`} x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor={gradStart} />
+              <Stop offset="0.5" stopColor={gradMid} />
+              <Stop offset="1" stopColor={gradEnd} />
+            </LinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width="100%" height="100%" fill={`url(#grad-${props.id})`} />
+        </Svg>
+
         <Text style={styles.bannerEmoji}>{theme?.defaultEmoji ?? '🌙'}</Text>
+
         {showUrgency && (
           <View style={styles.urgencyBadge}>
             <Text style={styles.urgencyText}>Only {spotsLeft} spots left!</Text>
           </View>
         )}
+
+        {/* Bottom fade into card body */}
+        <View style={styles.bannerFade} />
       </View>
 
       {/* Body */}
@@ -56,7 +85,7 @@ export default function EventCard(props: EventCardProps) {
           {props.price > 0 && (
             <>
               <Text style={styles.metaDot}>·</Text>
-              <Text style={styles.meta}>${(props.price / 100).toFixed(0)}</Text>
+              <Text style={styles.metaPrice}>${(props.price / 100).toFixed(0)}</Text>
             </>
           )}
         </View>
@@ -64,10 +93,22 @@ export default function EventCard(props: EventCardProps) {
         <View style={styles.tagRow}>
           <GenderBadge mode={props.gender_mode} />
           {props.is_halal_venue && <HalalBadge />}
+          {props.price === 0 && (
+            <View style={styles.freeBadge}>
+              <Text style={styles.freeBadgeText}>Free</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.bottomRow}>
-          <Text style={styles.goingText}>{props.yes_count} going</Text>
+          <View style={styles.goingDots}>
+            {[...Array(Math.min(totalGoing, 3))].map((_, i) => (
+              <View key={i} style={[styles.avatarDot, { left: i * 14, backgroundColor: i === 0 ? COLORS.gold : i === 1 ? COLORS.blue : COLORS.purple }]} />
+            ))}
+          </View>
+          <Text style={[styles.goingText, totalGoing > 0 && { marginLeft: Math.min(totalGoing, 3) * 14 + 8 }]}>
+            {totalGoing > 0 ? `${totalGoing} going` : 'Be the first to RSVP'}
+          </Text>
         </View>
       </View>
     </AnimatedPress>
@@ -76,26 +117,41 @@ export default function EventCard(props: EventCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1,
-    borderColor: COLORS.border, marginBottom: SPACING.md, overflow: 'hidden',
+    backgroundColor: COLORS.card, borderRadius: RADIUS.xl, borderWidth: 1,
+    borderColor: COLORS.border, marginBottom: SPACING.lg, overflow: 'hidden',
   },
   banner: {
-    height: 90, alignItems: 'center', justifyContent: 'center', position: 'relative',
+    height: 110, alignItems: 'center', justifyContent: 'center', position: 'relative',
   },
-  bannerEmoji: { fontSize: 40 },
+  bannerEmoji: { fontSize: 44, zIndex: 1 },
+  bannerFade: {
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: 30,
+    backgroundColor: COLORS.card, opacity: 0.6,
+  },
   urgencyBadge: {
-    position: 'absolute', top: SPACING.sm, right: SPACING.sm,
-    backgroundColor: COLORS.red, paddingHorizontal: SPACING.sm, paddingVertical: 2,
+    position: 'absolute', top: SPACING.sm, right: SPACING.sm, zIndex: 2,
+    backgroundColor: COLORS.red, paddingHorizontal: SPACING.sm + 2, paddingVertical: 3,
     borderRadius: RADIUS.full,
   },
   urgencyText: { color: COLORS.white, fontSize: 10, ...FONTS.bold },
-  body: { padding: SPACING.md },
-  title: { fontSize: 15, color: COLORS.white, ...FONTS.bold, marginBottom: 2 },
-  orgName: { fontSize: 12, color: COLORS.gold, ...FONTS.medium, marginBottom: SPACING.sm },
-  metaRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm, flexWrap: 'wrap' },
-  meta: { fontSize: 11, color: COLORS.muted, ...FONTS.regular },
-  metaDot: { fontSize: 11, color: COLORS.hint, marginHorizontal: 4 },
-  tagRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.sm },
-  bottomRow: { flexDirection: 'row', alignItems: 'center' },
+  body: { padding: SPACING.lg, paddingTop: SPACING.sm },
+  title: { fontSize: 17, color: COLORS.white, ...FONTS.bold, marginBottom: 3 },
+  orgName: { fontSize: 13, color: COLORS.gold, ...FONTS.medium, marginBottom: SPACING.sm },
+  metaRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.md, flexWrap: 'wrap' },
+  meta: { fontSize: 12, color: COLORS.muted, ...FONTS.regular },
+  metaDot: { fontSize: 12, color: COLORS.hint, marginHorizontal: 5 },
+  metaPrice: { fontSize: 12, color: COLORS.gold, ...FONTS.semibold },
+  tagRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md },
+  freeBadge: {
+    backgroundColor: `${COLORS.teal}20`, paddingHorizontal: SPACING.sm + 2, paddingVertical: 3,
+    borderRadius: RADIUS.full, borderWidth: 1, borderColor: `${COLORS.teal}40`,
+  },
+  freeBadgeText: { fontSize: 11, color: COLORS.teal, ...FONTS.semibold },
+  bottomRow: { flexDirection: 'row', alignItems: 'center', position: 'relative', minHeight: 20 },
+  goingDots: { flexDirection: 'row', position: 'absolute', left: 0, top: 0 },
+  avatarDot: {
+    width: 20, height: 20, borderRadius: 10, position: 'absolute',
+    borderWidth: 2, borderColor: COLORS.card,
+  },
   goingText: { fontSize: 12, color: COLORS.muted, ...FONTS.medium },
 });

@@ -2,6 +2,11 @@ import { Tabs } from 'expo-router';
 import { COLORS } from '../../lib/theme';
 import GlassTabBar from '../../components/GlassTabBar';
 
+// Fade animation for tab transitions
+const fadeTransition = {
+  animation: 'fade' as const,
+};
+
 export default function TabLayout() {
   return (
     <Tabs
@@ -9,6 +14,7 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: COLORS.dark },
+        ...fadeTransition,
       }}
       sceneContainerStyle={{ backgroundColor: COLORS.dark }}
     >

@@ -4,28 +4,34 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { COLORS, FONTS, SPACING } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
-import { getCurrentUserId } from '../../lib/auth-cache';
 import { GenderMode } from '../../types';
+import { getCurrentUserId } from '../../lib/auth-cache';
 import EventCard from '../../components/EventCard';
 import SkeletonCard from '../../components/SkeletonCard';
+import EmptyState from '../../components/EmptyState';
 
 export default function EventsScreen() {
   const [hosting, setHosting] = useState<any[]>([]);
   const [attending, setAttending] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [noAuth, setNoAuth] = useState(false);
 
   const fetchMyEvents = useCallback(async () => {
     try {
+      // Try cache first, then Supabase auth
       let userId = await getCurrentUserId();
-
-      // Fallback: try getUser if cache is empty
       if (!userId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        userId = user?.id ?? null;
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          userId = user?.id ?? null;
+        } catch {
+          userId = null;
+        }
       }
 
       if (!userId) {
+        setNoAuth(true);
         setHosting([]);
         setAttending([]);
         setLoading(false);
@@ -33,33 +39,20 @@ export default function EventsScreen() {
         return;
       }
 
-      // Events I'm hosting — simple query, no joins
-      const { data: hosted, error: hostErr } = await supabase
-        .from('events')
-        .select('*')
-        .eq('host_id', userId)
-        .order('created_at', { ascending: false });
+      setNoAuth(false);
 
-      if (hostErr) console.log('Host query error:', hostErr.message);
-      if (hosted) setHosting(hosted);
+      // Simple parallel queries — no joins
+      const [hostedResult, rsvpResult] = await Promise.all([
+        supabase.from('events').select('*').eq('host_id', userId).order('created_at', { ascending: false }),
+        supabase.from('rsvps').select('event_id').eq('user_id', userId).in('status', ['yes', 'inshallah']),
+      ]);
 
-      // Events I've RSVP'd to — get event IDs first, then fetch events
-      const { data: rsvpData, error: rsvpErr } = await supabase
-        .from('rsvps')
-        .select('event_id, status')
-        .eq('user_id', userId)
-        .in('status', ['yes', 'inshallah']);
+      setHosting(hostedResult.data ?? []);
 
-      if (rsvpErr) console.log('RSVP query error:', rsvpErr.message);
-
-      if (rsvpData && rsvpData.length > 0) {
-        const eventIds = rsvpData.map((r: any) => r.event_id);
-        const { data: events } = await supabase
-          .from('events')
-          .select('*')
-          .in('id', eventIds);
-
-        if (events) setAttending(events);
+      if (rsvpResult.data && rsvpResult.data.length > 0) {
+        const ids = rsvpResult.data.map((r: any) => r.event_id);
+        const { data: events } = await supabase.from('events').select('*').in('id', ids);
+        setAttending(events ?? []);
       } else {
         setAttending([]);
       }
@@ -72,6 +65,7 @@ export default function EventsScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => {
+    setLoading(true);
     fetchMyEvents();
   }, [fetchMyEvents]));
 
@@ -106,6 +100,8 @@ export default function EventsScreen() {
             <Text style={styles.sectionTitle}>Attending</Text>
             <SkeletonCard />
           </>
+        ) : noAuth ? (
+          <EmptyState emoji="🔐" title="Sign in to see your events" subtitle="Your hosted and attending events will appear here" />
         ) : (
           <>
             <Text style={styles.sectionTitle}>Hosting</Text>

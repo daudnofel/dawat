@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { GlassView } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { getThemeById } from '../../lib/themes';
 import EmptyState from '../../components/EmptyState';
+import SkeletonCard from '../../components/SkeletonCard';
 
 const ETHNIC_FILTERS = ['All', 'South Asian', 'Arab', 'Somali', 'West African', 'Turkish', 'Other'];
 
@@ -18,33 +19,38 @@ export default function TrendingScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  useEffect(() => { fetchTrending(); }, []);
+
   const fetchTrending = async () => {
-    // Fetch events with RSVP counts, ordered by total RSVPs (trending proxy)
-    const { data, error } = await supabase
-      .from('events')
-      .select('id, title, theme_id, date_time, host_id, slug, rsvps(status)')
-      .eq('is_published', true)
-      .eq('is_cancelled', false)
-      .order('created_at', { ascending: false })
-      .limit(20);
+    try {
+      // No auth needed — public events query
+      const { data, error } = await supabase
+        .from('events')
+        .select('id, title, theme_id, date_time, slug, rsvps(status)')
+        .eq('is_published', true)
+        .eq('is_cancelled', false)
+        .order('created_at', { ascending: false })
+        .limit(20);
 
-    if (!error && data) {
-      // Sort by RSVP count (descending) as trending proxy
-      const sorted = data
-        .map((e: any) => ({
-          ...e,
-          going: (e.rsvps ?? []).filter((r: any) => r.status === 'yes' || r.status === 'inshallah').length,
-        }))
-        .sort((a: any, b: any) => b.going - a.going);
-
-      setEvents(sorted);
+      if (error) {
+        console.log('Trending error:', error.message);
+        setEvents([]);
+      } else if (data) {
+        const sorted = data
+          .map((e: any) => ({
+            ...e,
+            going: (e.rsvps ?? []).filter((r: any) => r.status === 'yes' || r.status === 'inshallah').length,
+          }))
+          .sort((a: any, b: any) => b.going - a.going);
+        setEvents(sorted);
+      }
+    } catch (e) {
+      console.log('Trending fetch error:', e);
+      setEvents([]);
     }
-
     setLoading(false);
     setRefreshing(false);
   };
-
-  useEffect(() => { fetchTrending(); }, []);
 
   const onRefresh = () => { setRefreshing(true); fetchTrending(); };
 
@@ -75,11 +81,16 @@ export default function TrendingScreen() {
 
       <ScrollView
         style={styles.list}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gold} />}
       >
-        {loading && <ActivityIndicator size="large" color={COLORS.gold} style={{ marginTop: 60 }} />}
+        {loading && (
+          <View style={{ paddingHorizontal: SPACING.xl }}>
+            <SkeletonCard />
+            <SkeletonCard />
+          </View>
+        )}
 
         {!loading && events.map((event, index) => {
           const theme = getThemeById(event.theme_id);
@@ -87,7 +98,7 @@ export default function TrendingScreen() {
             <Pressable
               key={event.id}
               style={({ pressed }) => [styles.row, pressed && { opacity: 0.8 }]}
-              onPress={() => router.push(`/event/${event.id}`)}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(`/event/${event.id}`); }}
             >
               <View style={styles.rankCircle}>
                 <Text style={styles.rankText}>{index + 1}</Text>

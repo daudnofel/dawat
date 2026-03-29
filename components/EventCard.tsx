@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { GlassView } from 'expo-glass-effect';
+// GlassView removed — caused color flickering on scroll
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import AnimatedPress from './AnimatedPress';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
@@ -49,13 +49,7 @@ export default function EventCard(props: EventCardProps) {
       style={styles.cardOuter}
       onPress={() => router.push(`/event/${props.id}`)}
     >
-      <GlassView
-        style={styles.card}
-        glassEffectStyle="clear"
-        colorScheme="dark"
-      >
-      {/* Tint */}
-      <View style={styles.cardTint} />
+      <View style={styles.card}>
 
       {/* Gradient Banner */}
       <View style={styles.banner}>
@@ -82,8 +76,8 @@ export default function EventCard(props: EventCardProps) {
         <Svg style={styles.bannerFade} preserveAspectRatio="none">
           <Defs>
             <LinearGradient id={`fade-${props.id}`} x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor="#000000" stopOpacity="0" />
-              <Stop offset="1" stopColor="#000000" stopOpacity="0.5" />
+              <Stop offset="0" stopColor={COLORS.card} stopOpacity="0" />
+              <Stop offset="1" stopColor={COLORS.card} stopOpacity="1" />
             </LinearGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill={`url(#fade-${props.id})`} />
@@ -128,7 +122,7 @@ export default function EventCard(props: EventCardProps) {
           </Text>
         </View>
       </View>
-    </GlassView>
+    </View>
     </AnimatedPress>
   );
 }
@@ -140,11 +134,9 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: RADIUS.xl, overflow: 'hidden',
-  },
-  cardTint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    zIndex: 0,
+    backgroundColor: COLORS.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
   },
   banner: {
     height: 110, alignItems: 'center', justifyContent: 'center', position: 'relative',
@@ -176,7 +168,7 @@ const styles = StyleSheet.create({
   goingDots: { flexDirection: 'row', position: 'absolute', left: 0, top: 0 },
   avatarDot: {
     width: 20, height: 20, borderRadius: 10, position: 'absolute',
-    borderWidth: 2, borderColor: 'rgba(0,0,0,0.4)',
+    borderWidth: 2, borderColor: COLORS.card,
   },
   goingText: { fontSize: 12, color: COLORS.muted, ...FONTS.medium },
 });

@@ -62,7 +62,11 @@ export default function ProfileScreen() {
   }, []);
 
   const fetchProfile = async () => {
-    const userId = await getCurrentUserId();
+    let userId = await getCurrentUserId();
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id ?? null;
+    }
     if (!userId) return;
 
     const { data } = await supabase

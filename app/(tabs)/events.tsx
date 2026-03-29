@@ -17,8 +17,17 @@ export default function EventsScreen() {
 
   const fetchMyEvents = useCallback(async () => {
     try {
-      const userId = await getCurrentUserId();
+      let userId = await getCurrentUserId();
+
+      // Fallback: try getUser if cache is empty
       if (!userId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        userId = user?.id ?? null;
+      }
+
+      if (!userId) {
+        setHosting([]);
+        setAttending([]);
         setLoading(false);
         setRefreshing(false);
         return;

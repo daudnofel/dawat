@@ -69,8 +69,16 @@ export default function EventCard(props: EventCardProps) {
           </View>
         )}
 
-        {/* Bottom fade into card body */}
-        <View style={styles.bannerFade} />
+        {/* Smooth fade into card body */}
+        <Svg style={styles.bannerFade} preserveAspectRatio="none">
+          <Defs>
+            <LinearGradient id={`fade-${props.id}`} x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={COLORS.card} stopOpacity="0" />
+              <Stop offset="1" stopColor={COLORS.card} stopOpacity="1" />
+            </LinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width="100%" height="100%" fill={`url(#fade-${props.id})`} />
+        </Svg>
       </View>
 
       {/* Body */}
@@ -125,8 +133,7 @@ const styles = StyleSheet.create({
   },
   bannerEmoji: { fontSize: 44, zIndex: 1 },
   bannerFade: {
-    position: 'absolute', bottom: 0, left: 0, right: 0, height: 30,
-    backgroundColor: COLORS.card, opacity: 0.6,
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: 50,
   },
   urgencyBadge: {
     position: 'absolute', top: SPACING.sm, right: SPACING.sm, zIndex: 2,

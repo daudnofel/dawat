@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
@@ -54,7 +55,7 @@ export default function TrendingScreen() {
       <View style={styles.filterWrapper}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
           {ETHNIC_FILTERS.map((f) => (
-            <Pressable key={f} style={[styles.filterPill, activeFilter === f && styles.filterPillActive]} onPress={() => setActiveFilter(f)}>
+            <Pressable key={f} style={[styles.filterPill, activeFilter === f && styles.filterPillActive]} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveFilter(f); }}>
               <Text style={[styles.filterText, activeFilter === f && styles.filterTextActive]}>{f}</Text>
             </Pressable>
           ))}

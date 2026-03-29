@@ -7,6 +7,8 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import AnimatedPress from './AnimatedPress';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
 import { THEMES, THEME_CATEGORIES, getThemesByCategory } from '../lib/themes';
 import { DawatTheme } from '../types';
@@ -40,7 +42,10 @@ export default function ThemePicker({ selectedId, onSelect }: ThemePickerProps) 
           <Pressable
             key={cat}
             style={[styles.pill, activeCategory === cat && styles.pillActive]}
-            onPress={() => setActiveCategory(cat)}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setActiveCategory(cat);
+            }}
           >
             <Text style={[styles.pillText, activeCategory === cat && styles.pillTextActive]}>
               {cat}
@@ -54,14 +59,14 @@ export default function ThemePicker({ selectedId, onSelect }: ThemePickerProps) 
         {filteredThemes.map((t) => {
           const isSelected = t.id === selectedId;
           return (
-            <Pressable
+            <AnimatedPress
               key={t.id}
-              style={({ pressed }) => [
+              style={[
                 styles.card,
                 { backgroundColor: t.bannerBg },
                 isSelected && styles.cardSelected,
-                pressed && { opacity: 0.85 },
               ]}
+              scaleValue={0.95}
               onPress={() => onSelect(t)}
             >
               <Text style={styles.cardEmoji}>{t.defaultEmoji}</Text>
@@ -73,7 +78,7 @@ export default function ThemePicker({ selectedId, onSelect }: ThemePickerProps) 
                   <Text style={styles.checkText}>✓</Text>
                 </View>
               )}
-            </Pressable>
+            </AnimatedPress>
           );
         })}
       </View>

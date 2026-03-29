@@ -1,5 +1,6 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import AnimatedPress from './AnimatedPress';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
 import { GenderMode } from '../types';
 import { getThemeById } from '../lib/themes';
@@ -29,8 +30,8 @@ export default function EventCard(props: EventCardProps) {
   const showUrgency = spotsLeft !== null && spotsLeft < 20 && spotsLeft > 0;
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.card, pressed && { transform: [{ scale: 0.97 }], opacity: 0.95 }]}
+    <AnimatedPress
+      style={styles.card}
       onPress={() => router.push(`/event/${props.id}`)}
     >
       {/* Banner */}
@@ -69,7 +70,7 @@ export default function EventCard(props: EventCardProps) {
           <Text style={styles.goingText}>{props.yes_count} going</Text>
         </View>
       </View>
-    </Pressable>
+    </AnimatedPress>
   );
 }
 

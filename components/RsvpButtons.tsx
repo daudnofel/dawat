@@ -1,4 +1,5 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import AnimatedPress from './AnimatedPress';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
 import { RsvpStatus } from '../types';
 
@@ -21,18 +22,19 @@ export default function RsvpButtons({ currentStatus, onSelect }: RsvpButtonsProp
         {OPTIONS.map((opt) => {
           const isActive = currentStatus === opt.status;
           return (
-            <Pressable
+            <AnimatedPress
               key={opt.status}
-              style={({ pressed }) => [
+              style={[
                 styles.button,
                 isActive && { borderColor: opt.color, backgroundColor: `${opt.color}15` },
-                pressed && { transform: [{ scale: 0.95 }] },
               ]}
+              scaleValue={0.95}
+              haptic="medium"
               onPress={() => onSelect(opt.status)}
             >
               <Text style={styles.emoji}>{opt.emoji}</Text>
               <Text style={[styles.label, isActive && { color: opt.color }]}>{opt.label}</Text>
-            </Pressable>
+            </AnimatedPress>
           );
         })}
       </View>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { GenderMode } from '../../types';
@@ -94,7 +95,7 @@ export default function HomeScreen() {
               <Pressable
                 key={tab.value}
                 style={[styles.filterPill, isActive && styles.filterPillActive]}
-                onPress={() => setFilter(tab.value)}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setFilter(tab.value); }}
               >
                 <Text style={[styles.filterText, isActive && styles.filterTextActive]}>
                   {tab.label}

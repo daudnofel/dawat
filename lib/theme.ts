@@ -5,9 +5,9 @@
 
 export const COLORS = {
   // Brand
-  gold: '#C9A84C',
-  gold2: '#F0C040',
-  orange: '#E8760A',
+  gold: '#E0E0E0',
+  gold2: '#C0C0C0',
+  orange: '#A0A0A0',
 
   // Surfaces
   dark: '#0D0D0D',

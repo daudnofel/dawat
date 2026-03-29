@@ -30,7 +30,7 @@ export default function Step4Settings({ onPublish }: { onPublish?: () => void })
     }
 
     const slug = generateSlug(draft.title);
-    const serviceKey = process.env.SUPABASE_SERVICE_KEY!;
+    const serviceKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_KEY!;
 
     const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/events`, {
       method: 'POST',

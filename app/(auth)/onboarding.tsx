@@ -84,7 +84,7 @@ export default function OnboardingScreen() {
     console.log('[onboarding] inserting profile for:', userId);
 
     // Use service role key to bypass RLS for profile creation
-    const serviceKey = process.env.SUPABASE_SERVICE_KEY!;
+    const serviceKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_KEY!;
     const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/users`, {
       method: 'POST',
       headers: {

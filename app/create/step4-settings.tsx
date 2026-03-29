@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   toggleHint: { color: COLORS.hint, fontSize: 12, ...FONTS.regular, marginTop: SPACING.xs },
   bottomBar: {
     paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg,
-    borderTopWidth: 1, borderTopColor: COLORS.border,
+    borderTopWidth: 1, borderTopColor: COLORS.border, marginBottom: 90,
   },
   publishButton: {
     backgroundColor: COLORS.gold, borderRadius: RADIUS.md,

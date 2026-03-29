@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   pricePillActive: { borderColor: COLORS.gold, backgroundColor: COLORS.card2 },
   priceText: { color: COLORS.muted, fontSize: 14, ...FONTS.medium },
   priceTextActive: { color: COLORS.gold },
-  bottomBar: { paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg, borderTopWidth: 1, borderTopColor: COLORS.border },
+  bottomBar: { paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg, borderTopWidth: 1, borderTopColor: COLORS.border, marginBottom: 90 },
   button: { backgroundColor: COLORS.gold, borderRadius: RADIUS.md, paddingVertical: SPACING.lg, alignItems: 'center', height: 52, justifyContent: 'center' },
   buttonDisabled: { opacity: 0.4 },
   buttonText: { color: COLORS.dark, fontSize: 16, ...FONTS.bold },

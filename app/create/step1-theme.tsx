@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   dotActive: { backgroundColor: COLORS.gold, width: 24 },
   title: { fontSize: 22, color: COLORS.white, ...FONTS.bold, paddingHorizontal: SPACING.xl, marginBottom: SPACING.lg },
   scroll: { flex: 1 },
-  bottomBar: { paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg, borderTopWidth: 1, borderTopColor: COLORS.border },
+  bottomBar: { paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg, borderTopWidth: 1, borderTopColor: COLORS.border, marginBottom: 90 },
   button: { backgroundColor: COLORS.gold, borderRadius: RADIUS.md, paddingVertical: SPACING.lg, alignItems: 'center', height: 52, justifyContent: 'center' },
   buttonDisabled: { opacity: 0.4 },
   buttonText: { color: COLORS.dark, fontSize: 16, ...FONTS.bold },

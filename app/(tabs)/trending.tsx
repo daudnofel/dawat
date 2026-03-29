@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { getThemeById } from '../../lib/themes';
+import EmptyState from '../../components/EmptyState';
 
 const ETHNIC_FILTERS = ['All', 'South Asian', 'Arab', 'Somali', 'West African', 'Turkish', 'Other'];
 
@@ -96,11 +97,7 @@ export default function TrendingScreen() {
         })}
 
         {!loading && events.length === 0 && (
-          <View style={{ alignItems: 'center', paddingTop: 80 }}>
-            <Text style={{ fontSize: 48, marginBottom: SPACING.lg }}>🔥</Text>
-            <Text style={{ fontSize: 18, color: COLORS.white, ...FONTS.semibold }}>No trending events yet</Text>
-            <Text style={{ fontSize: 14, color: COLORS.muted, marginTop: SPACING.sm }}>Create events to see them here</Text>
-          </View>
+          <EmptyState emoji="🔥" title="No trending events yet" subtitle="Create events to see them here" />
         )}
       </ScrollView>
     </SafeAreaView>

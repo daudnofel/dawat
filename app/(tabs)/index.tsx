@@ -8,6 +8,7 @@ import { useFeedStore } from '../../store/useFeedStore';
 import { supabase } from '../../lib/supabase';
 import EventCard from '../../components/EventCard';
 import SkeletonCard from '../../components/SkeletonCard';
+import EmptyState from '../../components/EmptyState';
 
 const FILTER_TABS = [
   { label: 'All Events', value: 'all' as const },
@@ -147,11 +148,7 @@ export default function HomeScreen() {
         })}
 
         {!loading && events.length === 0 && (
-          <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>🌙</Text>
-            <Text style={styles.emptyTitle}>No events yet</Text>
-            <Text style={styles.emptySubtitle}>Create the first event for your community</Text>
-          </View>
+          <EmptyState emoji="🌙" title="No events yet" subtitle="Create the first event for your community" />
         )}
       </ScrollView>
     </SafeAreaView>

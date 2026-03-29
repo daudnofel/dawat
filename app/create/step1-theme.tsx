@@ -30,21 +30,22 @@ export default function Step1Theme() {
           selectedId={draft.theme_id}
           onSelect={(theme) => updateDraft({ theme_id: theme.id })}
         />
-        <View style={{ height: 100 }} />
-      </ScrollView>
 
-      <View style={styles.bottomBar}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.button, !canContinue && styles.buttonDisabled,
-            pressed && { transform: [{ scale: 0.97 }], opacity: 0.9 },
-          ]}
-          onPress={() => nextStep()}
-          disabled={!canContinue}
-        >
-          <Text style={styles.buttonText}>Use This Theme</Text>
-        </Pressable>
-      </View>
+        <View style={styles.buttonWrap}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.button, !canContinue && styles.buttonDisabled,
+              pressed && { transform: [{ scale: 0.97 }], opacity: 0.9 },
+            ]}
+            onPress={() => nextStep()}
+            disabled={!canContinue}
+          >
+            <Text style={styles.buttonText}>Use This Theme</Text>
+          </Pressable>
+        </View>
+
+        <View style={{ height: 120 }} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -62,7 +63,7 @@ const styles = StyleSheet.create({
   dotActive: { backgroundColor: COLORS.gold, width: 24 },
   title: { fontSize: 22, color: COLORS.white, ...FONTS.bold, paddingHorizontal: SPACING.xl, marginBottom: SPACING.lg },
   scroll: { flex: 1 },
-  bottomBar: { paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg, borderTopWidth: 1, borderTopColor: COLORS.border, marginBottom: 90 },
+  buttonWrap: { paddingHorizontal: SPACING.xl, paddingTop: SPACING.xl },
   button: { backgroundColor: COLORS.gold, borderRadius: RADIUS.md, paddingVertical: SPACING.lg, alignItems: 'center', height: 52, justifyContent: 'center' },
   buttonDisabled: { opacity: 0.4 },
   buttonText: { color: COLORS.dark, fontSize: 16, ...FONTS.bold },

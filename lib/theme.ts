@@ -5,16 +5,16 @@
 
 export const COLORS = {
   // Brand
-  gold: '#E8A0B0',
-  gold2: '#F0B8C8',
-  orange: '#C47888',
+  gold: '#D4C5A0',
+  gold2: '#E8DCC0',
+  orange: '#B8A880',
 
   // Surfaces
-  dark: '#0F0A0C',
-  card: '#1A1215',
-  card2: '#241A1E',
-  border: '#3A2830',
-  input: '#16101310',
+  dark: '#0E0C08',
+  card: '#1A1710',
+  card2: '#22201A',
+  border: '#352F24',
+  input: '#151310',
 
   // Text
   white: '#FFFFFF',

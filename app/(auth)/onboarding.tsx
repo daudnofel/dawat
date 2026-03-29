@@ -12,7 +12,7 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
 import { Gender, GenderPref } from '../../types';
-import { supabase } from '../../lib/supabase';
+import { supabase, debugSession } from '../../lib/supabase';
 import { setCurrentUserId } from '../../lib/auth-cache';
 import AnimatedPress from '../../components/AnimatedPress';
 
@@ -68,17 +68,23 @@ export default function OnboardingScreen() {
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      Alert.alert('Error', 'Not authenticated.');
+    // Get session — this contains the JWT that RLS needs
+    const session = await debugSession();
+
+    if (!session?.user) {
+      Alert.alert('Session expired', 'Please sign in again.');
       setSaving(false);
+      router.replace('/(auth)/login');
       return;
     }
 
-    setCurrentUserId(user.id);
+    const userId = session.user.id;
+    setCurrentUserId(userId);
+
+    console.log('[onboarding] inserting profile for:', userId);
 
     const { error } = await supabase.from('users').upsert({
-      id: user.id,
+      id: userId,
       display_name: displayName.trim(),
       username: username.trim(),
       gender,
@@ -89,11 +95,12 @@ export default function OnboardingScreen() {
     setSaving(false);
 
     if (error) {
+      console.log('[onboarding] error:', error.code, error.message);
       if (error.code === '23505') {
         Alert.alert('Username taken', 'Try another username.');
         animateTransition(false, () => setStep(2));
       } else {
-        Alert.alert('Error', error.message);
+        Alert.alert('Error', `${error.message} (${error.code})`);
       }
       return;
     }

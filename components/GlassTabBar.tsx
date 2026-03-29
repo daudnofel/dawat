@@ -49,7 +49,7 @@ export default function GlassTabBar({ state, navigation }: GlassTabBarProps) {
       <View style={styles.shadow}>
         <GlassView
           style={styles.container}
-          glassEffectStyle="clear"
+          glassEffectStyle="regularMaterial"
           colorScheme="dark"
         >
           {/* Dark tint overlay for depth */}
@@ -127,10 +127,12 @@ const styles = StyleSheet.create({
     height: TAB_BAR_HEIGHT,
     borderRadius: TAB_BAR_HEIGHT / 2,
     overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   barTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
   indicatorWrapper: {
     position: 'absolute',

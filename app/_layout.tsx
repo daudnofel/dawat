@@ -107,7 +107,8 @@ export default function RootLayout() {
         router.replace('/(auth)/login');
       }
     } else if (!hasProfile) {
-      if (segments[1] !== 'onboarding') {
+      // Only redirect to onboarding if not already in auth group
+      if (!inAuthGroup) {
         router.replace('/(auth)/onboarding');
       }
     } else {

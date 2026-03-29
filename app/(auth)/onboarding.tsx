@@ -83,24 +83,39 @@ export default function OnboardingScreen() {
 
     console.log('[onboarding] inserting profile for:', userId);
 
-    const { error } = await supabase.from('users').upsert({
-      id: userId,
-      display_name: displayName.trim(),
-      username: username.trim(),
-      gender,
-      gender_pref: GenderPref.All,
-      location_city: city.trim() || null,
-    }, { onConflict: 'id' });
+    // Use fetch directly to bypass any client-side session issues
+    const accessToken = session.access_token;
+    const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/users`, {
+      method: 'POST',
+      headers: {
+        'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify({
+        id: userId,
+        display_name: displayName.trim(),
+        username: username.trim(),
+        gender,
+        gender_pref: GenderPref.All,
+        location_city: city.trim() || null,
+      }),
+    });
+
+    const error = res.ok ? null : await res.json();
 
     setSaving(false);
 
     if (error) {
-      console.log('[onboarding] error:', error.code, error.message);
-      if (error.code === '23505') {
+      console.log('[onboarding] error:', JSON.stringify(error));
+      const msg = error.message ?? JSON.stringify(error);
+      const code = error.code ?? '';
+      if (code === '23505') {
         Alert.alert('Username taken', 'Try another username.');
         animateTransition(false, () => setStep(2));
       } else {
-        Alert.alert('Error', `${error.message} (${error.code})`);
+        Alert.alert('Error', `${msg} (${code})`);
       }
       return;
     }

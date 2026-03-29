@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { useEventStore } from '../../store/useEventStore';
 import { supabase } from '../../lib/supabase';
+import { getCurrentUserId } from '../../lib/auth-cache';
 import { generateSlug } from '../../lib/slugify';
 import { GenderMode } from '../../types';
 
@@ -21,19 +22,27 @@ export default function Step4Settings({ onPublish }: { onPublish?: () => void })
   const handlePublish = async () => {
     setPublishing(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const userId = await getCurrentUserId();
+    if (!userId) {
       Alert.alert('Error', 'You must be signed in to publish an event.');
       setPublishing(false);
       return;
     }
 
     const slug = generateSlug(draft.title);
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY!;
 
-    const { error } = await supabase.from('events').insert({
+    const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/events`, {
+      method: 'POST',
+      headers: {
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
       title: draft.title,
       description: draft.description || null,
-      host_id: user.id,
+      host_id: userId,
       theme_id: draft.theme_id,
       gender_mode: draft.gender_mode,
       is_id_required: draft.is_id_required,
@@ -49,12 +58,14 @@ export default function Step4Settings({ onPublish }: { onPublish?: () => void })
       capacity: draft.capacity,
       slug,
       is_published: true,
+    }),
     });
 
     setPublishing(false);
 
-    if (error) {
-      Alert.alert('Error publishing', error.message);
+    if (!res.ok) {
+      const err = await res.json();
+      Alert.alert('Error publishing', err.message ?? 'Unknown error');
       return;
     }
 

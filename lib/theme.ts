@@ -10,11 +10,11 @@ export const COLORS = {
   orange: '#059669',
 
   // Surfaces
-  dark: '#0D0D0D',
-  card: '#161616',
-  card2: '#1E1E1E',
-  border: '#2A2A2A',
-  input: '#1A1A1A',
+  dark: '#080F0D',
+  card: '#0F1A16',
+  card2: '#142420',
+  border: '#1E3A30',
+  input: '#0D1612',
 
   // Text
   white: '#FFFFFF',

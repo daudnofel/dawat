@@ -135,35 +135,35 @@ export default function ProfileScreen() {
         {noAuth ? (
           <EmptyState emoji="🔐" title="Sign in to see your profile" subtitle="Your profile and stats will appear here" />
         ) : (
-        <View style={styles.profileSection}>
-          <GradientAvatar letter={initial} />
+          <>
+            <View style={styles.profileSection}>
+              <GradientAvatar letter={initial} />
+              <Animated.View style={[styles.nameBlock, nameStyle]}>
+                <Text style={styles.name}>{profile?.display_name ?? 'Loading...'}</Text>
+                <Text style={styles.username}>@{profile?.username ?? '...'}</Text>
+                {profile?.location_city && (
+                  <View style={styles.cityRow}>
+                    <Text style={styles.cityIcon}>📍</Text>
+                    <Text style={styles.city}>{profile.location_city}</Text>
+                  </View>
+                )}
+              </Animated.View>
+            </View>
 
-          <Animated.View style={[styles.nameBlock, nameStyle]}>
-            <Text style={styles.name}>{profile?.display_name ?? 'Loading...'}</Text>
-            <Text style={styles.username}>@{profile?.username ?? '...'}</Text>
-            {profile?.location_city && (
-              <View style={styles.cityRow}>
-                <Text style={styles.cityIcon}>📍</Text>
-                <Text style={styles.city}>{profile.location_city}</Text>
-              </View>
-            )}
-          </Animated.View>
-        </View>
+            <View style={styles.statsRow}>
+              <StatCard value={hostedCount} label="Hosted" delay={100} />
+              <StatCard value={attendingCount} label="Attending" delay={200} />
+            </View>
 
-        <View style={styles.statsRow}>
-          <StatCard value={hostedCount} label="Hosted" delay={100} />
-          <StatCard value={attendingCount} label="Attending" delay={200} />
-        </View>
+            <View style={styles.menu}>
+              <MenuItem icon="📅" label="My Events" onPress={() => router.push('/(tabs)/events')} />
+              <MenuItem icon="✨" label="Create Event" onPress={() => router.push('/(tabs)/create')} />
+            </View>
 
-        {/* Menu Items */}
-        <View style={styles.menu}>
-          <MenuItem icon="📅" label="My Events" onPress={() => router.push('/(tabs)/events')} />
-          <MenuItem icon="✨" label="Create Event" onPress={() => router.push('/(tabs)/create')} />
-        </View>
-
-        <AnimatedPress style={styles.signOutButton} haptic="medium" onPress={handleSignOut}>
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </AnimatedPress>
+            <AnimatedPress style={styles.signOutButton} haptic="medium" onPress={handleSignOut}>
+              <Text style={styles.signOutText}>Sign Out</Text>
+            </AnimatedPress>
+          </>
         )}
 
         <View style={{ height: 120 }} />

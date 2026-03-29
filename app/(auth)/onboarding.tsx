@@ -77,14 +77,14 @@ export default function OnboardingScreen() {
 
     setCurrentUserId(user.id);
 
-    const { error } = await supabase.from('users').insert({
+    const { error } = await supabase.from('users').upsert({
       id: user.id,
       display_name: displayName.trim(),
       username: username.trim(),
       gender,
       gender_pref: GenderPref.All,
       location_city: city.trim() || null,
-    });
+    }, { onConflict: 'id' });
 
     setSaving(false);
 

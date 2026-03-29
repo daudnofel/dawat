@@ -12,7 +12,7 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
 import { Gender, GenderPref } from '../../types';
-import { supabase, debugSession } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { setCurrentUserId } from '../../lib/auth-cache';
 import AnimatedPress from '../../components/AnimatedPress';
 
@@ -68,58 +68,63 @@ export default function OnboardingScreen() {
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    // Get session — this contains the JWT that RLS needs
-    const session = await debugSession();
+    // Get user ID from cache or auth
+    let userId = await getCurrentUserId();
+    if (!userId) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        userId = user?.id ?? null;
+      } catch {}
+    }
 
-    if (!session?.user) {
+    if (!userId) {
       Alert.alert('Session expired', 'Please sign in again.');
       setSaving(false);
       router.replace('/(auth)/login');
       return;
     }
 
-    const userId = session.user.id;
     setCurrentUserId(userId);
 
-    console.log('[onboarding] inserting profile for:', userId);
-
-    // Use service role key to bypass RLS for profile creation
+    // Use service role key to bypass RLS
     const serviceKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_KEY!;
-    const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/users`, {
-      method: 'POST',
-      headers: {
-        'apikey': serviceKey,
-        'Authorization': `Bearer ${serviceKey}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates',
-      },
-      body: JSON.stringify({
-        id: userId,
-        display_name: displayName.trim(),
-        username: username.trim(),
-        gender,
-        gender_pref: GenderPref.All,
-        location_city: city.trim() || null,
-      }),
-    });
+    try {
+      const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/users`, {
+        method: 'POST',
+        headers: {
+          'apikey': serviceKey,
+          'Authorization': `Bearer ${serviceKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify({
+          id: userId,
+          display_name: displayName.trim(),
+          username: username.trim(),
+          gender,
+          gender_pref: GenderPref.All,
+          location_city: city.trim() || null,
+        }),
+      });
 
-    const error = res.ok ? null : await res.json();
-
-    setSaving(false);
-
-    if (error) {
-      console.log('[onboarding] error:', JSON.stringify(error));
-      const msg = error.message ?? JSON.stringify(error);
-      const code = error.code ?? '';
-      if (code === '23505') {
-        Alert.alert('Username taken', 'Try another username.');
-        animateTransition(false, () => setStep(2));
-      } else {
-        Alert.alert('Error', `${msg} (${code})`);
+      if (!res.ok) {
+        const err = await res.json();
+        setSaving(false);
+        if (err.code === '23505') {
+          Alert.alert('Username taken', 'Try another username.');
+          animateTransition(false, () => setStep(2));
+        } else {
+          Alert.alert('Error', err.message ?? 'Failed to save profile');
+        }
+        return;
       }
+    } catch (e: any) {
+      setSaving(false);
+      Alert.alert('Network error', e.message ?? 'Check your connection');
       return;
     }
 
+    setSaving(false);
     router.replace('/(tabs)');
   };
 

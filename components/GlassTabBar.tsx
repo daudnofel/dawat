@@ -117,13 +117,16 @@ export default function GlassTabBar({ state, navigation }: GlassTabBarProps) {
 
   return (
     <View style={styles.wrapper}>
+      {/* Subtle glow behind the bar so glass has something to blur */}
+      <View style={styles.glowBg} />
+
       <View style={styles.shadow}>
         <GlassView
           style={styles.container}
-          glassEffectStyle="regularMaterial"
+          glassEffectStyle="clear"
           colorScheme="dark"
         >
-          {/* Tint overlay */}
+          {/* Light tint overlay */}
           <View style={styles.barTint} />
 
           {/* Animated indicator */}
@@ -192,6 +195,14 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
   },
+  glowBg: {
+    position: 'absolute',
+    width: TAB_BAR_WIDTH + 40,
+    height: TAB_BAR_HEIGHT + 30,
+    borderRadius: (TAB_BAR_HEIGHT + 30) / 2,
+    backgroundColor: 'rgba(201, 168, 76, 0.08)',
+    top: -15,
+  },
   shadow: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
@@ -209,7 +220,7 @@ const styles = StyleSheet.create({
   },
   barTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.25)',
+    backgroundColor: 'rgba(0,0,0,0.15)',
   },
   indicatorWrapper: {
     position: 'absolute',

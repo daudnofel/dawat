@@ -137,11 +137,8 @@ export default function ProfileScreen() {
 
         {/* Menu Items */}
         <View style={styles.menu}>
-          <MenuItem icon="📅" label="My RSVPs" onPress={() => {}} />
-          <MenuItem icon="🕌" label="My Communities" onPress={() => {}} />
-          <MenuItem icon="✨" label="Host an Event" onPress={() => {}} />
-          <MenuItem icon="🔔" label="Notifications" onPress={() => {}} />
-          <MenuItem icon="🛡️" label="Privacy & Safety" onPress={() => {}} />
+          <MenuItem icon="📅" label="My Events" onPress={() => router.push('/(tabs)/events')} />
+          <MenuItem icon="✨" label="Create Event" onPress={() => router.push('/(tabs)/create')} />
         </View>
 
         <AnimatedPress style={styles.signOutButton} haptic="medium" onPress={handleSignOut}>

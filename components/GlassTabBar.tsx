@@ -7,20 +7,90 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import Svg, { Path } from 'react-native-svg';
 import { COLORS, FONTS } from '../lib/theme';
 
 const TAB_COUNT = 5;
-const TAB_BAR_WIDTH = 320;
-const TAB_BAR_HEIGHT = 58;
-const INDICATOR_PADDING = 5;
+const TAB_BAR_WIDTH = 340;
+const TAB_BAR_HEIGHT = 64;
+const INDICATOR_PADDING = 4;
 const INDICATOR_WIDTH = (TAB_BAR_WIDTH - INDICATOR_PADDING * 2) / TAB_COUNT;
+const INDICATOR_HEIGHT = TAB_BAR_HEIGHT - INDICATOR_PADDING * 2;
 
-const TAB_CONFIG: Record<string, { icon: string; iconFilled: string; label: string }> = {
-  index: { icon: '⌂', iconFilled: '⌂', label: 'Home' },
-  trending: { icon: '◇', iconFilled: '◆', label: 'Trending' },
-  create: { icon: '+', iconFilled: '+', label: 'Create' },
-  events: { icon: '▫', iconFilled: '▪', label: 'Events' },
-  profile: { icon: '○', iconFilled: '●', label: 'Profile' },
+// Clean SVG icons — thin line style
+function HomeIcon({ focused }: { focused: boolean }) {
+  return (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M3 10.5L12 3L21 10.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V10.5Z"
+        stroke={focused ? '#fff' : 'rgba(255,255,255,0.4)'}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill={focused ? 'rgba(255,255,255,0.15)' : 'none'}
+      />
+    </Svg>
+  );
+}
+
+function TrendingIcon({ focused }: { focused: boolean }) {
+  return (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M13 2L3 14H12L11 22L21 10H12L13 2Z"
+        stroke={focused ? '#fff' : 'rgba(255,255,255,0.4)'}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill={focused ? 'rgba(255,255,255,0.15)' : 'none'}
+      />
+    </Svg>
+  );
+}
+
+function EventsIcon({ focused }: { focused: boolean }) {
+  return (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M8 2V6M16 2V6M3 10H21M5 4H19C20.1 4 21 4.9 21 6V20C21 21.1 20.1 22 19 22H5C3.9 22 3 21.1 3 20V6C3 4.9 3.9 4 5 4Z"
+        stroke={focused ? '#fff' : 'rgba(255,255,255,0.4)'}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill={focused ? 'rgba(255,255,255,0.15)' : 'none'}
+      />
+    </Svg>
+  );
+}
+
+function ProfileIcon({ focused }: { focused: boolean }) {
+  return (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M20 21V19C20 16.79 18.21 15 16 15H8C5.79 15 4 16.79 4 19V21M12 11C14.21 11 16 9.21 16 7C16 4.79 14.21 3 12 3C9.79 3 8 4.79 8 7C8 9.21 9.79 11 12 11Z"
+        stroke={focused ? '#fff' : 'rgba(255,255,255,0.4)'}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill={focused ? 'rgba(255,255,255,0.15)' : 'none'}
+      />
+    </Svg>
+  );
+}
+
+const TAB_ICONS: Record<string, (props: { focused: boolean }) => React.JSX.Element> = {
+  index: HomeIcon,
+  trending: TrendingIcon,
+  events: EventsIcon,
+  profile: ProfileIcon,
+};
+
+const TAB_LABELS: Record<string, string> = {
+  index: 'Home',
+  trending: 'Trending',
+  create: 'Create',
+  events: 'Events',
+  profile: 'Profile',
 };
 
 interface GlassTabBarProps {
@@ -34,9 +104,9 @@ export default function GlassTabBar({ state, navigation }: GlassTabBarProps) {
 
   useEffect(() => {
     translateX.value = withSpring(INDICATOR_PADDING + state.index * INDICATOR_WIDTH, {
-      damping: 18,
-      stiffness: 280,
-      mass: 0.5,
+      damping: 20,
+      stiffness: 300,
+      mass: 0.4,
     });
   }, [state.index]);
 
@@ -52,10 +122,10 @@ export default function GlassTabBar({ state, navigation }: GlassTabBarProps) {
           glassEffectStyle="regularMaterial"
           colorScheme="dark"
         >
-          {/* Dark tint overlay for depth */}
+          {/* Tint overlay */}
           <View style={styles.barTint} />
 
-          {/* Animated selected-tab indicator */}
+          {/* Animated indicator */}
           <Animated.View style={[styles.indicatorWrapper, indicatorStyle]}>
             <View style={styles.indicatorHighlight} />
           </Animated.View>
@@ -64,8 +134,9 @@ export default function GlassTabBar({ state, navigation }: GlassTabBarProps) {
           <View style={styles.tabs}>
             {state.routes.map((route: any, index: number) => {
               const isFocused = state.index === index;
-              const config = TAB_CONFIG[route.name] ?? { icon: '?', iconFilled: '?', label: route.name };
               const isCreate = route.name === 'create';
+              const IconComponent = TAB_ICONS[route.name];
+              const label = TAB_LABELS[route.name];
 
               return (
                 <Pressable
@@ -85,15 +156,20 @@ export default function GlassTabBar({ state, navigation }: GlassTabBarProps) {
                 >
                   {isCreate ? (
                     <View style={[styles.createBtn, isFocused && styles.createBtnActive]}>
-                      <Text style={[styles.createIcon, isFocused && styles.createIconActive]}>+</Text>
+                      <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                        <Path
+                          d="M12 5V19M5 12H19"
+                          stroke={isFocused ? COLORS.dark : 'rgba(255,255,255,0.6)'}
+                          strokeWidth={2.2}
+                          strokeLinecap="round"
+                        />
+                      </Svg>
                     </View>
                   ) : (
                     <>
-                      <Text style={[styles.icon, isFocused && styles.iconActive]}>
-                        {isFocused ? config.iconFilled : config.icon}
-                      </Text>
+                      {IconComponent && <IconComponent focused={isFocused} />}
                       <Text style={[styles.label, isFocused && styles.labelActive]}>
-                        {config.label}
+                        {label}
                       </Text>
                     </>
                   )}
@@ -110,17 +186,17 @@ export default function GlassTabBar({ state, navigation }: GlassTabBarProps) {
 const styles = StyleSheet.create({
   wrapper: {
     position: 'absolute',
-    bottom: 36,
+    bottom: 28,
     left: 0,
     right: 0,
     alignItems: 'center',
   },
   shadow: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 12,
   },
   container: {
     width: TAB_BAR_WIDTH,
@@ -128,24 +204,24 @@ const styles = StyleSheet.create({
     borderRadius: TAB_BAR_HEIGHT / 2,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   barTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: 'rgba(0,0,0,0.25)',
   },
   indicatorWrapper: {
     position: 'absolute',
     top: INDICATOR_PADDING,
     width: INDICATOR_WIDTH,
-    height: TAB_BAR_HEIGHT - INDICATOR_PADDING * 2,
+    height: INDICATOR_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
   },
   indicatorHighlight: {
-    width: '100%',
+    width: '92%',
     height: '100%',
-    borderRadius: (TAB_BAR_HEIGHT - INDICATOR_PADDING * 2) / 2,
+    borderRadius: INDICATOR_HEIGHT / 2,
     backgroundColor: 'rgba(255,255,255,0.1)',
   },
   tabs: {
@@ -157,29 +233,21 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  icon: {
-    fontSize: 20,
-    color: 'rgba(255,255,255,0.4)',
-    lineHeight: 24,
-  },
-  iconActive: {
-    color: '#FFFFFF',
+    gap: 3,
   },
   label: {
-    fontSize: 9,
+    fontSize: 10,
     color: 'rgba(255,255,255,0.35)',
-    marginTop: 2,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
     ...FONTS.medium,
   },
   labelActive: {
     color: COLORS.gold,
   },
   createBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
@@ -189,13 +257,5 @@ const styles = StyleSheet.create({
   createBtnActive: {
     backgroundColor: COLORS.gold,
     borderColor: COLORS.gold,
-  },
-  createIcon: {
-    fontSize: 22,
-    color: 'rgba(255,255,255,0.5)',
-    lineHeight: 26,
-  },
-  createIconActive: {
-    color: COLORS.dark,
   },
 });

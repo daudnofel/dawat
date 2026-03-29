@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { useToast } from 'heroui-native/toast';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { RsvpStatus, GenderMode } from '../../types';
@@ -37,6 +38,7 @@ export default function EventDetailScreen() {
   const [rsvpStatus, setRsvpStatus] = useState<RsvpStatus | null>(null);
   const [yesCount, setYesCount] = useState(0);
   const [inshallahCount, setInshallahCount] = useState(0);
+  const toast = useToast();
 
   useEffect(() => {
     fetchEvent();
@@ -93,25 +95,38 @@ export default function EventDetailScreen() {
       status === RsvpStatus.No ? Haptics.NotificationFeedbackType.Warning :
       Haptics.NotificationFeedbackType.Success
     );
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      Alert.alert('Sign in required', 'Please sign in to RSVP.');
+    const userId = (await supabase.auth.getUser()).data.user?.id;
+    if (!userId) {
+      toast.show({ label: 'Sign in required', description: 'Please sign in to RSVP', variant: 'warning' });
       return;
     }
 
-    const { error } = await supabase.from('rsvps').upsert({
-      event_id: id,
-      user_id: user.id,
-      status,
-    }, { onConflict: 'event_id,user_id' });
+    const serviceKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_KEY!;
+    const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/rsvps`, {
+      method: 'POST',
+      headers: {
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify({ event_id: id, user_id: userId, status }),
+    });
 
-    if (error) {
-      Alert.alert('Error', error.message);
+    if (!res.ok) {
+      toast.show({ label: 'Error', description: 'Could not save RSVP', variant: 'danger' });
       return;
     }
 
     setRsvpStatus(status);
-    fetchEvent(); // Refresh counts
+
+    if (status === 'yes') {
+      toast.show({ label: "JazakAllah khair — you're going! 🤲", variant: 'success' });
+    } else if (status === 'inshallah') {
+      toast.show({ label: "We'll remind you 24h before 🤲", variant: 'default' });
+    }
+
+    fetchEvent();
   };
 
   const handleShare = () => {
@@ -197,12 +212,6 @@ export default function EventDetailScreen() {
 
           <View style={styles.rsvpSection}>
             <RsvpButtons currentStatus={rsvpStatus} onSelect={handleRsvp} />
-            {rsvpStatus === RsvpStatus.Yes && (
-              <Text style={styles.rsvpConfirm}>JazakAllah khair — you're going! 🤲</Text>
-            )}
-            {rsvpStatus === RsvpStatus.Inshallah && (
-              <Text style={styles.rsvpConfirm}>We'll remind you 24h before 🤲</Text>
-            )}
           </View>
         </View>
       </ScrollView>

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
-import { useFocusEffect } from 'expo-router';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { COLORS, FONTS, SPACING } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { GenderMode } from '../../types';
@@ -14,40 +14,69 @@ export default function EventsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchMyEvents = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+  const fetchMyEvents = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
 
-    // Events I'm hosting
-    const { data: hosted } = await supabase
-      .from('events')
-      .select('*')
-      .eq('host_id', user.id)
-      .order('created_at', { ascending: false });
+      // Events I'm hosting — simple query, no joins
+      const { data: hosted, error: hostErr } = await supabase
+        .from('events')
+        .select('*')
+        .eq('host_id', user.id)
+        .order('created_at', { ascending: false });
 
-    if (hosted) setHosting(hosted);
+      if (hostErr) console.log('Host query error:', hostErr.message);
+      if (hosted) setHosting(hosted);
 
-    // Events I've RSVP'd to
-    const { data: rsvps } = await supabase
-      .from('rsvps')
-      .select('event_id, status, events(*)')
-      .eq('user_id', user.id)
-      .in('status', ['yes', 'inshallah']);
+      // Events I've RSVP'd to — get event IDs first, then fetch events
+      const { data: rsvpData, error: rsvpErr } = await supabase
+        .from('rsvps')
+        .select('event_id, status')
+        .eq('user_id', user.id)
+        .in('status', ['yes', 'inshallah']);
 
-    if (rsvps) {
-      setAttending(rsvps.map((r: any) => ({ ...r.events, rsvp_status: r.status })).filter(Boolean));
+      if (rsvpErr) console.log('RSVP query error:', rsvpErr.message);
+
+      if (rsvpData && rsvpData.length > 0) {
+        const eventIds = rsvpData.map((r: any) => r.event_id);
+        const { data: events } = await supabase
+          .from('events')
+          .select('*')
+          .in('id', eventIds);
+
+        if (events) setAttending(events);
+      } else {
+        setAttending([]);
+      }
+    } catch (e) {
+      console.log('Events fetch error:', e);
     }
 
     setLoading(false);
     setRefreshing(false);
-  };
+  }, []);
 
-  useFocusEffect(useCallback(() => { fetchMyEvents(); }, []));
+  useFocusEffect(useCallback(() => {
+    fetchMyEvents();
+  }, [fetchMyEvents]));
 
   const onRefresh = () => { setRefreshing(true); fetchMyEvents(); };
+
+  const renderCard = (e: any, label: string) => (
+    <EventCard
+      key={e.id} id={e.id} title={e.title} theme_id={e.theme_id}
+      org_name={label}
+      date_label={e.date_time ? new Date(e.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD'}
+      location_name={e.location_name ?? 'TBD'} price={e.price}
+      gender_mode={e.gender_mode as GenderMode} is_halal_venue={e.is_halal_venue}
+      yes_count={0} inshallah_count={0} capacity={e.capacity}
+    />
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -60,40 +89,28 @@ export default function EventsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gold} />}
       >
-        {loading && (
+        {loading ? (
           <>
             <Text style={styles.sectionTitle}>Hosting</Text>
             <SkeletonCard />
             <Text style={styles.sectionTitle}>Attending</Text>
             <SkeletonCard />
           </>
-        )}
-
-        {!loading && (
+        ) : (
           <>
             <Text style={styles.sectionTitle}>Hosting</Text>
-            {hosting.length > 0 ? hosting.map((e) => (
-              <EventCard
-                key={e.id} id={e.id} title={e.title} theme_id={e.theme_id}
-                org_name="You" date_label={e.date_time ? new Date(e.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD'}
-                location_name={e.location_name ?? 'TBD'} price={e.price}
-                gender_mode={e.gender_mode as GenderMode} is_halal_venue={e.is_halal_venue}
-                yes_count={0} inshallah_count={0} capacity={e.capacity}
-              />
-            )) : <Text style={styles.emptyText}>No events hosted yet</Text>}
+            {hosting.length > 0
+              ? hosting.map((e) => renderCard(e, 'You'))
+              : <Text style={styles.emptyText}>No events hosted yet</Text>}
 
             <Text style={styles.sectionTitle}>Attending</Text>
-            {attending.length > 0 ? attending.map((e) => (
-              <EventCard
-                key={e.id} id={e.id} title={e.title} theme_id={e.theme_id}
-                org_name="RSVP'd" date_label={e.date_time ? new Date(e.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD'}
-                location_name={e.location_name ?? 'TBD'} price={e.price}
-                gender_mode={e.gender_mode as GenderMode} is_halal_venue={e.is_halal_venue}
-                yes_count={0} inshallah_count={0} capacity={e.capacity}
-              />
-            )) : <Text style={styles.emptyText}>No events yet — explore what's on</Text>}
+            {attending.length > 0
+              ? attending.map((e) => renderCard(e, "RSVP'd"))
+              : <Text style={styles.emptyText}>No events yet — explore what's on</Text>}
           </>
         )}
+
+        <View style={{ height: 120 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -103,7 +120,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.dark },
   header: { paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md },
   title: { fontSize: 22, color: COLORS.white, ...FONTS.bold },
-  scrollContent: { paddingHorizontal: SPACING.xl, paddingBottom: 100 },
+  scrollContent: { paddingHorizontal: SPACING.xl, paddingBottom: 40 },
   sectionTitle: { fontSize: 16, color: COLORS.muted, ...FONTS.semibold, marginTop: SPACING.lg, marginBottom: SPACING.md },
   emptyText: { color: COLORS.hint, fontSize: 14, ...FONTS.regular, textAlign: 'center', marginVertical: SPACING.xl },
 });

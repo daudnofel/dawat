@@ -48,7 +48,7 @@ export default function HomeScreen() {
       .limit(20);
 
     if (activeFilter !== 'all') {
-      query = query.in('gender_mode', [activeFilter, 'mixed']);
+      query = query.eq('gender_mode', activeFilter);
     }
 
     const { data, error } = await query;

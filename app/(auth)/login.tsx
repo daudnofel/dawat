@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button } from 'heroui-native/button';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 
@@ -64,16 +63,21 @@ export default function LoginScreen() {
           />
         </View>
 
-        <Button
-          size="lg"
-          color="warning"
-          fullWidth
-          isDisabled={!isValid}
-          isLoading={loading}
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            !isValid && styles.buttonDisabled,
+            pressed && { transform: [{ scale: 0.97 }], opacity: 0.9 },
+          ]}
           onPress={handleContinue}
+          disabled={!isValid || loading}
         >
-          Continue
-        </Button>
+          {loading ? (
+            <ActivityIndicator color={COLORS.dark} />
+          ) : (
+            <Text style={styles.buttonText}>Continue</Text>
+          )}
+        </Pressable>
 
         <Text style={styles.legal}>
           By continuing, you agree to our Terms of Service & Privacy Policy

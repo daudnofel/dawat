@@ -140,8 +140,6 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: RADIUS.xl, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   cardTint: {
     ...StyleSheet.absoluteFillObject,

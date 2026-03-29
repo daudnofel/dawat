@@ -4,10 +4,7 @@ description: Expo Go SDK 54 has native module limitations — no haptics, no Rea
 type: feedback
 ---
 
-Expo Go on the App Store uses SDK 54. Several native modules crash at import time:
-- `expo-haptics` — crashes with "disableEventLoopOnBridgeless" error
-- `react-native-reanimated` — same crash, use Pressable style prop for animations
-- `@react-native-async-storage/async-storage` — crashes when used in Supabase client
-
-**Why:** Expo Go SDK 54 doesn't bundle these native modules at versions compatible with our deps.
-**How to apply:** Never import these in screens until we either (a) match exact SDK 54 compatible versions or (b) build a custom dev client. Use in-memory storage for Supabase, Pressable style for press animations, skip haptics.
+RESOLVED: Upgraded to RN 0.81.5 + React 19.1.0 + New Architecture (matching the ios/ project).
+All native modules now work in Expo Go: haptics, Reanimated 4.1, AsyncStorage, glass effect, gesture handler, SVG, worklets.
+No more disableEventLoopOnBridgeless errors. Sessions persist between app restarts.
+**How to apply:** All native modules are safe to import now. Use Reanimated for animations, haptics on interactions, AsyncStorage for Supabase session.

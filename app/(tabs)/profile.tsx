@@ -10,6 +10,7 @@ import { supabase } from '../../lib/supabase';
 import { getCurrentUserId, clearCurrentUserId } from '../../lib/auth-cache';
 import { User } from '../../types';
 import AnimatedPress from '../../components/AnimatedPress';
+import EmptyState from '../../components/EmptyState';
 
 function GradientAvatar({ letter }: { letter: string }) {
   return (
@@ -61,13 +62,23 @@ export default function ProfileScreen() {
     fetchProfile();
   }, []);
 
+  const [noAuth, setNoAuth] = useState(false);
+
   const fetchProfile = async () => {
     let userId = await getCurrentUserId();
     if (!userId) {
-      const { data: { user } } = await supabase.auth.getUser();
-      userId = user?.id ?? null;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        userId = user?.id ?? null;
+      } catch {
+        userId = null;
+      }
     }
-    if (!userId) return;
+    if (!userId) {
+      setNoAuth(true);
+      return;
+    }
+    setNoAuth(false);
 
     const { data } = await supabase
       .from('users')
@@ -121,6 +132,9 @@ export default function ProfileScreen() {
           <Text style={styles.headerTitle}>Profile</Text>
         </View>
 
+        {noAuth ? (
+          <EmptyState emoji="🔐" title="Sign in to see your profile" subtitle="Your profile and stats will appear here" />
+        ) : (
         <View style={styles.profileSection}>
           <GradientAvatar letter={initial} />
 
@@ -150,6 +164,7 @@ export default function ProfileScreen() {
         <AnimatedPress style={styles.signOutButton} haptic="medium" onPress={handleSignOut}>
           <Text style={styles.signOutText}>Sign Out</Text>
         </AnimatedPress>
+        )}
 
         <View style={{ height: 120 }} />
       </ScrollView>

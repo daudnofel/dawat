@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { GlassView } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
@@ -96,12 +97,18 @@ export default function HomeScreen() {
             return (
               <Pressable
                 key={tab.value}
-                style={[styles.filterPill, isActive && styles.filterPillActive]}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setFilter(tab.value); }}
               >
-                <Text style={[styles.filterText, isActive && styles.filterTextActive]}>
-                  {tab.label}
-                </Text>
+                {isActive ? (
+                  <GlassView style={styles.filterPillGlass} glassEffectStyle="clear" colorScheme="dark">
+                    <View style={styles.filterPillGlassTint} />
+                    <Text style={styles.filterTextActive}>{tab.label}</Text>
+                  </GlassView>
+                ) : (
+                  <View style={styles.filterPill}>
+                    <Text style={styles.filterText}>{tab.label}</Text>
+                  </View>
+                )}
               </Pressable>
             );
           })}
@@ -167,9 +174,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm,
     borderRadius: RADIUS.full, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border,
   },
-  filterPillActive: { backgroundColor: COLORS.gold, borderColor: COLORS.gold },
+  filterPillGlass: {
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.full, overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.2)',
+  },
+  filterPillGlassTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: `${COLORS.gold}30`,
+  },
   filterText: { fontSize: 13, color: COLORS.muted, ...FONTS.medium },
-  filterTextActive: { color: COLORS.dark },
+  filterTextActive: { fontSize: 13, color: COLORS.white, ...FONTS.bold },
   feed: { flex: 1 },
   feedContent: { paddingHorizontal: SPACING.xl, paddingBottom: 100 },
   empty: { alignItems: 'center', paddingTop: 80 },

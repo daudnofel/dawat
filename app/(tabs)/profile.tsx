@@ -7,6 +7,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring, withDelay } fro
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
+import { getCurrentUserId, clearCurrentUserId } from '../../lib/auth-cache';
 import { User } from '../../types';
 import AnimatedPress from '../../components/AnimatedPress';
 
@@ -61,13 +62,13 @@ export default function ProfileScreen() {
   }, []);
 
   const fetchProfile = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const userId = await getCurrentUserId();
+    if (!userId) return;
 
     const { data } = await supabase
       .from('users')
       .select('*')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single();
 
     if (data) {
@@ -78,13 +79,13 @@ export default function ProfileScreen() {
     const { count: hosted } = await supabase
       .from('events')
       .select('*', { count: 'exact', head: true })
-      .eq('host_id', user.id);
+      .eq('host_id', userId);
     setHostedCount(hosted ?? 0);
 
     const { count: attending } = await supabase
       .from('rsvps')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .in('status', ['yes', 'inshallah']);
     setAttendingCount(attending ?? 0);
   };
@@ -99,6 +100,7 @@ export default function ProfileScreen() {
         text: 'Sign Out',
         style: 'destructive',
         onPress: async () => {
+          clearCurrentUserId();
           await supabase.auth.signOut();
           router.replace('/(auth)/login');
         },

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { COLORS, FONTS, SPACING } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
+import { getCurrentUserId } from '../../lib/auth-cache';
 import { GenderMode } from '../../types';
 import EventCard from '../../components/EventCard';
 import SkeletonCard from '../../components/SkeletonCard';
@@ -16,8 +17,8 @@ export default function EventsScreen() {
 
   const fetchMyEvents = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const userId = await getCurrentUserId();
+      if (!userId) {
         setLoading(false);
         setRefreshing(false);
         return;
@@ -27,7 +28,7 @@ export default function EventsScreen() {
       const { data: hosted, error: hostErr } = await supabase
         .from('events')
         .select('*')
-        .eq('host_id', user.id)
+        .eq('host_id', userId)
         .order('created_at', { ascending: false });
 
       if (hostErr) console.log('Host query error:', hostErr.message);
@@ -37,7 +38,7 @@ export default function EventsScreen() {
       const { data: rsvpData, error: rsvpErr } = await supabase
         .from('rsvps')
         .select('event_id, status')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .in('status', ['yes', 'inshallah']);
 
       if (rsvpErr) console.log('RSVP query error:', rsvpErr.message);

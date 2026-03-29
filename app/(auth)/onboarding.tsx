@@ -13,7 +13,7 @@ import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
 import { Gender, GenderPref } from '../../types';
 import { supabase } from '../../lib/supabase';
-import { setCurrentUserId } from '../../lib/auth-cache';
+import { setCurrentUserId, getCurrentUserId } from '../../lib/auth-cache';
 import AnimatedPress from '../../components/AnimatedPress';
 
 const TOTAL_STEPS = 4;

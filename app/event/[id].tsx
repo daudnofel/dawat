@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { useToast } from 'heroui-native/toast';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { RsvpStatus, GenderMode } from '../../types';
@@ -38,7 +37,6 @@ export default function EventDetailScreen() {
   const [rsvpStatus, setRsvpStatus] = useState<RsvpStatus | null>(null);
   const [yesCount, setYesCount] = useState(0);
   const [inshallahCount, setInshallahCount] = useState(0);
-  const toast = useToast();
 
   useEffect(() => {
     fetchEvent();
@@ -97,7 +95,7 @@ export default function EventDetailScreen() {
     );
     const userId = (await supabase.auth.getUser()).data.user?.id;
     if (!userId) {
-      toast.show({ label: 'Sign in required', description: 'Please sign in to RSVP', variant: 'warning' });
+      Alert.alert('Sign in required', 'Please sign in to RSVP.');
       return;
     }
 
@@ -114,18 +112,11 @@ export default function EventDetailScreen() {
     });
 
     if (!res.ok) {
-      toast.show({ label: 'Error', description: 'Could not save RSVP', variant: 'danger' });
+      Alert.alert('Error', 'Could not save RSVP');
       return;
     }
 
     setRsvpStatus(status);
-
-    if (status === 'yes') {
-      toast.show({ label: "JazakAllah khair — you're going! 🤲", variant: 'success' });
-    } else if (status === 'inshallah') {
-      toast.show({ label: "We'll remind you 24h before 🤲", variant: 'default' });
-    }
-
     fetchEvent();
   };
 

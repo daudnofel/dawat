@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
+import { GlassView } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -56,8 +57,17 @@ export default function TrendingScreen() {
       <View style={styles.filterWrapper}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
           {ETHNIC_FILTERS.map((f) => (
-            <Pressable key={f} style={[styles.filterPill, activeFilter === f && styles.filterPillActive]} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveFilter(f); }}>
-              <Text style={[styles.filterText, activeFilter === f && styles.filterTextActive]}>{f}</Text>
+            <Pressable key={f} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveFilter(f); }}>
+              {activeFilter === f ? (
+                <GlassView style={styles.filterPillGlass} glassEffectStyle="clear" colorScheme="dark">
+                  <View style={styles.filterPillGlassTint} />
+                  <Text style={styles.filterTextActive}>{f}</Text>
+                </GlassView>
+              ) : (
+                <View style={styles.filterPill}>
+                  <Text style={styles.filterText}>{f}</Text>
+                </View>
+              )}
             </Pressable>
           ))}
         </ScrollView>
@@ -111,9 +121,10 @@ const styles = StyleSheet.create({
   filterWrapper: { height: 44 },
   filterRow: { paddingHorizontal: SPACING.xl, gap: SPACING.sm, alignItems: 'center', height: 44 },
   filterPill: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm, borderRadius: RADIUS.full, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border },
-  filterPillActive: { backgroundColor: COLORS.gold, borderColor: COLORS.gold },
+  filterPillGlass: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm, borderRadius: RADIUS.full, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.2)' },
+  filterPillGlassTint: { ...StyleSheet.absoluteFillObject, backgroundColor: `${COLORS.gold}30` },
   filterText: { fontSize: 13, color: COLORS.muted, ...FONTS.medium },
-  filterTextActive: { color: COLORS.dark },
+  filterTextActive: { fontSize: 13, color: COLORS.white, ...FONTS.bold },
   list: { flex: 1, paddingHorizontal: SPACING.xl },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.md,

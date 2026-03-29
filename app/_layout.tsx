@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { View, ActivityIndicator, StatusBar, LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ToastProvider } from 'heroui-native/toast';
+import { HeroUINativeProvider } from 'heroui-native/provider';
 
 import { COLORS } from '../lib/theme';
 
@@ -62,6 +63,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <HeroUINativeProvider colorScheme="dark">
       <ToastProvider>
         <ThemeProvider value={DawatDarkTheme}>
           <StatusBar barStyle="light-content" />
@@ -71,6 +73,7 @@ export default function RootLayout() {
           </Stack>
         </ThemeProvider>
       </ToastProvider>
+      </HeroUINativeProvider>
     </GestureHandlerRootView>
   );
 }

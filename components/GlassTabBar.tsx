@@ -14,7 +14,8 @@ const TAB_COUNT = 5;
 const TAB_BAR_WIDTH = 340;
 const TAB_BAR_HEIGHT = 64;
 const INDICATOR_PADDING = 4;
-const INDICATOR_WIDTH = (TAB_BAR_WIDTH - INDICATOR_PADDING * 2) / TAB_COUNT;
+const USABLE_WIDTH = TAB_BAR_WIDTH;
+const INDICATOR_WIDTH = USABLE_WIDTH / TAB_COUNT;
 const INDICATOR_HEIGHT = TAB_BAR_HEIGHT - INDICATOR_PADDING * 2;
 
 // Clean SVG icons — thin line style
@@ -100,10 +101,10 @@ interface GlassTabBarProps {
 }
 
 export default function GlassTabBar({ state, navigation }: GlassTabBarProps) {
-  const translateX = useSharedValue(INDICATOR_PADDING + state.index * INDICATOR_WIDTH);
+  const translateX = useSharedValue(state.index * INDICATOR_WIDTH);
 
   useEffect(() => {
-    translateX.value = withSpring(INDICATOR_PADDING + state.index * INDICATOR_WIDTH, {
+    translateX.value = withSpring(state.index * INDICATOR_WIDTH, {
       damping: 20,
       stiffness: 300,
       mass: 0.4,
@@ -213,14 +214,15 @@ const styles = StyleSheet.create({
   indicatorWrapper: {
     position: 'absolute',
     top: INDICATOR_PADDING,
+    left: 0,
     width: INDICATOR_WIDTH,
     height: INDICATOR_HEIGHT,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   indicatorHighlight: {
-    width: '92%',
-    height: '100%',
+    width: INDICATOR_WIDTH - 8,
+    height: INDICATOR_HEIGHT,
     borderRadius: INDICATOR_HEIGHT / 2,
     backgroundColor: 'rgba(255,255,255,0.1)',
   },

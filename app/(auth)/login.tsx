@@ -83,14 +83,6 @@ export default function LoginScreen() {
           By continuing, you agree to our Terms of Service & Privacy Policy
         </Text>
 
-        {__DEV__ && (
-          <Pressable
-            style={styles.devSkip}
-            onPress={() => router.replace('/(tabs)')}
-          >
-            <Text style={styles.devSkipText}>Skip login (dev mode)</Text>
-          </Pressable>
-        )}
       </View>
     </KeyboardAvoidingView>
   );
@@ -120,6 +112,4 @@ const styles = StyleSheet.create({
     color: COLORS.hint, fontSize: 12, ...FONTS.regular,
     textAlign: 'center', marginTop: SPACING.xl, lineHeight: 18,
   },
-  devSkip: { marginTop: SPACING.xxl, alignItems: 'center', paddingVertical: SPACING.md },
-  devSkipText: { color: COLORS.muted, fontSize: 13, ...FONTS.regular, textDecorationLine: 'underline' },
 });

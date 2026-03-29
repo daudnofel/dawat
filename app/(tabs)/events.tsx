@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SPACING } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { GenderMode } from '../../types';
 import EventCard from '../../components/EventCard';
+import SkeletonCard from '../../components/SkeletonCard';
 
 export default function EventsScreen() {
   const [hosting, setHosting] = useState<any[]>([]);
@@ -43,7 +45,7 @@ export default function EventsScreen() {
     setRefreshing(false);
   };
 
-  useEffect(() => { fetchMyEvents(); }, []);
+  useFocusEffect(useCallback(() => { fetchMyEvents(); }, []));
 
   const onRefresh = () => { setRefreshing(true); fetchMyEvents(); };
 
@@ -58,7 +60,14 @@ export default function EventsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gold} />}
       >
-        {loading && <ActivityIndicator size="large" color={COLORS.gold} style={{ marginTop: 60 }} />}
+        {loading && (
+          <>
+            <Text style={styles.sectionTitle}>Hosting</Text>
+            <SkeletonCard />
+            <Text style={styles.sectionTitle}>Attending</Text>
+            <SkeletonCard />
+          </>
+        )}
 
         {!loading && (
           <>

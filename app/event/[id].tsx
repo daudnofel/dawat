@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Share, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
@@ -44,9 +44,11 @@ export default function EventDetailScreen() {
   const [isHost, setIsHost] = useState(false);
   const [guestRefreshKey, setGuestRefreshKey] = useState(0);
 
-  useEffect(() => {
-    fetchEvent();
-  }, [id]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchEvent();
+    }, [id]),
+  );
 
   const fetchEvent = async () => {
     const { data, error } = await supabase
@@ -180,6 +182,39 @@ export default function EventDetailScreen() {
     }
   };
 
+  const handleEdit = () => {
+    router.push(`/event/edit/${id}`);
+  };
+
+  const handleCancelEvent = () => {
+    Alert.alert(
+      'Cancel Event',
+      'Are you sure? All guests will see this event as cancelled. This cannot be undone.',
+      [
+        { text: 'Keep Event', style: 'cancel' },
+        {
+          text: 'Cancel Event',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await supabase
+              .from('events')
+              .update({ is_cancelled: true, updated_at: new Date().toISOString() })
+              .eq('id', id);
+
+            if (error) {
+              Alert.alert('Error', error.message);
+              return;
+            }
+
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            Alert.alert('Event Cancelled', 'This event has been cancelled.');
+            router.back();
+          },
+        },
+      ],
+    );
+  };
+
   const handleShare = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (event) {
@@ -266,6 +301,23 @@ export default function EventDetailScreen() {
           </View>
 
           <GuestListDashboard eventId={id!} visible={isHost} refreshKey={guestRefreshKey} />
+
+          {isHost && (
+            <View style={styles.hostActions}>
+              <Pressable
+                style={({ pressed }) => [styles.editButton, pressed && { transform: [{ scale: 0.97 }] }]}
+                onPress={handleEdit}
+              >
+                <Text style={styles.editButtonText}>Edit Event</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.cancelEventButton, pressed && { transform: [{ scale: 0.97 }] }]}
+                onPress={handleCancelEvent}
+              >
+                <Text style={styles.cancelEventText}>Cancel Event</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -317,4 +369,20 @@ const styles = StyleSheet.create({
   description: { fontSize: 14, color: COLORS.muted, ...FONTS.regular, lineHeight: 22, marginBottom: SPACING.lg },
   rsvpSection: { borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: SPACING.md, marginBottom: SPACING.xxl + SPACING.xxl },
   rsvpConfirm: { fontSize: 14, color: COLORS.green, ...FONTS.medium, textAlign: 'center', marginTop: SPACING.sm },
+  hostActions: {
+    marginTop: SPACING.xl, paddingTop: SPACING.lg,
+    borderTopWidth: 1, borderTopColor: COLORS.border,
+    gap: SPACING.sm, marginBottom: SPACING.xxl + SPACING.xxl,
+  },
+  editButton: {
+    backgroundColor: COLORS.gold, borderRadius: RADIUS.md,
+    paddingVertical: SPACING.lg, alignItems: 'center',
+  },
+  editButtonText: { color: COLORS.dark, fontSize: 16, ...FONTS.bold },
+  cancelEventButton: {
+    backgroundColor: 'transparent', borderRadius: RADIUS.md,
+    paddingVertical: SPACING.md, alignItems: 'center',
+    borderWidth: 1, borderColor: COLORS.red,
+  },
+  cancelEventText: { color: COLORS.red, fontSize: 14, ...FONTS.medium },
 });

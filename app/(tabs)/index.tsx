@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { GlassView } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { GenderMode } from '../../types';
 import { useFeedStore } from '../../store/useFeedStore';
@@ -64,10 +65,11 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [activeFilter]);
 
-  useEffect(() => {
-    setLoading(true);
-    fetchEvents();
-  }, [fetchEvents]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchEvents();
+    }, [fetchEvents]),
+  );
 
   const onRefresh = () => {
     setRefreshing(true);

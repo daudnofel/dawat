@@ -43,7 +43,7 @@ export default function EventsScreen() {
 
       // Simple parallel queries — no joins
       const [hostedResult, rsvpResult] = await Promise.all([
-        supabase.from('events').select('*').eq('host_id', userId).order('created_at', { ascending: false }),
+        supabase.from('events').select('*, rsvps(status)').eq('host_id', userId).eq('is_cancelled', false).order('created_at', { ascending: false }),
         supabase.from('rsvps').select('event_id').eq('user_id', userId).in('status', ['yes', 'inshallah']),
       ]);
 
@@ -51,7 +51,7 @@ export default function EventsScreen() {
 
       if (rsvpResult.data && rsvpResult.data.length > 0) {
         const ids = rsvpResult.data.map((r: any) => r.event_id);
-        const { data: events } = await supabase.from('events').select('*').in('id', ids);
+        const { data: events } = await supabase.from('events').select('*, rsvps(status)').in('id', ids).eq('is_cancelled', false);
         setAttending(events ?? []);
       } else {
         setAttending([]);
@@ -71,16 +71,21 @@ export default function EventsScreen() {
 
   const onRefresh = () => { setRefreshing(true); fetchMyEvents(); };
 
-  const renderCard = (e: any, label: string) => (
-    <EventCard
-      key={e.id} id={e.id} title={e.title} theme_id={e.theme_id}
-      org_name={label}
-      date_label={e.date_time ? new Date(e.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD'}
-      location_name={e.location_name ?? 'TBD'} price={e.price}
-      gender_mode={e.gender_mode as GenderMode} is_halal_venue={e.is_halal_venue}
-      yes_count={0} inshallah_count={0} capacity={e.capacity}
-    />
-  );
+  const renderCard = (e: any, label: string) => {
+    const rsvps = Array.isArray(e.rsvps) ? e.rsvps : [];
+    const yesCount = rsvps.filter((r: any) => r.status === 'yes').length;
+    const inshallahCount = rsvps.filter((r: any) => r.status === 'inshallah').length;
+    return (
+      <EventCard
+        key={e.id} id={e.id} title={e.title} theme_id={e.theme_id}
+        org_name={label}
+        date_label={e.date_time ? new Date(e.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD'}
+        location_name={e.location_name ?? 'TBD'} price={e.price}
+        gender_mode={e.gender_mode as GenderMode} is_halal_venue={e.is_halal_venue}
+        yes_count={yesCount} inshallah_count={inshallahCount} capacity={e.capacity}
+      />
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

@@ -150,7 +150,7 @@ export default function Step3Details() {
               value={tempDate}
               mode={pickerMode}
               display="spinner"
-              onChange={(_, date) => { if (date) setTempDate(date); }}
+              onValueChange={(date) => { if (date) setTempDate(date); }}
               minimumDate={pickerMode === 'date' ? new Date() : undefined}
               themeVariant="dark"
               style={{ height: 200 }}

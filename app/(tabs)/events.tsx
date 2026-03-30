@@ -65,8 +65,10 @@ export default function EventsScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => {
-    setLoading(true);
-    fetchMyEvents();
+    if (!loading) {
+      // Silent refresh — no skeleton flash
+      fetchMyEvents();
+    }
   }, [fetchMyEvents]));
 
   const onRefresh = () => { setRefreshing(true); fetchMyEvents(); };

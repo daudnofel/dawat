@@ -11,6 +11,10 @@ import { supabase } from '../../lib/supabase';
 import RsvpButtons from '../../components/RsvpButtons';
 import FamilyRegistration from '../../components/FamilyRegistration';
 import GuestListDashboard from '../../components/GuestListDashboard';
+import AddToCalendar from '../../components/AddToCalendar';
+import GuestAvatars from '../../components/GuestAvatars';
+import MapPreview from '../../components/MapPreview';
+import EventComments from '../../components/EventComments';
 import { getThemeById } from '../../lib/themes';
 
 interface EventDetail {
@@ -43,11 +47,19 @@ export default function EventDetailScreen() {
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [guestRefreshKey, setGuestRefreshKey] = useState(0);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  useEffect(() => {
+    fetchEvent();
+  }, [id]);
 
   useFocusEffect(
     useCallback(() => {
-      fetchEvent();
-    }, [id]),
+      // Only silently refetch (no loading spinner) after initial load
+      if (hasLoaded) {
+        fetchEventSilent();
+      }
+    }, [id, hasLoaded]),
   );
 
   const fetchEvent = async () => {
@@ -95,6 +107,23 @@ export default function EventDetailScreen() {
     }
 
     setLoading(false);
+    setHasLoaded(true);
+  };
+
+  // Re-fetch data without showing loading spinner (for focus returns)
+  const fetchEventSilent = async () => {
+    const { data } = await supabase.from('events').select('*').eq('id', id).single();
+    if (data) setEvent(data as EventDetail);
+
+    const { count: yc } = await supabase
+      .from('rsvps').select('*', { count: 'exact', head: true })
+      .eq('event_id', id).eq('status', 'yes');
+    const { count: ic } = await supabase
+      .from('rsvps').select('*', { count: 'exact', head: true })
+      .eq('event_id', id).eq('status', 'inshallah');
+    setYesCount(yc ?? 0);
+    setInshallahCount(ic ?? 0);
+    setGuestRefreshKey((k) => k + 1);
   };
 
   const handleRsvp = async (status: RsvpStatus) => {
@@ -275,6 +304,7 @@ export default function EventDetailScreen() {
 
         <View style={styles.body}>
           <Text style={styles.title}>{event.title}</Text>
+          <GuestAvatars eventId={id!} refreshKey={guestRefreshKey} />
           <Text style={styles.attendance}>
             {yesCount} confirmed · {inshallahCount} Inshallah
           </Text>
@@ -292,6 +322,19 @@ export default function EventDetailScreen() {
             {event.is_halal_venue && <InfoRow icon="✅" text="Halal venue" />}
           </View>
 
+          <MapPreview
+            locationName={event.location_name}
+            locationAddress={event.location_address}
+            isHidden={event.is_location_hidden}
+          />
+
+          <AddToCalendar
+            title={event.title}
+            dateTime={event.date_time}
+            locationName={event.location_name}
+            description={event.description}
+          />
+
           {event.description && (
             <Text style={styles.description}>{event.description}</Text>
           )}
@@ -301,6 +344,8 @@ export default function EventDetailScreen() {
           </View>
 
           <GuestListDashboard eventId={id!} visible={isHost} refreshKey={guestRefreshKey} />
+
+          <EventComments eventId={id!} hostId={event.host_id} />
 
           {isHost && (
             <View style={styles.hostActions}>

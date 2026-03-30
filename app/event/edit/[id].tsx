@@ -425,7 +425,7 @@ export default function EditEventScreen() {
               value={tempDate}
               mode={pickerMode}
               display="spinner"
-              onChange={(_, date) => { if (date) setTempDate(date); }}
+              onValueChange={(date) => { if (date) setTempDate(date); }}
               themeVariant="dark"
               style={{ height: 200 }}
             />

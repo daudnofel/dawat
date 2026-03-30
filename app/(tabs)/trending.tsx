@@ -1,124 +1,236 @@
-import { useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { GlassView } from 'expo-glass-effect';
-import * as Haptics from 'expo-haptics';
+import { useState, useCallback } from 'react';
+import {
+  View, Text, TextInput, Pressable, StyleSheet, ScrollView, RefreshControl,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { getThemeById } from '../../lib/themes';
-import EmptyState from '../../components/EmptyState';
+import { GenderMode } from '../../types';
+import EventCard from '../../components/EventCard';
 import SkeletonCard from '../../components/SkeletonCard';
+import EmptyState from '../../components/EmptyState';
 
-const ETHNIC_FILTERS = ['All', 'South Asian', 'Arab', 'Somali', 'West African', 'Turkish', 'Other'];
+interface DiscoverEvent {
+  id: string;
+  title: string;
+  theme_id: string;
+  gender_mode: GenderMode;
+  is_halal_venue: boolean;
+  price: number;
+  capacity: number | null;
+  date_time: string | null;
+  location_name: string | null;
+  host_id: string;
+  slug: string;
+  rsvps: { status: string }[] | null;
+  going: number;
+}
 
-export default function TrendingScreen() {
+export default function DiscoverScreen() {
   const router = useRouter();
-  const [activeFilter, setActiveFilter] = useState('All');
-  const [events, setEvents] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [happeningSoon, setHappeningSoon] = useState<DiscoverEvent[]>([]);
+  const [popular, setPopular] = useState<DiscoverEvent[]>([]);
+  const [searchResults, setSearchResults] = useState<DiscoverEvent[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searching, setSearching] = useState(false);
 
-  useEffect(() => { fetchTrending(); }, []);
+  const fetchDiscover = useCallback(async () => {
+    const now = new Date().toISOString();
+    const oneWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const fetchTrending = async () => {
-    try {
-      // No auth needed — public events query
-      const { data, error } = await supabase
-        .from('events')
-        .select('id, title, theme_id, date_time, slug, rsvps(status)')
-        .eq('is_published', true)
-        .eq('is_cancelled', false)
-        .order('created_at', { ascending: false })
-        .limit(20);
+    // Happening Soon — events in the next 7 days
+    const { data: soonData } = await supabase
+      .from('events')
+      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status)')
+      .eq('is_published', true)
+      .eq('is_cancelled', false)
+      .gte('date_time', now)
+      .lte('date_time', oneWeek)
+      .order('date_time', { ascending: true })
+      .limit(10);
 
-      if (error) {
-        console.log('Trending error:', error.message);
-        setEvents([]);
-      } else if (data) {
-        const sorted = data
-          .map((e: any) => ({
-            ...e,
-            going: (e.rsvps ?? []).filter((r: any) => r.status === 'yes' || r.status === 'inshallah').length,
-          }))
-          .sort((a: any, b: any) => b.going - a.going);
-        setEvents(sorted);
-      }
-    } catch (e) {
-      console.log('Trending fetch error:', e);
-      setEvents([]);
-    }
+    const soonWithCounts = (soonData ?? []).map((e: any) => ({
+      ...e,
+      going: (e.rsvps ?? []).filter((r: any) => r.status === 'yes' || r.status === 'inshallah').length,
+    }));
+    setHappeningSoon(soonWithCounts);
+
+    // Popular — all upcoming events sorted by RSVP count
+    const { data: popData } = await supabase
+      .from('events')
+      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status)')
+      .eq('is_published', true)
+      .eq('is_cancelled', false)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    const popWithCounts = (popData ?? [])
+      .map((e: any) => ({
+        ...e,
+        going: (e.rsvps ?? []).filter((r: any) => r.status === 'yes' || r.status === 'inshallah').length,
+      }))
+      .sort((a: any, b: any) => b.going - a.going)
+      .slice(0, 10);
+    setPopular(popWithCounts);
+
     setLoading(false);
     setRefreshing(false);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!loading) fetchDiscover();
+    }, [fetchDiscover]),
+  );
+
+  // Initial load
+  useState(() => { fetchDiscover(); });
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+
+    if (query.trim().length < 2) {
+      setSearchResults(null);
+      return;
+    }
+
+    setSearching(true);
+    const { data } = await supabase
+      .from('events')
+      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status)')
+      .eq('is_published', true)
+      .eq('is_cancelled', false)
+      .or(`title.ilike.%${query}%,location_name.ilike.%${query}%`)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    const results = (data ?? []).map((e: any) => ({
+      ...e,
+      going: (e.rsvps ?? []).filter((r: any) => r.status === 'yes' || r.status === 'inshallah').length,
+    }));
+    setSearchResults(results);
+    setSearching(false);
   };
 
-  const onRefresh = () => { setRefreshing(true); fetchTrending(); };
+  const onRefresh = () => {
+    setRefreshing(true);
+    setSearchResults(null);
+    setSearchQuery('');
+    fetchDiscover();
+  };
+
+  const renderEventCard = (event: DiscoverEvent) => {
+    const rsvps = event.rsvps ?? [];
+    const yesCount = rsvps.filter((r) => r.status === 'yes').length;
+    const inshallahCount = rsvps.filter((r) => r.status === 'inshallah').length;
+    return (
+      <EventCard
+        key={event.id}
+        id={event.id}
+        title={event.title}
+        theme_id={event.theme_id}
+        org_name="Community Event"
+        date_label={event.date_time ? new Date(event.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Date TBD'}
+        location_name={event.location_name ?? 'Location TBD'}
+        price={event.price}
+        gender_mode={event.gender_mode}
+        is_halal_venue={event.is_halal_venue}
+        yes_count={yesCount}
+        inshallah_count={inshallahCount}
+        capacity={event.capacity}
+      />
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Trending</Text>
+        <Text style={styles.title}>Discover</Text>
       </View>
 
-      <View style={styles.filterWrapper}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          {ETHNIC_FILTERS.map((f) => (
-            <Pressable key={f} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveFilter(f); }}>
-              {activeFilter === f ? (
-                <GlassView style={styles.filterPillGlass} glassEffectStyle="clear" colorScheme="dark">
-                  <View style={styles.filterPillGlassTint} />
-                  <Text style={styles.filterTextActive}>{f}</Text>
-                </GlassView>
-              ) : (
-                <View style={styles.filterPill}>
-                  <Text style={styles.filterText}>{f}</Text>
-                </View>
-              )}
-            </Pressable>
-          ))}
-        </ScrollView>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          value={searchQuery}
+          onChangeText={handleSearch}
+          placeholder="Search events or locations..."
+          placeholderTextColor={COLORS.hint}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {searchQuery.length > 0 && (
+          <Pressable
+            style={styles.clearButton}
+            onPress={() => { setSearchQuery(''); setSearchResults(null); }}
+          >
+            <Text style={styles.clearText}>✕</Text>
+          </Pressable>
+        )}
       </View>
 
       <ScrollView
-        style={styles.list}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gold} />}
       >
         {loading && (
-          <View style={{ paddingHorizontal: SPACING.xl }}>
+          <>
             <SkeletonCard />
             <SkeletonCard />
-          </View>
+          </>
         )}
 
-        {!loading && events.map((event, index) => {
-          const theme = getThemeById(event.theme_id);
-          return (
-            <Pressable
-              key={event.id}
-              style={({ pressed }) => [styles.row, pressed && { opacity: 0.8 }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(`/event/${event.id}`); }}
-            >
-              <View style={styles.rankCircle}>
-                <Text style={styles.rankText}>{index + 1}</Text>
-              </View>
-              <Text style={styles.rowEmoji}>{theme?.defaultEmoji ?? '🌙'}</Text>
-              <View style={styles.rowInfo}>
-                <Text style={styles.rowTitle} numberOfLines={1}>{event.title}</Text>
-                <Text style={styles.rowMeta}>
-                  {event.date_time ? new Date(event.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD'}
-                </Text>
-              </View>
-              <Text style={styles.rowGoing}>
-                {event.going > 5 ? '🔥 ' : ''}{event.going} going
-              </Text>
-            </Pressable>
-          );
-        })}
+        {/* Search Results */}
+        {searchResults !== null && !loading && (
+          <>
+            <Text style={styles.sectionTitle}>
+              Results for "{searchQuery}" ({searchResults.length})
+            </Text>
+            {searchResults.length === 0 ? (
+              <EmptyState emoji="🔍" title="No events found" subtitle={`Try a different search term`} />
+            ) : (
+              searchResults.map(renderEventCard)
+            )}
+          </>
+        )}
 
-        {!loading && events.length === 0 && (
-          <EmptyState emoji="🔥" title="No trending events yet" subtitle="Create events to see them here" />
+        {/* Browse Sections (shown when not searching) */}
+        {searchResults === null && !loading && (
+          <>
+            {/* Happening Soon */}
+            {happeningSoon.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>Happening Soon 🗓</Text>
+                <Text style={styles.sectionSubtitle}>Events in the next 7 days</Text>
+                {happeningSoon.map(renderEventCard)}
+              </>
+            )}
+
+            {/* Popular */}
+            {popular.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>Popular 🔥</Text>
+                <Text style={styles.sectionSubtitle}>Most RSVPs</Text>
+                {popular.map(renderEventCard)}
+              </>
+            )}
+
+            {happeningSoon.length === 0 && popular.length === 0 && (
+              <EmptyState
+                emoji="🌙"
+                title="No events to discover"
+                subtitle="Create the first event for your community"
+              />
+            )}
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -127,25 +239,49 @@ export default function TrendingScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.dark },
-  header: { paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md },
+  header: { paddingHorizontal: SPACING.xl, paddingTop: SPACING.md, paddingBottom: SPACING.sm },
   title: { fontSize: 22, color: COLORS.white, ...FONTS.bold },
-  filterWrapper: { height: 44 },
-  filterRow: { paddingHorizontal: SPACING.xl, gap: SPACING.sm, alignItems: 'center', height: 44 },
-  filterPill: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm, borderRadius: RADIUS.full, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border },
-  filterPillGlass: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm, borderRadius: RADIUS.full, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.2)' },
-  filterPillGlassTint: { ...StyleSheet.absoluteFillObject, backgroundColor: `${COLORS.gold}30` },
-  filterText: { fontSize: 13, color: COLORS.muted, ...FONTS.medium },
-  filterTextActive: { fontSize: 13, color: COLORS.white, ...FONTS.bold },
-  list: { flex: 1, paddingHorizontal: SPACING.xl },
-  row: {
-    flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
-    paddingVertical: SPACING.md, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  searchContainer: {
+    paddingHorizontal: SPACING.xl,
+    paddingBottom: SPACING.md,
+    position: 'relative',
   },
-  rankCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.gold, alignItems: 'center', justifyContent: 'center' },
-  rankText: { color: COLORS.dark, fontSize: 13, ...FONTS.bold },
-  rowEmoji: { fontSize: 24 },
-  rowInfo: { flex: 1 },
-  rowTitle: { fontSize: 14, color: COLORS.white, ...FONTS.semibold },
-  rowMeta: { fontSize: 12, color: COLORS.muted, ...FONTS.regular, marginTop: 2 },
-  rowGoing: { fontSize: 12, color: COLORS.muted, ...FONTS.medium },
+  searchInput: {
+    backgroundColor: COLORS.input,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    paddingRight: 40,
+    color: COLORS.white,
+    fontSize: 15,
+    ...FONTS.medium,
+  },
+  clearButton: {
+    position: 'absolute',
+    right: SPACING.xl + SPACING.md,
+    top: 0,
+    bottom: SPACING.md,
+    justifyContent: 'center',
+  },
+  clearText: {
+    color: COLORS.muted,
+    fontSize: 16,
+  },
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: SPACING.xl, paddingBottom: 120 },
+  sectionTitle: {
+    fontSize: 18,
+    color: COLORS.white,
+    ...FONTS.bold,
+    marginTop: SPACING.xl,
+    marginBottom: SPACING.xs,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: COLORS.muted,
+    ...FONTS.regular,
+    marginBottom: SPACING.lg,
+  },
 });

@@ -56,6 +56,10 @@ export default function Step4Settings({ onPublish }: { onPublish?: () => void })
       is_halal_venue: draft.is_halal_venue,
       price: draft.price,
       capacity: draft.capacity,
+      rsvp_deadline: draft.rsvp_deadline?.toISOString() ?? null,
+      virtual_link: draft.virtual_link || null,
+      allow_plus_ones: draft.allow_plus_ones,
+      max_plus_ones: draft.max_plus_ones,
       slug,
       is_published: true,
     }),
@@ -125,6 +129,43 @@ export default function Step4Settings({ onPublish }: { onPublish?: () => void })
           <Text style={styles.idNote}>
             ID verification recommended for gender-only events
           </Text>
+        )}
+
+        {/* Plus Ones */}
+        <View style={[styles.toggleRow, { marginTop: SPACING.xl, borderTopWidth: 1, borderTopColor: COLORS.border }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.toggleLabel}>Allow plus-ones?</Text>
+            <Text style={styles.toggleHint}>Guests can bring additional people</Text>
+          </View>
+          <Switch
+            value={draft.allow_plus_ones}
+            onValueChange={(v) => updateDraft({ allow_plus_ones: v, max_plus_ones: v ? 1 : 0 })}
+            trackColor={{ false: COLORS.border, true: COLORS.gold }}
+            thumbColor={COLORS.white}
+          />
+        </View>
+
+        {draft.allow_plus_ones && (
+          <View style={styles.plusOneRow}>
+            <Text style={styles.toggleLabel}>Max plus-ones per guest</Text>
+            <View style={styles.plusOneControls}>
+              <Pressable
+                style={[styles.plusOneBtn, draft.max_plus_ones <= 1 && { opacity: 0.3 }]}
+                onPress={() => updateDraft({ max_plus_ones: Math.max(1, draft.max_plus_ones - 1) })}
+                disabled={draft.max_plus_ones <= 1}
+              >
+                <Text style={styles.plusOneBtnText}>−</Text>
+              </Pressable>
+              <Text style={styles.plusOneCount}>{draft.max_plus_ones}</Text>
+              <Pressable
+                style={[styles.plusOneBtn, draft.max_plus_ones >= 10 && { opacity: 0.3 }]}
+                onPress={() => updateDraft({ max_plus_ones: Math.min(10, draft.max_plus_ones + 1) })}
+                disabled={draft.max_plus_ones >= 10}
+              >
+                <Text style={styles.plusOneBtnText}>+</Text>
+              </Pressable>
+            </View>
+          </View>
         )}
 
         {/* ID Verification */}
@@ -221,6 +262,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg,
     borderTopWidth: 1, borderTopColor: COLORS.border, marginBottom: 90,
   },
+  plusOneRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: SPACING.md,
+  },
+  plusOneControls: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
+  },
+  plusOneBtn: {
+    width: 32, height: 32, borderRadius: RADIUS.full,
+    backgroundColor: COLORS.card2, borderWidth: 1, borderColor: COLORS.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  plusOneBtnText: { fontSize: 18, color: COLORS.gold, ...FONTS.bold },
+  plusOneCount: { fontSize: 18, color: COLORS.white, ...FONTS.bold, minWidth: 24, textAlign: 'center' },
   publishButton: {
     backgroundColor: COLORS.gold, borderRadius: RADIUS.md,
     paddingVertical: SPACING.lg, alignItems: 'center', height: 52, justifyContent: 'center',

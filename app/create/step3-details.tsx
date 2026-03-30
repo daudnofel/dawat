@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Switch, Platform, Modal } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Switch, Platform, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
@@ -18,7 +18,7 @@ export default function Step3Details() {
   const { draft, updateDraft, nextStep, prevStep } = useEventStore();
   const [customPrice, setCustomPrice] = useState('');
   const [showCustom, setShowCustom] = useState(false);
-  const [pickerMode, setPickerMode] = useState<'date' | 'time' | null>(null);
+  const [pickerMode, setPickerMode] = useState<'date' | 'time' | 'deadline' | null>(null);
   const [tempDate, setTempDate] = useState(new Date());
 
   const canContinue = draft.location_name.trim().length >= 2 || draft.date_tbd;
@@ -30,7 +30,29 @@ export default function Step3Details() {
   };
 
   const confirmPicker = () => {
-    updateDraft({ date_time: tempDate });
+    if (pickerMode === 'deadline') {
+      // RSVP deadline must be at least 1 hour before event
+      if (draft.date_time) {
+        const oneHourBefore = new Date(draft.date_time.getTime() - 60 * 60 * 1000);
+        if (tempDate >= oneHourBefore) {
+          Alert.alert('Invalid Deadline', 'RSVP deadline must be at least 1 hour before the event starts.');
+          return;
+        }
+      }
+      updateDraft({ rsvp_deadline: tempDate });
+    } else {
+      // If event date moved earlier and existing RSVP deadline is now invalid, auto-adjust
+      if (draft.rsvp_deadline) {
+        const oneHourBefore = new Date(tempDate.getTime() - 60 * 60 * 1000);
+        if (draft.rsvp_deadline >= oneHourBefore) {
+          updateDraft({ date_time: tempDate, rsvp_deadline: oneHourBefore });
+          setPickerMode(null);
+          Alert.alert('RSVP Deadline Adjusted', 'The RSVP deadline was moved to 1 hour before the new event time.');
+          return;
+        }
+      }
+      updateDraft({ date_time: tempDate });
+    }
     setPickerMode(null);
   };
 
@@ -99,6 +121,16 @@ export default function Step3Details() {
           <Switch value={draft.is_halal_venue} onValueChange={(v) => updateDraft({ is_halal_venue: v })} trackColor={{ false: COLORS.border, true: COLORS.green }} thumbColor={COLORS.white} />
         </View>
 
+        <Text style={styles.label}>Virtual event link (optional)</Text>
+        <TextInput
+          style={styles.input} value={draft.virtual_link}
+          onChangeText={(t) => updateDraft({ virtual_link: t })}
+          placeholder="Zoom, Google Meet, etc."
+          placeholderTextColor={COLORS.hint}
+          autoCapitalize="none"
+          keyboardType="url"
+        />
+
         <Text style={styles.label}>How much?</Text>
         <View style={styles.priceRow}>
           {PRICE_OPTIONS.map((opt) => (
@@ -123,6 +155,27 @@ export default function Step3Details() {
           onChangeText={(t) => { const num = parseInt(t, 10); updateDraft({ capacity: isNaN(num) ? null : num }); }}
           placeholder="Leave empty for unlimited" placeholderTextColor={COLORS.hint} keyboardType="number-pad" />
 
+        <Text style={styles.label}>RSVP deadline (optional)</Text>
+        <Pressable
+          style={({ pressed }) => [styles.dateButton, pressed && { opacity: 0.8 }]}
+          onPress={() => {
+            const d = draft.rsvp_deadline instanceof Date ? draft.rsvp_deadline : new Date();
+            setTempDate(d);
+            setPickerMode('deadline');
+          }}
+        >
+          <Text style={styles.dateIcon}>⏳</Text>
+          <Text style={styles.dateText}>
+            {draft.rsvp_deadline ? format(draft.rsvp_deadline, 'MMM d, yyyy h:mm a') : 'No deadline'}
+          </Text>
+          {draft.rsvp_deadline && (
+            <Pressable onPress={() => updateDraft({ rsvp_deadline: null })}>
+              <Text style={{ color: COLORS.red, fontSize: 14 }}>✕</Text>
+            </Pressable>
+          )}
+          <Text style={styles.dateChevron}>›</Text>
+        </Pressable>
+
         <View style={{ height: 40 }} />
       </ScrollView>
 
@@ -139,7 +192,7 @@ export default function Step3Details() {
         <View style={styles.modalSheet}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
-              {pickerMode === 'date' ? 'Select Date' : 'Select Time'}
+              {pickerMode === 'date' ? 'Select Date' : pickerMode === 'deadline' ? 'RSVP Deadline' : 'Select Time'}
             </Text>
             <Pressable onPress={confirmPicker}>
               <Text style={styles.modalDone}>Done</Text>
@@ -148,10 +201,10 @@ export default function Step3Details() {
           {pickerMode && (
             <DateTimePicker
               value={tempDate}
-              mode={pickerMode}
+              mode={pickerMode === 'deadline' ? 'date' : pickerMode}
               display="spinner"
-              onValueChange={(date) => { if (date) setTempDate(date); }}
-              minimumDate={pickerMode === 'date' ? new Date() : undefined}
+              onChange={(_, date) => { if (date) setTempDate(date); }}
+              minimumDate={pickerMode === 'date' || pickerMode === 'deadline' ? new Date() : undefined}
               themeVariant="dark"
               style={{ height: 200 }}
             />

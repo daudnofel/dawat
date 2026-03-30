@@ -40,6 +40,10 @@ interface EditableEvent {
   capacity: number | null;
   gender_mode: GenderMode;
   is_id_required: boolean;
+  rsvp_deadline: Date | null;
+  virtual_link: string;
+  allow_plus_ones: boolean;
+  max_plus_ones: number;
 }
 
 export default function EditEventScreen() {
@@ -60,10 +64,14 @@ export default function EditEventScreen() {
     capacity: null,
     gender_mode: GenderMode.Mixed,
     is_id_required: false,
+    rsvp_deadline: null,
+    virtual_link: '',
+    allow_plus_ones: false,
+    max_plus_ones: 0,
   });
   const [customPrice, setCustomPrice] = useState('');
   const [showCustom, setShowCustom] = useState(false);
-  const [pickerMode, setPickerMode] = useState<'date' | 'time' | null>(null);
+  const [pickerMode, setPickerMode] = useState<'date' | 'time' | 'deadline' | null>(null);
   const [tempDate, setTempDate] = useState(new Date());
 
   useEffect(() => {
@@ -111,6 +119,10 @@ export default function EditEventScreen() {
       capacity: data.capacity ?? null,
       gender_mode: (data.gender_mode as GenderMode) ?? GenderMode.Mixed,
       is_id_required: data.is_id_required ?? false,
+      rsvp_deadline: data.rsvp_deadline ? new Date(data.rsvp_deadline) : null,
+      virtual_link: data.virtual_link ?? '',
+      allow_plus_ones: data.allow_plus_ones ?? false,
+      max_plus_ones: data.max_plus_ones ?? 0,
     });
 
     setLoading(false);
@@ -126,7 +138,27 @@ export default function EditEventScreen() {
   };
 
   const confirmPicker = () => {
-    update({ date_time: tempDate });
+    if (pickerMode === 'deadline') {
+      if (event.date_time) {
+        const oneHourBefore = new Date(event.date_time.getTime() - 60 * 60 * 1000);
+        if (tempDate >= oneHourBefore) {
+          Alert.alert('Invalid Deadline', 'RSVP deadline must be at least 1 hour before the event starts.');
+          return;
+        }
+      }
+      update({ rsvp_deadline: tempDate });
+    } else {
+      if (event.rsvp_deadline) {
+        const oneHourBefore = new Date(tempDate.getTime() - 60 * 60 * 1000);
+        if (event.rsvp_deadline >= oneHourBefore) {
+          update({ date_time: tempDate, rsvp_deadline: oneHourBefore });
+          setPickerMode(null);
+          Alert.alert('RSVP Deadline Adjusted', 'The RSVP deadline was moved to 1 hour before the new event time.');
+          return;
+        }
+      }
+      update({ date_time: tempDate });
+    }
     setPickerMode(null);
   };
 
@@ -151,6 +183,10 @@ export default function EditEventScreen() {
       capacity: event.capacity,
       gender_mode: event.gender_mode,
       is_id_required: event.is_id_required,
+      rsvp_deadline: event.rsvp_deadline?.toISOString() ?? null,
+      virtual_link: event.virtual_link || null,
+      allow_plus_ones: event.allow_plus_ones,
+      max_plus_ones: event.max_plus_ones,
       updated_at: new Date().toISOString(),
     };
 
@@ -295,6 +331,18 @@ export default function EditEventScreen() {
           />
         </View>
 
+        {/* Virtual Link */}
+        <Text style={styles.label}>Virtual event link (optional)</Text>
+        <TextInput
+          style={styles.input}
+          value={event.virtual_link}
+          onChangeText={(t) => update({ virtual_link: t })}
+          placeholder="Zoom, Google Meet, etc."
+          placeholderTextColor={COLORS.hint}
+          autoCapitalize="none"
+          keyboardType="url"
+        />
+
         {/* Price */}
         <Text style={styles.label}>Price</Text>
         <View style={styles.priceRow}>
@@ -345,6 +393,63 @@ export default function EditEventScreen() {
           placeholderTextColor={COLORS.hint}
           keyboardType="number-pad"
         />
+
+        {/* RSVP Deadline */}
+        <Text style={styles.label}>RSVP deadline (optional)</Text>
+        <Pressable
+          style={({ pressed }) => [styles.dateButton, pressed && { opacity: 0.8 }]}
+          onPress={() => {
+            setTempDate(event.rsvp_deadline ?? new Date());
+            setPickerMode('deadline' as any);
+          }}
+        >
+          <Text style={styles.dateIcon}>⏳</Text>
+          <Text style={styles.dateText}>
+            {event.rsvp_deadline ? format(event.rsvp_deadline, 'MMM d, yyyy h:mm a') : 'No deadline'}
+          </Text>
+          {event.rsvp_deadline && (
+            <Pressable onPress={() => update({ rsvp_deadline: null })}>
+              <Text style={{ color: COLORS.red, fontSize: 14 }}>✕</Text>
+            </Pressable>
+          )}
+          <Text style={styles.dateChevron}>›</Text>
+        </Pressable>
+
+        {/* Plus Ones */}
+        <View style={[styles.toggleRow, { marginTop: SPACING.xl }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.toggleLabel}>Allow plus-ones?</Text>
+          </View>
+          <Switch
+            value={event.allow_plus_ones}
+            onValueChange={(v) => update({ allow_plus_ones: v, max_plus_ones: v ? 1 : 0 })}
+            trackColor={{ false: COLORS.border, true: COLORS.gold }}
+            thumbColor={COLORS.white}
+          />
+        </View>
+
+        {event.allow_plus_ones && (
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Max plus-ones per guest</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.md }}>
+              <Pressable
+                style={[styles.counterBtn, event.max_plus_ones <= 1 && { opacity: 0.3 }]}
+                onPress={() => update({ max_plus_ones: Math.max(1, event.max_plus_ones - 1) })}
+                disabled={event.max_plus_ones <= 1}
+              >
+                <Text style={styles.counterBtnText}>−</Text>
+              </Pressable>
+              <Text style={styles.counterCount}>{event.max_plus_ones}</Text>
+              <Pressable
+                style={[styles.counterBtn, event.max_plus_ones >= 10 && { opacity: 0.3 }]}
+                onPress={() => update({ max_plus_ones: Math.min(10, event.max_plus_ones + 1) })}
+                disabled={event.max_plus_ones >= 10}
+              >
+                <Text style={styles.counterBtnText}>+</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
 
         {/* Gender Mode */}
         <Text style={styles.label}>Who's this gathering for?</Text>
@@ -414,7 +519,7 @@ export default function EditEventScreen() {
         <View style={styles.modalSheet}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
-              {pickerMode === 'date' ? 'Select Date' : 'Select Time'}
+              {pickerMode === 'date' ? 'Select Date' : pickerMode === 'deadline' ? 'RSVP Deadline' : 'Select Time'}
             </Text>
             <Pressable onPress={confirmPicker}>
               <Text style={styles.modalDone}>Done</Text>
@@ -423,9 +528,10 @@ export default function EditEventScreen() {
           {pickerMode && (
             <DateTimePicker
               value={tempDate}
-              mode={pickerMode}
+              mode={pickerMode === 'deadline' ? 'date' : pickerMode}
               display="spinner"
-              onValueChange={(date) => { if (date) setTempDate(date); }}
+              onChange={(_, date) => { if (date) setTempDate(date); }}
+              minimumDate={pickerMode === 'deadline' ? new Date() : undefined}
               themeVariant="dark"
               style={{ height: 200 }}
             />
@@ -522,4 +628,11 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 17, color: COLORS.white, ...FONTS.bold },
   modalDone: { fontSize: 17, color: COLORS.gold, ...FONTS.bold },
+  counterBtn: {
+    width: 32, height: 32, borderRadius: RADIUS.full,
+    backgroundColor: COLORS.card2, borderWidth: 1, borderColor: COLORS.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  counterBtnText: { fontSize: 18, color: COLORS.gold, ...FONTS.bold },
+  counterCount: { fontSize: 18, color: COLORS.white, ...FONTS.bold, minWidth: 24, textAlign: 'center' },
 });

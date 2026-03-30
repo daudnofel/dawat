@@ -33,6 +33,10 @@ interface EventDetail {
   capacity: number | null;
   slug: string;
   host_id: string;
+  rsvp_deadline: string | null;
+  virtual_link: string | null;
+  allow_plus_ones: boolean;
+  max_plus_ones: number;
 }
 
 export default function EventDetailScreen() {
@@ -148,6 +152,18 @@ export default function EventDetailScreen() {
       setRsvpStatus(null);
       setGuestRefreshKey((k) => k + 1);
       fetchEvent();
+      return;
+    }
+
+    // Check RSVP deadline
+    if (event?.rsvp_deadline && new Date(event.rsvp_deadline) < new Date()) {
+      Alert.alert('RSVP Closed', 'The RSVP deadline for this event has passed.');
+      return;
+    }
+
+    // Check capacity for "Yes" RSVPs
+    if (status === RsvpStatus.Yes && event?.capacity && yesCount >= event.capacity && rsvpStatus !== RsvpStatus.Yes) {
+      Alert.alert('Event Full', 'This event has reached its capacity.');
       return;
     }
 
@@ -317,15 +333,22 @@ export default function EventDetailScreen() {
           <View style={styles.infoCard}>
             <InfoRow icon="📅" text={event.date_tbd ? 'Date TBD' : (event.date_time ? new Date(event.date_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'Date TBD')} />
             {event.date_time && <InfoRow icon="⏰" text={new Date(event.date_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} />}
-            <InfoRow icon="📍" text={event.is_location_hidden ? 'Address revealed on RSVP' : (event.location_name ?? 'Location TBD')} />
+            <InfoRow icon="📍" text={event.is_location_hidden && !isHost && rsvpStatus !== RsvpStatus.Yes ? 'Address revealed after RSVP' : (event.location_name ?? 'Location TBD')} />
             <InfoRow icon="💵" text={event.price === 0 ? 'Free' : `$${(event.price / 100).toFixed(2)}`} />
             {event.is_halal_venue && <InfoRow icon="✅" text="Halal venue" />}
+            {event.virtual_link && <InfoRow icon="🔗" text="Virtual event — link available" />}
+            {event.rsvp_deadline && (
+              <InfoRow icon="⏳" text={`RSVP by ${new Date(event.rsvp_deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`} />
+            )}
+            {event.allow_plus_ones && (
+              <InfoRow icon="👥" text={`Plus-ones allowed (up to ${event.max_plus_ones})`} />
+            )}
           </View>
 
           <MapPreview
             locationName={event.location_name}
             locationAddress={event.location_address}
-            isHidden={event.is_location_hidden}
+            isHidden={event.is_location_hidden && !isHost && rsvpStatus !== RsvpStatus.Yes}
           />
 
           <AddToCalendar

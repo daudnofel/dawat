@@ -233,6 +233,10 @@ export interface EventDraft {
   gender_mode: GenderMode;
   is_id_required: boolean;
   custom_tags: string[];
+  rsvp_deadline: Date | null;
+  virtual_link: string;
+  allow_plus_ones: boolean;
+  max_plus_ones: number;
 }
 
 // ─── Theme ───────────────────────────────────────────────────

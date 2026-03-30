@@ -31,6 +31,10 @@ const INITIAL_DRAFT: EventDraft = {
   gender_mode: GenderMode.Mixed,
   is_id_required: false,
   custom_tags: [],
+  rsvp_deadline: null,
+  virtual_link: '',
+  allow_plus_ones: false,
+  max_plus_ones: 0,
 };
 
 export const useEventStore = create<EventStoreState>((set) => ({

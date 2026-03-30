@@ -79,10 +79,19 @@ Never assume a previous step worked — wait to be told.
 
 ---
 
-## The Tracker (read this every session)
+## Issue Tracking — Linear (primary)
 
-> **`docs/tracker.md` is the build progress tracker. Read it at the start of every session and before every new task.**
-> After each file is confirmed working, update the tracker to mark it ✅ DONE.
+> **Linear is the primary issue tracker. Use it for all new work.**
+> - **Workspace:** Dawat | **Team:** Dawat | **MCP:** `linear-server`
+> - Check Linear backlog (`list_issues`) at the start of every session
+> - When completing work, update the Linear issue (check off sub-tasks, move to Done)
+> - When discovering bugs or needed features, create a Linear issue (bundle related items to conserve the 250-issue free tier limit)
+> - Daud's business partner Shehryar uses Linear to track progress — keep it up to date
+
+## The Old Tracker (read-only history)
+
+> **`docs/tracker.md` is the legacy build progress tracker.** It documents Sprints 1–8 completion status.
+> Do NOT update it for new work — use Linear instead.
 > Never start a new file without checking the tracker first.
 
 ---

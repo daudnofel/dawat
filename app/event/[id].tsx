@@ -9,6 +9,8 @@ import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { RsvpStatus, GenderMode } from '../../types';
 import { supabase } from '../../lib/supabase';
 import RsvpButtons from '../../components/RsvpButtons';
+import FamilyRegistration from '../../components/FamilyRegistration';
+import GuestListDashboard from '../../components/GuestListDashboard';
 import { getThemeById } from '../../lib/themes';
 
 interface EventDetail {
@@ -37,6 +39,10 @@ export default function EventDetailScreen() {
   const [rsvpStatus, setRsvpStatus] = useState<RsvpStatus | null>(null);
   const [yesCount, setYesCount] = useState(0);
   const [inshallahCount, setInshallahCount] = useState(0);
+  const [showFamilyModal, setShowFamilyModal] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [isHost, setIsHost] = useState(false);
+  const [guestRefreshKey, setGuestRefreshKey] = useState(0);
 
   useEffect(() => {
     fetchEvent();
@@ -69,9 +75,11 @@ export default function EventDetailScreen() {
     setYesCount(yc ?? 0);
     setInshallahCount(ic ?? 0);
 
-    // Check current user's RSVP
+    // Check current user's RSVP and host status
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
+      if (data) setIsHost(data.host_id === user.id);
+
       const { data: rsvp } = await supabase
         .from('rsvps')
         .select('status')
@@ -88,36 +96,88 @@ export default function EventDetailScreen() {
   };
 
   const handleRsvp = async (status: RsvpStatus) => {
-    Haptics.notificationAsync(
-      status === RsvpStatus.Yes ? Haptics.NotificationFeedbackType.Success :
-      status === RsvpStatus.No ? Haptics.NotificationFeedbackType.Warning :
-      Haptics.NotificationFeedbackType.Success
-    );
     const userId = (await supabase.auth.getUser()).data.user?.id;
     if (!userId) {
       Alert.alert('Sign in required', 'Please sign in to RSVP.');
       return;
     }
 
-    const serviceKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_KEY!;
-    const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/rsvps`, {
-      method: 'POST',
-      headers: {
-        'apikey': serviceKey,
-        'Authorization': `Bearer ${serviceKey}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates',
-      },
-      body: JSON.stringify({ event_id: id, user_id: userId, status }),
-    });
+    // Tapping the same option again = de-select (remove RSVP)
+    if (rsvpStatus === status) {
+      const { error } = await supabase
+        .from('rsvps')
+        .delete()
+        .eq('event_id', id)
+        .eq('user_id', userId);
 
-    if (!res.ok) {
+      if (error) {
+        Alert.alert('Error', 'Could not remove RSVP');
+        return;
+      }
+      setRsvpStatus(null);
+      setGuestRefreshKey((k) => k + 1);
+      fetchEvent();
+      return;
+    }
+
+    // If tapping "Yes", show family modal before saving
+    if (status === RsvpStatus.Yes) {
+      setPendingUserId(userId);
+      setShowFamilyModal(true);
+      return;
+    }
+
+    // For Inshallah / No, save directly
+    await saveRsvp(userId, status, 0, []);
+  };
+
+  const saveRsvp = async (
+    userId: string,
+    status: RsvpStatus,
+    childrenCount: number,
+    childrenNames: string[],
+  ) => {
+    // Delete existing RSVP first, then insert new one
+    await supabase
+      .from('rsvps')
+      .delete()
+      .eq('event_id', id)
+      .eq('user_id', userId);
+
+    const { error } = await supabase
+      .from('rsvps')
+      .insert({
+        event_id: id,
+        user_id: userId,
+        status,
+        children_count: childrenCount,
+        children_names: childrenNames.length > 0 ? childrenNames : null,
+      });
+
+    if (error) {
       Alert.alert('Error', 'Could not save RSVP');
       return;
     }
 
     setRsvpStatus(status);
+    setGuestRefreshKey((k) => k + 1);
     fetchEvent();
+  };
+
+  const handleFamilySubmit = (childrenCount: number) => {
+    setShowFamilyModal(false);
+    if (pendingUserId) {
+      saveRsvp(pendingUserId, RsvpStatus.Yes, childrenCount, []);
+      setPendingUserId(null);
+    }
+  };
+
+  const handleFamilySkip = () => {
+    setShowFamilyModal(false);
+    if (pendingUserId) {
+      saveRsvp(pendingUserId, RsvpStatus.Yes, 0, []);
+      setPendingUserId(null);
+    }
   };
 
   const handleShare = () => {
@@ -204,8 +264,16 @@ export default function EventDetailScreen() {
           <View style={styles.rsvpSection}>
             <RsvpButtons currentStatus={rsvpStatus} onSelect={handleRsvp} />
           </View>
+
+          <GuestListDashboard eventId={id!} visible={isHost} refreshKey={guestRefreshKey} />
         </View>
       </ScrollView>
+
+      <FamilyRegistration
+        visible={showFamilyModal}
+        onSubmit={handleFamilySubmit}
+        onSkip={handleFamilySkip}
+      />
     </SafeAreaView>
   );
 }

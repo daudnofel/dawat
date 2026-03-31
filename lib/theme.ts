@@ -4,22 +4,22 @@
 // =============================================================
 
 export const COLORS = {
-  // Brand
-  gold: '#D4C5A0',
-  gold2: '#E8DCC0',
+  // Brand — DESIGN.md "Restrained Luxury" champagne gold
+  gold: '#FFDFA1',          // primary — brand accent, logo, high-value interactions
+  gold2: '#E6C27A',         // primary-container — CTAs, metallic gradient end
   orange: '#B8A880',
 
-  // Surfaces
-  dark: '#0E0C08',
-  card: '#1A1710',
-  card2: '#22201A',
-  border: '#352F24',
-  input: '#151310',
+  // Surfaces — DESIGN.md tonal layering (no hard borders)
+  dark: '#131313',           // surface-dim — page background
+  card: '#1C1B1B',           // surface-container-low — card surface
+  card2: '#2A2A2A',          // surface-container-high — elevated elements
+  border: '#4D4639',         // outline-variant — ghost borders only at 20% opacity
+  input: '#0E0E0E',          // surface-container-lowest — input wells
 
-  // Text
-  white: '#FFFFFF',
-  muted: '#888888',
-  hint: '#555555',
+  // Text — warm whites per DESIGN.md
+  white: '#E5E2E1',          // on-surface — primary text (warm, not clinical)
+  muted: '#D0C5B4',          // on-surface-variant — secondary metadata
+  hint: '#555555',           // tertiary / placeholder
 
   // Semantic
   green: '#4CAF50',
@@ -28,11 +28,15 @@ export const COLORS = {
   purple: '#A855F7',
   blue: '#60A5FA',
   teal: '#14B8A6',
+
+  // Surface utilities
+  surfaceVariant: '#353534', // glass fills at 30% opacity
+  ghostBorder: '#4D463933',  // outline-variant at 20% — "light catching glass edge"
 } as const;
 
 export const FONTS = {
-  bold: { fontWeight: '900' as const },
-  semibold: { fontWeight: '700' as const },
+  bold: { fontWeight: '700' as const },
+  semibold: { fontWeight: '600' as const },
   medium: { fontWeight: '500' as const },
   regular: { fontWeight: '400' as const },
 } as const;

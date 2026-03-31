@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, ScrollView, Image, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Alert, ScrollView, Image, Pressable, ActivityIndicator, Dimensions, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import Svg, { Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, RadialGradient, Stop, Circle, Rect } from 'react-native-svg';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withDelay } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
+import { BlurView } from 'expo-blur';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { getCurrentUserId, clearCurrentUserId } from '../../lib/auth-cache';
@@ -13,73 +14,73 @@ import { User } from '../../types';
 import AnimatedPress from '../../components/AnimatedPress';
 import EmptyState from '../../components/EmptyState';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 function ProfileAvatar({ letter, avatarUrl, onPress, uploading }: { letter: string; avatarUrl: string | null; onPress: () => void; uploading: boolean }) {
   return (
     <Pressable style={styles.avatarOuter} onPress={onPress}>
+      {/* Golden glow — smooth radial gradient */}
+      <Svg width={200} height={200} style={styles.avatarGlowSvg}>
+        <Defs>
+          <RadialGradient id="avatarGlow" cx="50%" cy="50%" rx="50%" ry="50%">
+            <Stop offset="0" stopColor="#FFDFA1" stopOpacity="0.18" />
+            <Stop offset="0.5" stopColor="#FFDFA1" stopOpacity="0.08" />
+            <Stop offset="0.8" stopColor="#FFDFA1" stopOpacity="0.03" />
+            <Stop offset="1" stopColor="#FFDFA1" stopOpacity="0" />
+          </RadialGradient>
+        </Defs>
+        <Rect x="0" y="0" width="200" height="200" fill="url(#avatarGlow)" />
+      </Svg>
+
       {avatarUrl ? (
         <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
       ) : (
         <>
-          <Svg width={88} height={88} viewBox="0 0 88 88">
+          <Svg width={140} height={140} viewBox="0 0 140 140">
             <Defs>
               <LinearGradient id="avatarGrad" x1="0" y1="0" x2="1" y2="1">
                 <Stop offset="0" stopColor={COLORS.gold} />
                 <Stop offset="0.5" stopColor={COLORS.gold2} />
-                <Stop offset="1" stopColor={COLORS.orange} />
+                <Stop offset="1" stopColor={COLORS.gold2} />
               </LinearGradient>
             </Defs>
-            <Circle cx="44" cy="44" r="42" stroke="url(#avatarGrad)" strokeWidth="3" fill="none" />
-            <Circle cx="44" cy="44" r="38" fill={COLORS.card2} />
+            <Circle cx="70" cy="70" r="68" stroke="url(#avatarGrad)" strokeWidth="2.5" fill="none" />
+            <Circle cx="70" cy="70" r="64" fill={COLORS.card2} />
           </Svg>
           <Text style={styles.avatarText}>{letter}</Text>
         </>
       )}
       {uploading ? (
         <View style={styles.avatarOverlay}>
-          <ActivityIndicator color={COLORS.white} />
+          <ActivityIndicator color="#FFFFFF" />
         </View>
       ) : (
-        <View style={styles.cameraBadge}>
-          <Text style={styles.cameraBadgeText}>📷</Text>
-        </View>
+        <BlurView intensity={40} tint="dark" style={styles.cameraBadge}>
+          <View style={styles.cameraBadgeInner}>
+            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+              <Rect x="2" y="6" width="20" height="14" rx="3" stroke="#E5E2E1" strokeWidth="1.8" fill="none" />
+              <Circle cx="12" cy="13" r="3.5" stroke="#E5E2E1" strokeWidth="1.8" fill="none" />
+              <Rect x="8.5" y="3.5" width="7" height="3" rx="1" stroke="#E5E2E1" strokeWidth="1.5" fill="none" />
+            </Svg>
+          </View>
+        </BlurView>
       )}
     </Pressable>
-  );
-}
-
-function StatCard({ value, label, delay }: { value: number; label: string; delay: number }) {
-  const scale = useSharedValue(0);
-
-  useEffect(() => {
-    scale.value = withDelay(delay, withSpring(1, { damping: 12, stiffness: 150 }));
-  }, []);
-
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <Animated.View style={[styles.statCard, animStyle]}>
-      <Text style={styles.statNum}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </Animated.View>
   );
 }
 
 export default function ProfileScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<User | null>(null);
-  const [hostedCount, setHostedCount] = useState(0);
   const [attendingCount, setAttendingCount] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [noAuth, setNoAuth] = useState(false);
 
   const nameOpacity = useSharedValue(0);
 
   useEffect(() => {
     fetchProfile();
   }, []);
-
-  const [noAuth, setNoAuth] = useState(false);
 
   const fetchProfile = async () => {
     let userId = await getCurrentUserId();
@@ -107,12 +108,6 @@ export default function ProfileScreen() {
       setProfile(data as User);
       nameOpacity.value = withSpring(1);
     }
-
-    const { count: hosted } = await supabase
-      .from('events')
-      .select('*', { count: 'exact', head: true })
-      .eq('host_id', userId);
-    setHostedCount(hosted ?? 0);
 
     const { count: attending } = await supabase
       .from('rsvps')
@@ -152,11 +147,8 @@ export default function ProfileScreen() {
       const ext = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
       const filePath = `${userId}/avatar.${ext}`;
 
-      // Read file as blob
       const response = await fetch(asset.uri);
       const blob = await response.blob();
-
-      // Convert blob to arraybuffer
       const arrayBuffer = await new Response(blob).arrayBuffer();
 
       const { error: uploadError } = await supabase.storage
@@ -176,10 +168,8 @@ export default function ProfileScreen() {
         .from('avatars')
         .getPublicUrl(filePath);
 
-      // Add cache buster to force refresh
       const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
-      // Update user record
       const serviceKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_KEY!;
       await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
         method: 'PATCH',
@@ -200,6 +190,17 @@ export default function ProfileScreen() {
     setUploading(false);
   };
 
+  const handleShareProfile = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const username = profile?.username ?? '';
+    const url = `https://dawat.app/@${username}`;
+    try {
+      await Share.share({ message: url });
+    } catch {
+      Alert.alert('Share', `dawat.app/@${username}`);
+    }
+  };
+
   const handleSignOut = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert('Sign Out', 'Are you sure?', [
@@ -218,128 +219,416 @@ export default function ProfileScreen() {
 
   const initial = profile?.display_name?.charAt(0)?.toUpperCase() ?? '?';
 
+  // Format join date
+  const joinDate = profile?.created_at
+    ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+    : null;
+
+  // Safely access optional fields that may not exist on type yet
+  const profileAny = profile as any;
+  const bio = profileAny?.bio as string | undefined;
+  const instagramHandle = profileAny?.instagram_handle as string | undefined;
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profile</Text>
-        </View>
+    <View style={styles.container}>
+      {/* Subtle golden atmospheric glow */}
+      <View style={styles.atmosphereLayer} pointerEvents="none">
+        <Svg width={SCREEN_WIDTH} height={350} style={styles.glowSvg}>
+          <Defs>
+            <RadialGradient id="profileAtmosphere" cx="50%" cy="0%" rx="60%" ry="70%">
+              <Stop offset="0" stopColor="#FFDFA1" stopOpacity="0.12" />
+              <Stop offset="0.5" stopColor="#E6C27A" stopOpacity="0.05" />
+              <Stop offset="1" stopColor={COLORS.dark} stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          <Rect x="0" y="0" width={SCREEN_WIDTH} height={350} fill="url(#profileAtmosphere)" />
+        </Svg>
+      </View>
 
-        {noAuth ? (
-          <EmptyState emoji="🔐" title="Sign in to see your profile" subtitle="Your profile and stats will appear here" />
-        ) : (
-          <>
-            <View style={styles.profileSection}>
-              <ProfileAvatar letter={initial} avatarUrl={profile?.avatar_url ?? null} onPress={handlePickAvatar} uploading={uploading} />
-              <Animated.View style={[styles.nameBlock, nameStyle]}>
-                <Text style={styles.name}>{profile?.display_name ?? 'Loading...'}</Text>
-                <Text style={styles.username}>@{profile?.username ?? '...'}</Text>
-                {profile?.location_city && (
-                  <View style={styles.cityRow}>
-                    <Text style={styles.cityIcon}>📍</Text>
-                    <Text style={styles.city}>{profile.location_city}</Text>
-                  </View>
-                )}
-              </Animated.View>
-            </View>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-            <View style={styles.statsRow}>
-              <StatCard value={hostedCount} label="Hosted" delay={100} />
-              <StatCard value={attendingCount} label="Attending" delay={200} />
-            </View>
+          {noAuth ? (
+            <EmptyState emoji="🔐" title="Sign in to see your profile" subtitle="Your profile and stats will appear here" />
+          ) : (
+            <>
+              {/* Avatar with halo */}
+              <View style={styles.profileSection}>
+                <ProfileAvatar letter={initial} avatarUrl={profile?.avatar_url ?? null} onPress={handlePickAvatar} uploading={uploading} />
+                <Animated.View style={[styles.nameBlock, nameStyle]}>
+                  <Text style={styles.name}>{profile?.display_name ?? 'Loading...'}</Text>
+                  {bio ? <Text style={styles.bio}>{bio}</Text> : null}
+                  <Text style={styles.username}>@{profile?.username ?? '...'}</Text>
+                  {instagramHandle ? (
+                    <View style={styles.igRow}>
+                      <Text style={styles.igIcon}>📷</Text>
+                      <Text style={styles.igHandle}>@{instagramHandle}</Text>
+                    </View>
+                  ) : null}
+                </Animated.View>
+              </View>
 
-            <View style={styles.menu}>
-              <MenuItem icon="📅" label="My Events" onPress={() => router.push('/(tabs)/events')} />
-              <MenuItem icon="✨" label="Create Event" onPress={() => router.push('/(tabs)/create')} />
-            </View>
+              {/* Edit / Share — glass buttons */}
+              <View style={styles.actionRow}>
+                <AnimatedPress
+                  style={styles.actionButtonOuter}
+                  scaleValue={0.97}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    Alert.alert('Edit Profile', 'Coming soon');
+                  }}
+                >
+                  <BlurView intensity={30} tint="dark" style={styles.actionBlur}>
+                    <View style={styles.actionButtonInner}>
+                      <View style={styles.glassHighlight} />
+                      <Text style={styles.actionButtonText}>Edit profile</Text>
+                    </View>
+                  </BlurView>
+                </AnimatedPress>
+                <AnimatedPress
+                  style={styles.actionButtonOuter}
+                  scaleValue={0.97}
+                  onPress={handleShareProfile}
+                >
+                  <BlurView intensity={30} tint="dark" style={styles.actionBlur}>
+                    <View style={styles.actionButtonInner}>
+                      <View style={styles.glassHighlight} />
+                      <Text style={styles.actionButtonText}>Share profile</Text>
+                    </View>
+                  </BlurView>
+                </AnimatedPress>
+              </View>
 
-            <AnimatedPress style={styles.signOutButton} haptic="medium" onPress={handleSignOut}>
-              <Text style={styles.signOutText}>Sign Out</Text>
-            </AnimatedPress>
-          </>
-        )}
+              {/* Info row — birthday + joined */}
+              {joinDate && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoText}>🌐 Joined {joinDate}</Text>
+                </View>
+              )}
 
-        <View style={{ height: 120 }} />
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
+              {/* Badges section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Badges</Text>
+                <View style={styles.badgeCardOuter}>
+                  <BlurView intensity={30} tint="dark" style={styles.badgeBlur}>
+                    <View style={styles.badgeCardInner}>
+                      <View style={styles.glassHighlight} />
+                      {/* Diamond badge — rotated square with layered gold borders */}
+                      <View style={styles.diamondWrapper}>
+                        <View style={styles.diamondGlow} />
+                        <View style={styles.diamondOuter}>
+                          <View style={styles.diamondMiddle}>
+                            <View style={styles.diamondInner}>
+                              <Text style={styles.badgeNumber}>{attendingCount}</Text>
+                              <Text style={styles.badgeSublabel}>EVENTS{'\n'}ATTENDED</Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  </BlurView>
+                </View>
+              </View>
 
-function MenuItem({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
-  return (
-    <AnimatedPress style={styles.menuItem} scaleValue={0.98} onPress={onPress}>
-      <Text style={styles.menuIcon}>{icon}</Text>
-      <Text style={styles.menuLabel}>{label}</Text>
-      <Text style={styles.menuChevron}>›</Text>
-    </AnimatedPress>
+              {/* Sign out — glass button matching other buttons */}
+              <View style={styles.signOutRow}>
+                <AnimatedPress
+                  style={styles.signOutOuter}
+                  scaleValue={0.97}
+                  haptic="medium"
+                  onPress={handleSignOut}
+                >
+                  <BlurView intensity={30} tint="dark" style={styles.signOutBlur}>
+                    <View style={styles.signOutInner}>
+                      <View style={styles.glassHighlight} />
+                      <Text style={styles.signOutText}>Sign Out</Text>
+                    </View>
+                  </BlurView>
+                </AnimatedPress>
+              </View>
+            </>
+          )}
+
+          <View style={{ height: 120 }} />
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.dark },
-  scrollContent: { paddingBottom: 40 },
-  header: { paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md },
-  headerTitle: { fontSize: 22, color: COLORS.white, ...FONTS.bold },
-  profileSection: { alignItems: 'center', paddingTop: SPACING.lg },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.dark,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+
+  // Atmosphere
+  atmosphereLayer: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+  },
+  glowSvg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+
+  // Avatar + halo
+  profileSection: {
+    alignItems: 'center',
+    paddingTop: SPACING.xxl,
+  },
   avatarOuter: {
-    width: 88, height: 88, alignItems: 'center', justifyContent: 'center',
+    width: 200,
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: SPACING.lg,
   },
+  avatarGlowSvg: {
+    position: 'absolute',
+  },
   avatarImage: {
-    width: 88, height: 88, borderRadius: 44,
-    borderWidth: 3, borderColor: COLORS.gold,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 2.5,
+    borderColor: COLORS.gold,
   },
   avatarText: {
-    position: 'absolute', fontSize: 32, color: COLORS.white, ...FONTS.bold,
+    position: 'absolute',
+    fontSize: 32,
+    color: COLORS.white,
+    ...FONTS.bold,
   },
   avatarOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 44,
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cameraBadge: {
-    position: 'absolute', bottom: 0, right: -4,
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: COLORS.card2, borderWidth: 2, borderColor: COLORS.dark,
-    alignItems: 'center', justifyContent: 'center',
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
-  cameraBadgeText: { fontSize: 13 },
-  nameBlock: { alignItems: 'center', marginBottom: SPACING.xl },
-  name: { fontSize: 22, color: COLORS.white, ...FONTS.bold, marginBottom: SPACING.xs },
-  username: { fontSize: 15, color: COLORS.muted, ...FONTS.regular },
-  cityRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: SPACING.sm },
-  cityIcon: { fontSize: 13 },
-  city: { fontSize: 13, color: COLORS.hint, ...FONTS.regular },
-  statsRow: {
-    flexDirection: 'row', justifyContent: 'center', gap: SPACING.lg,
-    paddingHorizontal: SPACING.xl, marginBottom: SPACING.xl,
+  cameraBadgeInner: {
+    flex: 1,
+    backgroundColor: 'rgba(40, 40, 40, 0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  statCard: {
-    flex: 1, alignItems: 'center', paddingVertical: SPACING.lg,
-    backgroundColor: COLORS.card, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border,
+
+  // Name block
+  nameBlock: {
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
   },
-  statNum: { fontSize: 24, color: COLORS.gold, ...FONTS.bold },
-  statLabel: { fontSize: 12, color: COLORS.muted, ...FONTS.medium, marginTop: 4 },
-  menu: {
-    paddingHorizontal: SPACING.xl, gap: 2,
+  name: {
+    fontSize: 28,
+    color: COLORS.white,
+    ...FONTS.bold,
+    marginBottom: SPACING.xs,
   },
-  menuItem: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: SPACING.lg, paddingHorizontal: SPACING.lg,
-    backgroundColor: COLORS.card, borderRadius: RADIUS.md,
-    marginBottom: 1,
+  bio: {
+    fontSize: 14,
+    color: COLORS.muted,
+    ...FONTS.regular,
+    marginBottom: SPACING.xs,
   },
-  menuIcon: { fontSize: 18, marginRight: SPACING.md },
-  menuLabel: { flex: 1, fontSize: 15, color: COLORS.white, ...FONTS.medium },
-  menuChevron: { fontSize: 20, color: COLORS.hint },
-  signOutButton: {
-    marginHorizontal: SPACING.xl, marginTop: SPACING.xl,
-    paddingVertical: SPACING.lg, alignItems: 'center',
-    backgroundColor: COLORS.card, borderRadius: RADIUS.md,
-    borderWidth: 1, borderColor: COLORS.border,
+  username: {
+    fontSize: 15,
+    color: COLORS.muted,
+    ...FONTS.regular,
   },
-  signOutText: { color: COLORS.red, fontSize: 15, ...FONTS.semibold },
+  igRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: SPACING.sm,
+  },
+  igIcon: { fontSize: 13 },
+  igHandle: {
+    fontSize: 14,
+    color: COLORS.white,
+    ...FONTS.medium,
+  },
+
+  // Action buttons — glass
+  actionRow: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.xl,
+    gap: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  actionButtonOuter: {
+    flex: 1,
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 223, 161, 0.12)',
+  },
+  actionBlur: {
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+  },
+  actionButtonInner: {
+    alignItems: 'center',
+    paddingVertical: SPACING.md + 2,
+    backgroundColor: 'rgba(50, 45, 30, 0.55)',
+  },
+  actionButtonText: {
+    fontSize: 15,
+    color: COLORS.muted,
+    ...FONTS.regular,
+  },
+  glassHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255, 223, 161, 0.15)',
+  },
+
+  // Info row
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.xl,
+    marginBottom: SPACING.xxl,
+    gap: SPACING.sm,
+  },
+  infoText: {
+    fontSize: 13,
+    color: COLORS.muted,
+    ...FONTS.regular,
+  },
+
+  // Sections
+  section: {
+    paddingHorizontal: SPACING.xl,
+    marginBottom: SPACING.xl,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    color: COLORS.white,
+    ...FONTS.bold,
+    marginBottom: SPACING.md,
+  },
+
+  // Badge card — glass
+  badgeCardOuter: {
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 223, 161, 0.12)',
+  },
+  badgeBlur: {
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+  },
+  badgeCardInner: {
+    height: 100,
+    backgroundColor: 'rgba(50, 45, 30, 0.55)',
+    justifyContent: 'center',
+  },
+
+  // Diamond badge — layered rotated squares
+  diamondWrapper: {
+    position: 'absolute',
+    left: SPACING.xl,
+    width: 90,
+    height: 90,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  diamondGlow: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 223, 161, 0.08)',
+  },
+  diamondOuter: {
+    width: 72,
+    height: 72,
+    transform: [{ rotate: '45deg' }],
+    borderWidth: 1.5,
+    borderColor: 'rgba(230, 194, 122, 0.5)',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 223, 161, 0.04)',
+  },
+  diamondMiddle: {
+    width: 56,
+    height: 56,
+    borderWidth: 1,
+    borderColor: 'rgba(230, 194, 122, 0.35)',
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 223, 161, 0.06)',
+  },
+  diamondInner: {
+    transform: [{ rotate: '-45deg' }],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeNumber: {
+    fontSize: 18,
+    color: COLORS.gold,
+    ...FONTS.bold,
+    lineHeight: 20,
+  },
+  badgeSublabel: {
+    fontSize: 7,
+    color: COLORS.muted,
+    ...FONTS.bold,
+    letterSpacing: 1,
+    textAlign: 'center',
+    lineHeight: 9,
+  },
+
+  // Sign out — glass button
+  signOutRow: {
+    paddingHorizontal: SPACING.xl,
+    marginTop: SPACING.sm,
+  },
+  signOutOuter: {
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.15)',
+  },
+  signOutBlur: {
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+  },
+  signOutInner: {
+    alignItems: 'center',
+    paddingVertical: SPACING.md + 2,
+    backgroundColor: 'rgba(60, 30, 30, 0.45)',
+  },
+  signOutText: {
+    color: COLORS.red,
+    fontSize: 14,
+    ...FONTS.medium,
+  },
 });

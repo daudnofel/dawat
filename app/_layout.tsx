@@ -40,6 +40,9 @@ const DawatDarkTheme = {
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    ManropeLight: require('@expo-google-fonts/manrope/300Light/Manrope_300Light.ttf'),
+    ManropeRegular: require('@expo-google-fonts/manrope/400Regular/Manrope_400Regular.ttf'),
+    ManropeSemiBold: require('@expo-google-fonts/manrope/600SemiBold/Manrope_600SemiBold.ttf'),
   });
 
   useEffect(() => {

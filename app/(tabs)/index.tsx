@@ -3,11 +3,12 @@ import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl } from 'r
 import { GlassView } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { GenderMode } from '../../types';
 import { useFeedStore } from '../../store/useFeedStore';
 import { supabase } from '../../lib/supabase';
+import { getCurrentUserId } from '../../lib/auth-cache';
 import EventCard from '../../components/EventCard';
 import SkeletonCard from '../../components/SkeletonCard';
 import EmptyState from '../../components/EmptyState';
@@ -35,10 +36,12 @@ interface FeedEvent {
 }
 
 export default function HomeScreen() {
+  const router = useRouter();
   const { activeFilter, setFilter } = useFeedStore();
   const [events, setEvents] = useState<FeedEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchEvents = useCallback(async () => {
     let query = supabase
@@ -65,10 +68,30 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [activeFilter]);
 
+  const fetchUnreadCount = useCallback(async () => {
+    let userId = await getCurrentUserId();
+    if (!userId) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        userId = user?.id ?? null;
+      } catch { userId = null; }
+    }
+    if (!userId) return;
+
+    const { count } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_read', false);
+
+    setUnreadCount(count ?? 0);
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       fetchEvents();
-    }, [fetchEvents]),
+      fetchUnreadCount();
+    }, [fetchEvents, fetchUnreadCount]),
   );
 
   const onRefresh = () => {
@@ -86,6 +109,17 @@ export default function HomeScreen() {
           <Text style={styles.brandArabic}>دعوت</Text>
           <Text style={styles.brandEnglish}>DAWAT</Text>
         </View>
+        <Pressable
+          style={styles.bellButton}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/notifications'); }}
+        >
+          <Text style={styles.bellIcon}>🔔</Text>
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+            </View>
+          )}
+        </Pressable>
       </View>
 
       <View style={styles.filterWrapper}>
@@ -166,10 +200,19 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.dark },
-  header: { paddingHorizontal: SPACING.xl, paddingTop: SPACING.sm, paddingBottom: SPACING.md },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.xl, paddingTop: SPACING.sm, paddingBottom: SPACING.md },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   brandArabic: { fontSize: 22, color: COLORS.gold, ...FONTS.bold },
   brandEnglish: { fontSize: 18, color: COLORS.white, ...FONTS.bold, letterSpacing: 3 },
+  bellButton: { position: 'relative', padding: SPACING.sm },
+  bellIcon: { fontSize: 22 },
+  badge: {
+    position: 'absolute', top: 2, right: 2,
+    minWidth: 18, height: 18, borderRadius: 9,
+    backgroundColor: COLORS.red, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: { fontSize: 10, color: COLORS.white, ...FONTS.bold },
   filterWrapper: { height: 44 },
   filterRow: { paddingHorizontal: SPACING.xl, gap: SPACING.sm, alignItems: 'center', height: 44 },
   filterPill: {

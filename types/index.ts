@@ -190,13 +190,14 @@ export interface HalalSpot {
 
 export interface Notification {
   id: string;
-  user_id: string | null;
+  user_id: string;
   event_id: string | null;
-  type: NotificationType;
-  channel: NotificationChannel;
-  message: string | null;
-  sent_at: string;
-  delivered: boolean;
+  type: 'rsvp' | 'comment' | 'event_update' | 'event_cancelled';
+  title: string;
+  body: string;
+  actor_id: string | null;
+  is_read: boolean;
+  created_at: string;
 }
 
 // ─── Joined / Computed Types ─────────────────────────────────

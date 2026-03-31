@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Share, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
@@ -15,6 +15,7 @@ import AddToCalendar from '../../components/AddToCalendar';
 import GuestAvatars from '../../components/GuestAvatars';
 import MapPreview from '../../components/MapPreview';
 import EventComments from '../../components/EventComments';
+import ShareSheet from '../../components/ShareSheet';
 import { getThemeById } from '../../lib/themes';
 
 interface EventDetail {
@@ -52,6 +53,7 @@ export default function EventDetailScreen() {
   const [isHost, setIsHost] = useState(false);
   const [guestRefreshKey, setGuestRefreshKey] = useState(0);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [showShareSheet, setShowShareSheet] = useState(false);
 
   useEffect(() => {
     fetchEvent();
@@ -262,9 +264,7 @@ export default function EventDetailScreen() {
 
   const handleShare = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (event) {
-      Share.share({ message: `Check out ${event.title} on Dawat: dawatapp.com/e/${event.slug}` });
-    }
+    setShowShareSheet(true);
   };
 
   if (loading || !event) {
@@ -394,6 +394,15 @@ export default function EventDetailScreen() {
         onSubmit={handleFamilySubmit}
         onSkip={handleFamilySkip}
       />
+
+      {event && (
+        <ShareSheet
+          visible={showShareSheet}
+          onClose={() => setShowShareSheet(false)}
+          eventTitle={event.title}
+          eventSlug={event.slug}
+        />
+      )}
     </SafeAreaView>
   );
 }

@@ -1,9 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Share } from 'react-native';
+import { View, Text, StyleSheet, Share, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withDelay } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import * as Clipboard from 'expo-clipboard';
+import * as Linking from 'expo-linking';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { useEventStore } from '../../store/useEventStore';
 import { generateSlug } from '../../lib/slugify';
@@ -12,9 +15,11 @@ import AnimatedPress from '../../components/AnimatedPress';
 export default function SuccessScreen({ onDone }: { onDone?: () => void }) {
   const { draft, reset } = useEventStore();
   const confettiRef = useRef<any>(null);
+  const router = useRouter();
 
   const slug = generateSlug(draft.title || 'event');
-  const link = `dawatapp.com/e/${slug}`;
+  const link = `https://dawat.app/e/${slug}`;
+  const shareMessage = `You're invited to ${draft.title} on Dawat!\n${link}`;
 
   // Entrance animations
   const emojiScale = useSharedValue(0);
@@ -34,13 +39,27 @@ export default function SuccessScreen({ onDone }: { onDone?: () => void }) {
   const titleStyle = useAnimatedStyle(() => ({ opacity: titleOpacity.value }));
   const contentStyle = useAnimatedStyle(() => ({ opacity: contentOpacity.value }));
 
-  const handleCopyLink = () => {
-    Share.share({ message: `Check out this event on Dawat: ${link}` });
+  const handleShareLink = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await Share.share({ message: shareMessage, url: link });
+  };
+
+  const handleCopyLink = async () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    await Clipboard.setStringAsync(link);
+    Alert.alert('Link Copied', 'Event link copied to clipboard');
+  };
+
+  const handleWhatsApp = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Linking.openURL(`whatsapp://send?text=${encodeURIComponent(shareMessage)}`).catch(() => {
+      Alert.alert('WhatsApp not found', 'WhatsApp is not installed on this device');
+    });
   };
 
   const handleViewEvent = () => {
     reset();
-    onDone?.();
+    router.replace('/(tabs)');
   };
 
   return (
@@ -66,11 +85,15 @@ export default function SuccessScreen({ onDone }: { onDone?: () => void }) {
             <Text style={styles.linkText} numberOfLines={1}>{link}</Text>
           </View>
 
-          <AnimatedPress style={styles.shareButton} haptic="medium" onPress={handleCopyLink}>
+          <AnimatedPress style={styles.copyButton} haptic="medium" onPress={handleCopyLink}>
+            <Text style={styles.copyText}>Copy Link</Text>
+          </AnimatedPress>
+
+          <AnimatedPress style={styles.shareButton} haptic="medium" onPress={handleShareLink}>
             <Text style={styles.shareText}>Share Link</Text>
           </AnimatedPress>
 
-          <AnimatedPress style={styles.whatsappButton} haptic="medium" onPress={handleCopyLink}>
+          <AnimatedPress style={styles.whatsappButton} haptic="medium" onPress={handleWhatsApp}>
             <Text style={styles.whatsappText}>Share to WhatsApp</Text>
           </AnimatedPress>
 
@@ -98,11 +121,16 @@ const styles = StyleSheet.create({
     width: '100%', marginBottom: SPACING.lg,
   },
   linkText: { color: COLORS.gold, fontSize: 15, ...FONTS.medium, textAlign: 'center' },
-  shareButton: {
+  copyButton: {
     backgroundColor: COLORS.gold, borderRadius: RADIUS.md,
     paddingVertical: SPACING.lg, width: '100%', alignItems: 'center', marginBottom: SPACING.md,
   },
-  shareText: { color: COLORS.dark, fontSize: 16, ...FONTS.bold },
+  copyText: { color: COLORS.dark, fontSize: 16, ...FONTS.bold },
+  shareButton: {
+    backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
+    paddingVertical: SPACING.lg, width: '100%', alignItems: 'center', marginBottom: SPACING.md,
+  },
+  shareText: { color: COLORS.white, fontSize: 16, ...FONTS.semibold },
   whatsappButton: {
     backgroundColor: '#25D366', borderRadius: RADIUS.md,
     paddingVertical: SPACING.lg, width: '100%', alignItems: 'center', marginBottom: SPACING.md,

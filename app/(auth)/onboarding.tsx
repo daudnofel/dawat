@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  View, Text, TextInput, StyleSheet,
+  View, Text, TextInput, StyleSheet, Image, Pressable,
   KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import Animated, {
   withSpring, withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
 import { Gender, GenderPref } from '../../types';
 import { supabase } from '../../lib/supabase';
@@ -25,6 +26,7 @@ export default function OnboardingScreen() {
   const [gender, setGender] = useState<Gender | null>(null);
   const [city, setCity] = useState('');
   const [saving, setSaving] = useState(false);
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const router = useRouter();
 
   // Animation values
@@ -63,6 +65,51 @@ export default function OnboardingScreen() {
     }
   };
 
+  const handlePickPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow access to your photo library.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setAvatarUri(result.assets[0].uri);
+    }
+  };
+
+  const uploadAvatar = async (userId: string): Promise<string | null> => {
+    if (!avatarUri) return null;
+    try {
+      const ext = avatarUri.split('.').pop()?.toLowerCase() ?? 'jpg';
+      const filePath = `${userId}/avatar.${ext}`;
+      const response = await fetch(avatarUri);
+      const blob = await response.blob();
+      const arrayBuffer = await new Response(blob).arrayBuffer();
+
+      const { error } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, arrayBuffer, {
+          contentType: `image/${ext}`,
+          upsert: true,
+        });
+
+      if (error) return null;
+
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      return `${urlData.publicUrl}?t=${Date.now()}`;
+    } catch {
+      return null;
+    }
+  };
+
   const handleComplete = async () => {
     if (saving) return;
     setSaving(true);
@@ -86,6 +133,9 @@ export default function OnboardingScreen() {
 
     setCurrentUserId(userId);
 
+    // Upload avatar if selected
+    const avatarUrl = await uploadAvatar(userId);
+
     // Use service role key to bypass RLS
     const serviceKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_KEY!;
     try {
@@ -104,6 +154,7 @@ export default function OnboardingScreen() {
           gender,
           gender_pref: GenderPref.All,
           location_city: city.trim() || null,
+          avatar_url: avatarUrl,
         }),
       });
 
@@ -162,7 +213,18 @@ export default function OnboardingScreen() {
         <Animated.View style={[styles.content, contentStyle]}>
           {step === 1 && (
             <View style={styles.stepContent}>
-              <Text style={styles.stepEmoji}>👋</Text>
+              <Pressable style={styles.onboardAvatar} onPress={handlePickPhoto}>
+                {avatarUri ? (
+                  <Image source={{ uri: avatarUri }} style={styles.onboardAvatarImage} />
+                ) : (
+                  <View style={styles.onboardAvatarPlaceholder}>
+                    <Text style={styles.onboardAvatarEmoji}>📷</Text>
+                  </View>
+                )}
+                <Text style={styles.onboardAvatarHint}>
+                  {avatarUri ? 'Change photo' : 'Add photo (optional)'}
+                </Text>
+              </Pressable>
               <Text style={styles.stepTitle}>What's your name?</Text>
               <Text style={styles.stepSubtitle}>This is how you'll appear to others</Text>
               <TextInput
@@ -314,5 +376,23 @@ const styles = StyleSheet.create({
   skipCity: {
     color: COLORS.muted, fontSize: 14, ...FONTS.medium,
     textAlign: 'center', marginTop: SPACING.lg,
+  },
+  onboardAvatar: {
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+  },
+  onboardAvatarImage: {
+    width: 80, height: 80, borderRadius: 40,
+    borderWidth: 3, borderColor: COLORS.gold,
+  },
+  onboardAvatarPlaceholder: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: COLORS.card2, borderWidth: 2, borderColor: COLORS.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  onboardAvatarEmoji: { fontSize: 28 },
+  onboardAvatarHint: {
+    fontSize: 13, color: COLORS.gold, ...FONTS.medium,
+    marginTop: SPACING.sm,
   },
 });

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Alert, ScrollView, Image, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Svg, { Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withDelay } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { getCurrentUserId, clearCurrentUserId } from '../../lib/auth-cache';
@@ -12,22 +13,37 @@ import { User } from '../../types';
 import AnimatedPress from '../../components/AnimatedPress';
 import EmptyState from '../../components/EmptyState';
 
-function GradientAvatar({ letter }: { letter: string }) {
+function ProfileAvatar({ letter, avatarUrl, onPress, uploading }: { letter: string; avatarUrl: string | null; onPress: () => void; uploading: boolean }) {
   return (
-    <View style={styles.avatarOuter}>
-      <Svg width={88} height={88} viewBox="0 0 88 88">
-        <Defs>
-          <LinearGradient id="avatarGrad" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor={COLORS.gold} />
-            <Stop offset="0.5" stopColor={COLORS.gold2} />
-            <Stop offset="1" stopColor={COLORS.orange} />
-          </LinearGradient>
-        </Defs>
-        <Circle cx="44" cy="44" r="42" stroke="url(#avatarGrad)" strokeWidth="3" fill="none" />
-        <Circle cx="44" cy="44" r="38" fill={COLORS.card2} />
-      </Svg>
-      <Text style={styles.avatarText}>{letter}</Text>
-    </View>
+    <Pressable style={styles.avatarOuter} onPress={onPress}>
+      {avatarUrl ? (
+        <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+      ) : (
+        <>
+          <Svg width={88} height={88} viewBox="0 0 88 88">
+            <Defs>
+              <LinearGradient id="avatarGrad" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0" stopColor={COLORS.gold} />
+                <Stop offset="0.5" stopColor={COLORS.gold2} />
+                <Stop offset="1" stopColor={COLORS.orange} />
+              </LinearGradient>
+            </Defs>
+            <Circle cx="44" cy="44" r="42" stroke="url(#avatarGrad)" strokeWidth="3" fill="none" />
+            <Circle cx="44" cy="44" r="38" fill={COLORS.card2} />
+          </Svg>
+          <Text style={styles.avatarText}>{letter}</Text>
+        </>
+      )}
+      {uploading ? (
+        <View style={styles.avatarOverlay}>
+          <ActivityIndicator color={COLORS.white} />
+        </View>
+      ) : (
+        <View style={styles.cameraBadge}>
+          <Text style={styles.cameraBadgeText}>📷</Text>
+        </View>
+      )}
+    </Pressable>
   );
 }
 
@@ -55,6 +71,7 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState<User | null>(null);
   const [hostedCount, setHostedCount] = useState(0);
   const [attendingCount, setAttendingCount] = useState(0);
+  const [uploading, setUploading] = useState(false);
 
   const nameOpacity = useSharedValue(0);
 
@@ -107,6 +124,82 @@ export default function ProfileScreen() {
 
   const nameStyle = useAnimatedStyle(() => ({ opacity: nameOpacity.value }));
 
+  const handlePickAvatar = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow access to your photo library.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (result.canceled || !result.assets[0]) return;
+
+    const asset = result.assets[0];
+    const userId = profile?.id;
+    if (!userId) return;
+
+    setUploading(true);
+
+    try {
+      const ext = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
+      const filePath = `${userId}/avatar.${ext}`;
+
+      // Read file as blob
+      const response = await fetch(asset.uri);
+      const blob = await response.blob();
+
+      // Convert blob to arraybuffer
+      const arrayBuffer = await new Response(blob).arrayBuffer();
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, arrayBuffer, {
+          contentType: asset.mimeType ?? `image/${ext}`,
+          upsert: true,
+        });
+
+      if (uploadError) {
+        Alert.alert('Upload failed', uploadError.message);
+        setUploading(false);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Add cache buster to force refresh
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+      // Update user record
+      const serviceKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_KEY!;
+      await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': serviceKey,
+          'Authorization': `Bearer ${serviceKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ avatar_url: publicUrl }),
+      });
+
+      setProfile((prev) => prev ? { ...prev, avatar_url: publicUrl } : prev);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e) {
+      Alert.alert('Error', 'Could not upload photo');
+    }
+
+    setUploading(false);
+  };
+
   const handleSignOut = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert('Sign Out', 'Are you sure?', [
@@ -137,7 +230,7 @@ export default function ProfileScreen() {
         ) : (
           <>
             <View style={styles.profileSection}>
-              <GradientAvatar letter={initial} />
+              <ProfileAvatar letter={initial} avatarUrl={profile?.avatar_url ?? null} onPress={handlePickAvatar} uploading={uploading} />
               <Animated.View style={[styles.nameBlock, nameStyle]}>
                 <Text style={styles.name}>{profile?.display_name ?? 'Loading...'}</Text>
                 <Text style={styles.username}>@{profile?.username ?? '...'}</Text>
@@ -192,9 +285,27 @@ const styles = StyleSheet.create({
     width: 88, height: 88, alignItems: 'center', justifyContent: 'center',
     marginBottom: SPACING.lg,
   },
+  avatarImage: {
+    width: 88, height: 88, borderRadius: 44,
+    borderWidth: 3, borderColor: COLORS.gold,
+  },
   avatarText: {
     position: 'absolute', fontSize: 32, color: COLORS.white, ...FONTS.bold,
   },
+  avatarOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 44,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cameraBadge: {
+    position: 'absolute', bottom: 0, right: -4,
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: COLORS.card2, borderWidth: 2, borderColor: COLORS.dark,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cameraBadgeText: { fontSize: 13 },
   nameBlock: { alignItems: 'center', marginBottom: SPACING.xl },
   name: { fontSize: 22, color: COLORS.white, ...FONTS.bold, marginBottom: SPACING.xs },
   username: { fontSize: 15, color: COLORS.muted, ...FONTS.regular },

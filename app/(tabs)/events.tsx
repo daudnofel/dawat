@@ -1,8 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Dimensions } from 'react-native';
 import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { GenderMode } from '../../types';
@@ -22,15 +22,7 @@ export default function EventsScreen() {
 
   const fetchMyEvents = useCallback(async () => {
     try {
-      let userId = await getCurrentUserId();
-      if (!userId) {
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          userId = user?.id ?? null;
-        } catch {
-          userId = null;
-        }
-      }
+      const userId = await getCurrentUserId();
 
       if (!userId) {
         setNoAuth(true);
@@ -65,11 +57,10 @@ export default function EventsScreen() {
     setRefreshing(false);
   }, []);
 
-  useFocusEffect(useCallback(() => {
-    if (!loading) {
-      fetchMyEvents();
-    }
-  }, [fetchMyEvents]));
+  // Initial fetch on mount only
+  useEffect(() => {
+    fetchMyEvents();
+  }, []);
 
   const onRefresh = () => { setRefreshing(true); fetchMyEvents(); };
 

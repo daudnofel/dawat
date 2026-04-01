@@ -45,7 +45,6 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: COLORS.dark },
-        animation: 'fade' as const,
       }}
       sceneContainerStyle={{ backgroundColor: COLORS.dark }}
     >

@@ -83,15 +83,7 @@ export default function ProfileScreen() {
   }, []);
 
   const fetchProfile = async () => {
-    let userId = await getCurrentUserId();
-    if (!userId) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        userId = user?.id ?? null;
-      } catch {
-        userId = null;
-      }
-    }
+    const userId = await getCurrentUserId();
     if (!userId) {
       setNoAuth(true);
       return;

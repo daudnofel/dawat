@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, Dimensions } from 'react-native';
 import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
@@ -71,13 +71,7 @@ export default function HomeScreen() {
   }, [activeFilter]);
 
   const fetchUnreadCount = useCallback(async () => {
-    let userId = await getCurrentUserId();
-    if (!userId) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        userId = user?.id ?? null;
-      } catch { userId = null; }
-    }
+    const userId = await getCurrentUserId();
     if (!userId) return;
 
     const { count } = await supabase
@@ -89,11 +83,16 @@ export default function HomeScreen() {
     setUnreadCount(count ?? 0);
   }, []);
 
+  // Initial fetch + re-fetch when filter changes
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
+
+  // Lightweight: just refresh badge count on focus
   useFocusEffect(
     useCallback(() => {
-      fetchEvents();
       fetchUnreadCount();
-    }, [fetchEvents, fetchUnreadCount]),
+    }, [fetchUnreadCount]),
   );
 
   const onRefresh = () => {

@@ -1,10 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet, ScrollView, RefreshControl, Dimensions,
 } from 'react-native';
 import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
@@ -83,13 +83,10 @@ export default function DiscoverScreen() {
     setRefreshing(false);
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!loading) fetchDiscover();
-    }, [fetchDiscover]),
-  );
-
-  useState(() => { fetchDiscover(); });
+  // Initial fetch on mount only
+  useEffect(() => {
+    fetchDiscover();
+  }, []);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);

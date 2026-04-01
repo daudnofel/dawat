@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Switch, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { useEventStore } from '../../store/useEventStore';
 import { supabase } from '../../lib/supabase';
@@ -132,7 +133,7 @@ export default function Step4Settings({ onPublish }: { onPublish?: () => void })
         )}
 
         {/* Plus Ones */}
-        <View style={[styles.toggleRow, { marginTop: SPACING.xl, borderTopWidth: 1, borderTopColor: COLORS.border }]}>
+        <View style={[styles.toggleRow, { marginTop: SPACING.xl, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255, 223, 161, 0.10)' }]}>
           <View style={{ flex: 1 }}>
             <Text style={styles.toggleLabel}>Allow plus-ones?</Text>
             <Text style={styles.toggleHint}>Guests can bring additional people</Text>
@@ -192,8 +193,18 @@ export default function Step4Settings({ onPublish }: { onPublish?: () => void })
           onPress={handlePublish}
           disabled={publishing}
         >
+          <Svg style={StyleSheet.absoluteFill}>
+            <Defs>
+              <LinearGradient id="ctaGrad4" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0" stopColor="#FFDFA1" />
+                <Stop offset="0.5" stopColor="#E6C27A" />
+                <Stop offset="1" stopColor="#FFDFA1" />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="100%" height="100%" rx={RADIUS.md} fill="url(#ctaGrad4)" />
+          </Svg>
           {publishing ? (
-            <ActivityIndicator color={COLORS.dark} />
+            <ActivityIndicator color={COLORS.dark} style={{ zIndex: 1 }} />
           ) : (
             <Text style={styles.publishText}>Publish Event</Text>
           )}
@@ -204,7 +215,7 @@ export default function Step4Settings({ onPublish }: { onPublish?: () => void })
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.dark },
+  container: { flex: 1, backgroundColor: 'transparent' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md,
@@ -229,14 +240,14 @@ const styles = StyleSheet.create({
     width: '47%',
     backgroundColor: COLORS.card,
     borderRadius: RADIUS.lg,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 223, 161, 0.08)',
     paddingVertical: SPACING.xl,
     alignItems: 'center',
   },
   genderCardSelected: {
-    borderColor: COLORS.gold,
-    backgroundColor: COLORS.card2,
+    borderColor: 'rgba(255, 223, 161, 0.30)',
+    backgroundColor: 'rgba(50, 45, 30, 0.55)',
   },
   genderEmoji: { fontSize: 28, marginBottom: SPACING.sm },
   genderLabel: { fontSize: 15, color: COLORS.white, ...FONTS.bold, marginBottom: SPACING.xs },
@@ -254,13 +265,13 @@ const styles = StyleSheet.create({
   toggleRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: SPACING.lg, marginTop: SPACING.xl,
-    borderTopWidth: 1, borderTopColor: COLORS.border,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255, 223, 161, 0.10)',
   },
   toggleLabel: { color: COLORS.white, fontSize: 15, ...FONTS.medium },
   toggleHint: { color: COLORS.hint, fontSize: 12, ...FONTS.regular, marginTop: SPACING.xs },
   bottomBar: {
     paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg,
-    borderTopWidth: 1, borderTopColor: COLORS.border, marginBottom: 90,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255, 223, 161, 0.10)', marginBottom: 90,
   },
   plusOneRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -271,14 +282,15 @@ const styles = StyleSheet.create({
   },
   plusOneBtn: {
     width: 32, height: 32, borderRadius: RADIUS.full,
-    backgroundColor: COLORS.card2, borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: COLORS.card2, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255, 223, 161, 0.10)',
     alignItems: 'center', justifyContent: 'center',
   },
   plusOneBtnText: { fontSize: 18, color: COLORS.gold, ...FONTS.bold },
   plusOneCount: { fontSize: 18, color: COLORS.white, ...FONTS.bold, minWidth: 24, textAlign: 'center' },
   publishButton: {
-    backgroundColor: COLORS.gold, borderRadius: RADIUS.md,
-    paddingVertical: SPACING.lg, alignItems: 'center', height: 52, justifyContent: 'center',
+    borderRadius: RADIUS.md,
+    alignItems: 'center', height: 52, justifyContent: 'center',
+    overflow: 'hidden',
   },
-  publishText: { color: COLORS.dark, fontSize: 16, ...FONTS.bold },
+  publishText: { color: COLORS.dark, fontSize: 16, ...FONTS.bold, zIndex: 1 },
 });

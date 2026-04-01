@@ -116,8 +116,8 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 16, color: COLORS.muted, ...FONTS.regular, textAlign: 'center', marginBottom: SPACING.xxl },
   actions: { width: '100%' },
   linkBox: {
-    backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: 1,
-    borderColor: COLORS.border, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg,
+    backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 223, 161, 0.10)', paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg,
     width: '100%', marginBottom: SPACING.lg,
   },
   linkText: { color: COLORS.gold, fontSize: 15, ...FONTS.medium, textAlign: 'center' },
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   },
   copyText: { color: COLORS.dark, fontSize: 16, ...FONTS.bold },
   shareButton: {
-    backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255, 223, 161, 0.10)',
     paddingVertical: SPACING.lg, width: '100%', alignItems: 'center', marginBottom: SPACING.md,
   },
   shareText: { color: COLORS.white, fontSize: 16, ...FONTS.semibold },
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   },
   whatsappText: { color: COLORS.white, fontSize: 16, ...FONTS.bold },
   viewButton: {
-    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
+    borderRadius: RADIUS.md, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255, 223, 161, 0.10)',
     paddingVertical: SPACING.lg, width: '100%', alignItems: 'center', marginBottom: SPACING.xxl,
   },
   viewText: { color: COLORS.white, fontSize: 16, ...FONTS.medium },

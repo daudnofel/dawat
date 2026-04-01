@@ -1,5 +1,6 @@
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { useEventStore } from '../../store/useEventStore';
 import ThemePicker from '../../components/ThemePicker';
@@ -40,6 +41,17 @@ export default function Step1Theme() {
             onPress={() => nextStep()}
             disabled={!canContinue}
           >
+            {/* Metallic gold gradient — DESIGN.md signature CTA */}
+            <Svg style={StyleSheet.absoluteFill}>
+              <Defs>
+                <LinearGradient id="ctaGrad" x1="0" y1="0" x2="1" y2="1">
+                  <Stop offset="0" stopColor="#FFDFA1" />
+                  <Stop offset="0.5" stopColor="#E6C27A" />
+                  <Stop offset="1" stopColor="#FFDFA1" />
+                </LinearGradient>
+              </Defs>
+              <Rect x="0" y="0" width="100%" height="100%" rx={RADIUS.md} fill="url(#ctaGrad)" />
+            </Svg>
             <Text style={styles.buttonText}>Use This Theme</Text>
           </Pressable>
         </View>
@@ -51,12 +63,11 @@ export default function Step1Theme() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.dark },
+  container: { flex: 1, backgroundColor: 'transparent' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md,
   },
-  backText: { color: COLORS.gold, fontSize: 16, ...FONTS.medium },
   stepLabel: { color: COLORS.muted, fontSize: 13, ...FONTS.medium },
   progressRow: { flexDirection: 'row', justifyContent: 'center', gap: SPACING.sm, marginBottom: SPACING.lg },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.border },
@@ -64,7 +75,13 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, color: COLORS.white, ...FONTS.bold, paddingHorizontal: SPACING.xl, marginBottom: SPACING.lg },
   scroll: { flex: 1 },
   buttonWrap: { paddingHorizontal: SPACING.xl, paddingTop: SPACING.xl },
-  button: { backgroundColor: COLORS.gold, borderRadius: RADIUS.md, paddingVertical: SPACING.lg, alignItems: 'center', height: 52, justifyContent: 'center' },
+  button: {
+    borderRadius: RADIUS.md,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
   buttonDisabled: { opacity: 0.4 },
-  buttonText: { color: COLORS.dark, fontSize: 16, ...FONTS.bold },
+  buttonText: { color: COLORS.dark, fontSize: 16, ...FONTS.bold, zIndex: 1 },
 });

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from 'react-native-reanimated';
 import { COLORS } from '../../lib/theme';
 import { useEventStore } from '../../store/useEventStore';
@@ -10,6 +11,8 @@ import Step3Details from '../create/step3-details';
 import Step4Settings from '../create/step4-settings';
 import SuccessScreen from '../create/success';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 export default function CreateTab() {
   const { currentStep } = useEventStore();
   const [published, setPublished] = useState(false);
@@ -18,7 +21,6 @@ export default function CreateTab() {
   const translateX = useSharedValue(0);
 
   useEffect(() => {
-    // Animate step transitions
     opacity.value = 0;
     translateX.value = 20;
     opacity.value = withTiming(1, { duration: 250 });
@@ -32,22 +34,60 @@ export default function CreateTab() {
 
   if (published) {
     return (
-      <Animated.View style={[styles.container, animStyle]}>
-        <SuccessScreen onDone={() => setPublished(false)} />
-      </Animated.View>
+      <View style={styles.container}>
+        <View style={styles.atmosphereLayer} pointerEvents="none">
+          <Svg width={SCREEN_WIDTH} height={350} style={styles.glowSvg}>
+            <Defs>
+              <RadialGradient id="createGlow" cx="50%" cy="0%" rx="70%" ry="80%">
+                <Stop offset="0" stopColor="#FFDFA1" stopOpacity="0.14" />
+                <Stop offset="0.4" stopColor="#E6C27A" stopOpacity="0.06" />
+                <Stop offset="1" stopColor={COLORS.dark} stopOpacity="0" />
+              </RadialGradient>
+            </Defs>
+            <Rect x="0" y="0" width={SCREEN_WIDTH} height={350} fill="url(#createGlow)" />
+          </Svg>
+        </View>
+        <Animated.View style={[styles.content, animStyle]}>
+          <SuccessScreen onDone={() => setPublished(false)} />
+        </Animated.View>
+      </View>
     );
   }
 
   return (
-    <Animated.View style={[styles.container, animStyle]}>
-      {currentStep === 1 && <Step1Theme />}
-      {currentStep === 2 && <Step2Basics />}
-      {currentStep === 3 && <Step3Details />}
-      {currentStep === 4 && <Step4Settings onPublish={() => setPublished(true)} />}
-    </Animated.View>
+    <View style={styles.container}>
+      <View style={styles.atmosphereLayer} pointerEvents="none">
+        <Svg width={SCREEN_WIDTH} height={350} style={styles.glowSvg}>
+          <Defs>
+            <RadialGradient id="createGlow2" cx="50%" cy="0%" rx="70%" ry="80%">
+              <Stop offset="0" stopColor="#FFDFA1" stopOpacity="0.14" />
+              <Stop offset="0.4" stopColor="#E6C27A" stopOpacity="0.06" />
+              <Stop offset="1" stopColor={COLORS.dark} stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          <Rect x="0" y="0" width={SCREEN_WIDTH} height={350} fill="url(#createGlow2)" />
+        </Svg>
+      </View>
+      <Animated.View style={[styles.content, animStyle]}>
+        {currentStep === 1 && <Step1Theme />}
+        {currentStep === 2 && <Step2Basics />}
+        {currentStep === 3 && <Step3Details />}
+        {currentStep === 4 && <Step4Settings onPublish={() => setPublished(true)} />}
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.dark },
+  content: { flex: 1 },
+  atmosphereLayer: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+  },
+  glowSvg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
 });

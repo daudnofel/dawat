@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
 import {
-  View, Text, TextInput, Pressable, StyleSheet, ScrollView, RefreshControl,
+  View, Text, TextInput, Pressable, StyleSheet, ScrollView, RefreshControl, Dimensions,
 } from 'react-native';
+import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -12,6 +13,8 @@ import { GenderMode } from '../../types';
 import EventCard from '../../components/EventCard';
 import SkeletonCard from '../../components/SkeletonCard';
 import EmptyState from '../../components/EmptyState';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface DiscoverEvent {
   id: string;
@@ -43,7 +46,6 @@ export default function DiscoverScreen() {
     const now = new Date().toISOString();
     const oneWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Happening Soon — events in the next 7 days
     const { data: soonData } = await supabase
       .from('events')
       .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status)')
@@ -60,7 +62,6 @@ export default function DiscoverScreen() {
     }));
     setHappeningSoon(soonWithCounts);
 
-    // Popular — all upcoming events sorted by RSVP count
     const { data: popData } = await supabase
       .from('events')
       .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status)')
@@ -88,7 +89,6 @@ export default function DiscoverScreen() {
     }, [fetchDiscover]),
   );
 
-  // Initial load
   useState(() => { fetchDiscover(); });
 
   const handleSearch = async (query: string) => {
@@ -148,109 +148,140 @@ export default function DiscoverScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Discover</Text>
+    <View style={styles.container}>
+      {/* Golden atmospheric glow */}
+      <View style={styles.atmosphereLayer} pointerEvents="none">
+        <Svg width={SCREEN_WIDTH} height={350} style={styles.glowSvg}>
+          <Defs>
+            <RadialGradient id="discoverGlow" cx="50%" cy="0%" rx="70%" ry="80%">
+              <Stop offset="0" stopColor="#FFDFA1" stopOpacity="0.14" />
+              <Stop offset="0.4" stopColor="#E6C27A" stopOpacity="0.06" />
+              <Stop offset="1" stopColor={COLORS.dark} stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          <Rect x="0" y="0" width={SCREEN_WIDTH} height={350} fill="url(#discoverGlow)" />
+        </Svg>
       </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          value={searchQuery}
-          onChangeText={handleSearch}
-          placeholder="Search events or locations..."
-          placeholderTextColor={COLORS.hint}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        {searchQuery.length > 0 && (
-          <Pressable
-            style={styles.clearButton}
-            onPress={() => { setSearchQuery(''); setSearchResults(null); }}
-          >
-            <Text style={styles.clearText}>✕</Text>
-          </Pressable>
-        )}
-      </View>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Discover</Text>
+        </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gold} />}
-      >
-        {loading && (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
-        )}
+        {/* Search Bar — glass style */}
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={handleSearch}
+            placeholder="Search events or locations..."
+            placeholderTextColor={COLORS.hint}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <Pressable
+              style={styles.clearButton}
+              onPress={() => { setSearchQuery(''); setSearchResults(null); }}
+            >
+              <Text style={styles.clearText}>✕</Text>
+            </Pressable>
+          )}
+        </View>
 
-        {/* Search Results */}
-        {searchResults !== null && !loading && (
-          <>
-            <Text style={styles.sectionTitle}>
-              Results for "{searchQuery}" ({searchResults.length})
-            </Text>
-            {searchResults.length === 0 ? (
-              <EmptyState emoji="🔍" title="No events found" subtitle={`Try a different search term`} />
-            ) : (
-              searchResults.map(renderEventCard)
-            )}
-          </>
-        )}
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gold} />}
+        >
+          {loading && (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          )}
 
-        {/* Browse Sections (shown when not searching) */}
-        {searchResults === null && !loading && (
-          <>
-            {/* Happening Soon */}
-            {happeningSoon.length > 0 && (
-              <>
-                <Text style={styles.sectionTitle}>Happening Soon 🗓</Text>
-                <Text style={styles.sectionSubtitle}>Events in the next 7 days</Text>
-                {happeningSoon.map(renderEventCard)}
-              </>
-            )}
+          {searchResults !== null && !loading && (
+            <>
+              <Text style={styles.sectionTitle}>
+                Results for "{searchQuery}" ({searchResults.length})
+              </Text>
+              {searchResults.length === 0 ? (
+                <EmptyState emoji="🔍" title="No events found" subtitle={`Try a different search term`} />
+              ) : (
+                searchResults.map(renderEventCard)
+              )}
+            </>
+          )}
 
-            {/* Popular */}
-            {popular.length > 0 && (
-              <>
-                <Text style={styles.sectionTitle}>Popular 🔥</Text>
-                <Text style={styles.sectionSubtitle}>Most RSVPs</Text>
-                {popular.map(renderEventCard)}
-              </>
-            )}
+          {searchResults === null && !loading && (
+            <>
+              {happeningSoon.length > 0 && (
+                <>
+                  <Text style={styles.sectionTitle}>Happening Soon 🗓</Text>
+                  <Text style={styles.sectionSubtitle}>Events in the next 7 days</Text>
+                  {happeningSoon.map(renderEventCard)}
+                </>
+              )}
 
-            {happeningSoon.length === 0 && popular.length === 0 && (
-              <EmptyState
-                emoji="🌙"
-                title="No events to discover"
-                subtitle="Create the first event for your community"
-              />
-            )}
-          </>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+              {popular.length > 0 && (
+                <>
+                  <Text style={styles.sectionTitle}>Popular 🔥</Text>
+                  <Text style={styles.sectionSubtitle}>Most RSVPs</Text>
+                  {popular.map(renderEventCard)}
+                </>
+              )}
+
+              {happeningSoon.length === 0 && popular.length === 0 && (
+                <EmptyState
+                  emoji="🌙"
+                  title="No events to discover"
+                  subtitle="Create the first event for your community"
+                />
+              )}
+            </>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.dark },
-  header: { paddingHorizontal: SPACING.xl, paddingTop: SPACING.md, paddingBottom: SPACING.sm },
+  safeArea: { flex: 1 },
+
+  // Atmosphere
+  atmosphereLayer: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+  },
+  glowSvg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+
+  header: {
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
   title: { fontSize: 22, color: COLORS.white, ...FONTS.bold },
+
+  // Search — glass input
   searchContainer: {
     paddingHorizontal: SPACING.xl,
     paddingBottom: SPACING.md,
     position: 'relative',
   },
   searchInput: {
-    backgroundColor: COLORS.input,
+    backgroundColor: 'rgba(30, 30, 30, 0.55)',
     borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 223, 161, 0.10)',
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
     paddingRight: 40,
@@ -269,6 +300,7 @@ const styles = StyleSheet.create({
     color: COLORS.muted,
     fontSize: 16,
   },
+
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: SPACING.xl, paddingBottom: 120 },
   sectionTitle: {

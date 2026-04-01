@@ -54,7 +54,7 @@ export default function ThemePicker({ selectedId, onSelect }: ThemePickerProps) 
         ))}
       </ScrollView>
 
-      {/* Theme Grid */}
+      {/* Theme Grid — uniform dark glass */}
       <View style={styles.grid}>
         {filteredThemes.map((t) => {
           const isSelected = t.id === selectedId;
@@ -63,21 +63,17 @@ export default function ThemePicker({ selectedId, onSelect }: ThemePickerProps) 
               key={t.id}
               style={[
                 styles.card,
-                { backgroundColor: t.bannerBg },
                 isSelected && styles.cardSelected,
               ]}
               scaleValue={0.95}
               onPress={() => onSelect(t)}
             >
+              {/* Golden glow behind selected card */}
+              {isSelected && <View style={styles.selectedGlow} />}
               <Text style={styles.cardEmoji}>{t.defaultEmoji}</Text>
-              <Text style={[styles.cardName, { color: t.textColor }]} numberOfLines={1}>
+              <Text style={styles.cardName} numberOfLines={1}>
                 {t.name}
               </Text>
-              {isSelected && (
-                <View style={styles.checkBadge}>
-                  <Text style={styles.checkText}>✓</Text>
-                </View>
-              )}
             </AnimatedPress>
           );
         })}
@@ -99,13 +95,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.sm,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: 'rgba(53, 53, 52, 0.30)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   pillActive: {
-    backgroundColor: COLORS.gold,
-    borderColor: COLORS.gold,
+    backgroundColor: `${COLORS.gold}25`,
+    borderColor: `${COLORS.gold}50`,
   },
   pillText: {
     color: COLORS.muted,
@@ -113,7 +109,7 @@ const styles = StyleSheet.create({
     ...FONTS.medium,
   },
   pillTextActive: {
-    color: COLORS.dark,
+    color: COLORS.gold,
   },
   grid: {
     flexDirection: 'row',
@@ -127,12 +123,30 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    overflow: 'hidden',
+    backgroundColor: 'rgba(30, 30, 30, 0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    // Subtle glass edge glow — unselected
+    shadowColor: 'rgba(255, 255, 255, 0.15)',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   cardSelected: {
-    borderColor: COLORS.gold,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 223, 161, 0.40)',
+    // Bright golden glow — selected
+    shadowColor: '#FFDFA1',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  selectedGlow: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 223, 161, 0.05)',
+    borderRadius: RADIUS.lg,
   },
   cardEmoji: {
     fontSize: 32,
@@ -140,24 +154,9 @@ const styles = StyleSheet.create({
   },
   cardName: {
     fontSize: 11,
+    color: COLORS.white,
     ...FONTS.semibold,
     textAlign: 'center',
     paddingHorizontal: SPACING.xs,
-  },
-  checkBadge: {
-    position: 'absolute',
-    top: SPACING.sm,
-    right: SPACING.sm,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: COLORS.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkText: {
-    color: COLORS.dark,
-    fontSize: 13,
-    ...FONTS.bold,
   },
 });

@@ -1,5 +1,6 @@
 import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { useEventStore } from '../../store/useEventStore';
 
@@ -33,6 +34,16 @@ export default function Step2Basics() {
       </KeyboardAvoidingView>
       <View style={styles.bottomBar}>
         <Pressable style={({ pressed }) => [styles.button, !canContinue && styles.buttonDisabled, pressed && { transform: [{ scale: 0.97 }] }]} onPress={() => nextStep()} disabled={!canContinue}>
+          <Svg style={StyleSheet.absoluteFill}>
+            <Defs>
+              <LinearGradient id="ctaGrad2" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0" stopColor="#FFDFA1" />
+                <Stop offset="0.5" stopColor="#E6C27A" />
+                <Stop offset="1" stopColor="#FFDFA1" />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="100%" height="100%" rx={RADIUS.md} fill="url(#ctaGrad2)" />
+          </Svg>
           <Text style={styles.buttonText}>Continue</Text>
         </Pressable>
       </View>
@@ -41,7 +52,7 @@ export default function Step2Basics() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.dark },
+  container: { flex: 1, backgroundColor: 'transparent' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md },
   backText: { color: COLORS.gold, fontSize: 16, ...FONTS.medium },
   stepLabel: { color: COLORS.muted, fontSize: 13, ...FONTS.medium },
@@ -51,11 +62,11 @@ const styles = StyleSheet.create({
   dotCurrent: { width: 24 },
   scrollContent: { paddingHorizontal: SPACING.xl, paddingBottom: 40 },
   label: { fontSize: 16, color: COLORS.white, ...FONTS.semibold, marginBottom: SPACING.sm, marginTop: SPACING.xl },
-  titleInput: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.lg, color: COLORS.white, fontSize: 20, ...FONTS.semibold },
-  input: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md + 2, color: COLORS.white, fontSize: 16, ...FONTS.medium },
+  titleInput: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255, 223, 161, 0.10)', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md + 2, color: COLORS.white, fontSize: 16, ...FONTS.medium },
+  input: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255, 223, 161, 0.10)', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md + 2, color: COLORS.white, fontSize: 16, ...FONTS.medium },
   charCount: { color: COLORS.hint, fontSize: 12, ...FONTS.regular, textAlign: 'right', marginTop: SPACING.xs },
-  bottomBar: { paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg, borderTopWidth: 1, borderTopColor: COLORS.border, marginBottom: 90 },
-  button: { backgroundColor: COLORS.gold, borderRadius: RADIUS.md, paddingVertical: SPACING.lg, alignItems: 'center', height: 52, justifyContent: 'center' },
+  bottomBar: { paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255, 223, 161, 0.10)', marginBottom: 90 },
+  button: { borderRadius: RADIUS.md, alignItems: 'center', height: 52, justifyContent: 'center', overflow: 'hidden' },
   buttonDisabled: { opacity: 0.4 },
   buttonText: { color: COLORS.dark, fontSize: 16, ...FONTS.bold },
 });

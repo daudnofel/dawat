@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Switch, Platf
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { useEventStore } from '../../store/useEventStore';
 
@@ -182,6 +183,16 @@ export default function Step3Details() {
       <View style={styles.bottomBar}>
         <Pressable style={({ pressed }) => [styles.button, !canContinue && styles.buttonDisabled, pressed && { transform: [{ scale: 0.97 }] }]}
           onPress={() => nextStep()} disabled={!canContinue}>
+          <Svg style={StyleSheet.absoluteFill}>
+            <Defs>
+              <LinearGradient id="ctaGrad3" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0" stopColor="#FFDFA1" />
+                <Stop offset="0.5" stopColor="#E6C27A" />
+                <Stop offset="1" stopColor="#FFDFA1" />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="100%" height="100%" rx={RADIUS.md} fill="url(#ctaGrad3)" />
+          </Svg>
           <Text style={styles.buttonText}>Continue</Text>
         </Pressable>
       </View>
@@ -216,7 +227,7 @@ export default function Step3Details() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.dark },
+  container: { flex: 1, backgroundColor: 'transparent' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md },
   backText: { color: COLORS.gold, fontSize: 16, ...FONTS.medium },
   stepLabel: { color: COLORS.muted, fontSize: 13, ...FONTS.medium },
@@ -227,10 +238,10 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: SPACING.xl, paddingBottom: 40 },
   label: { fontSize: 16, color: COLORS.white, ...FONTS.semibold, marginBottom: SPACING.sm, marginTop: SPACING.xl },
-  input: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md + 2, color: COLORS.white, fontSize: 16, ...FONTS.medium },
+  input: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255, 223, 161, 0.10)', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md + 2, color: COLORS.white, fontSize: 16, ...FONTS.medium },
   dateButton: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
-    backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255, 223, 161, 0.10)',
     paddingHorizontal: SPACING.lg, paddingVertical: SPACING.lg,
   },
   dateIcon: { fontSize: 18 },
@@ -239,12 +250,12 @@ const styles = StyleSheet.create({
   toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: SPACING.md, marginTop: SPACING.sm },
   toggleLabel: { color: COLORS.white, fontSize: 15, ...FONTS.medium },
   priceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  pricePill: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm + 2, borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.input },
+  pricePill: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm + 2, borderRadius: RADIUS.full, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255, 223, 161, 0.10)', backgroundColor: COLORS.input },
   pricePillActive: { borderColor: COLORS.gold, backgroundColor: COLORS.card2 },
   priceText: { color: COLORS.muted, fontSize: 14, ...FONTS.medium },
   priceTextActive: { color: COLORS.gold },
-  bottomBar: { paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg, borderTopWidth: 1, borderTopColor: COLORS.border, marginBottom: 90 },
-  button: { backgroundColor: COLORS.gold, borderRadius: RADIUS.md, paddingVertical: SPACING.lg, alignItems: 'center', height: 52, justifyContent: 'center' },
+  bottomBar: { paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255, 223, 161, 0.10)', marginBottom: 90 },
+  button: { borderRadius: RADIUS.md, alignItems: 'center', height: 52, justifyContent: 'center', overflow: 'hidden' },
   buttonDisabled: { opacity: 0.4 },
   buttonText: { color: COLORS.dark, fontSize: 16, ...FONTS.bold },
   // Modal
@@ -256,7 +267,7 @@ const styles = StyleSheet.create({
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255, 223, 161, 0.10)',
   },
   modalTitle: { fontSize: 17, color: COLORS.white, ...FONTS.bold },
   modalDone: { fontSize: 17, color: COLORS.gold, ...FONTS.bold },

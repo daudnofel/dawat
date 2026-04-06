@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
 import { RsvpStatus } from '../types';
 import { supabase } from '../lib/supabase';
@@ -8,6 +9,7 @@ interface GuestRow {
   id: string;
   status: RsvpStatus;
   children_count: number;
+  plus_one_names: string[];
   created_at: string;
   display_name: string | null;
   email: string | null;
@@ -25,6 +27,7 @@ const TABS: { key: FilterTab; label: string; color: string }[] = [
   { key: 'all', label: 'All', color: COLORS.gold },
   { key: RsvpStatus.Yes, label: 'Yes', color: COLORS.green },
   { key: RsvpStatus.Inshallah, label: 'Inshallah', color: COLORS.amber },
+  { key: RsvpStatus.Waitlist, label: 'Waitlist', color: COLORS.blue },
   { key: RsvpStatus.No, label: "Can't Go", color: COLORS.red },
 ];
 
@@ -41,7 +44,7 @@ export default function GuestListDashboard({ eventId, visible, refreshKey }: Gue
     setLoading(true);
     const { data, error } = await supabase
       .from('rsvps')
-      .select('id, status, children_count, created_at, user_id')
+      .select('id, status, children_count, plus_one_names, created_at, user_id')
       .eq('event_id', eventId)
       .order('created_at', { ascending: true });
 
@@ -50,7 +53,6 @@ export default function GuestListDashboard({ eventId, visible, refreshKey }: Gue
       return;
     }
 
-    // Fetch user display names
     const userIds = data.map((r) => r.user_id).filter(Boolean) as string[];
     const { data: users } = await supabase
       .from('users')
@@ -67,6 +69,7 @@ export default function GuestListDashboard({ eventId, visible, refreshKey }: Gue
         id: r.id,
         status: r.status as RsvpStatus,
         children_count: r.children_count ?? 0,
+        plus_one_names: r.plus_one_names ?? [],
         created_at: r.created_at,
         display_name: user?.display_name ?? null,
         email: user?.email ?? null,
@@ -77,17 +80,36 @@ export default function GuestListDashboard({ eventId, visible, refreshKey }: Gue
     setLoading(false);
   };
 
+  const admitFromWaitlist = async (rsvpId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const { error } = await supabase
+      .from('rsvps')
+      .update({ status: 'yes', updated_at: new Date().toISOString() })
+      .eq('id', rsvpId);
+
+    if (error) {
+      Alert.alert('Error', 'Could not admit guest');
+      return;
+    }
+
+    fetchGuests();
+  };
+
   if (!visible) return null;
 
   const filtered = activeTab === 'all' ? guests : guests.filter((g) => g.status === activeTab);
 
   const yesCount = guests.filter((g) => g.status === RsvpStatus.Yes).length;
   const inshallahCount = guests.filter((g) => g.status === RsvpStatus.Inshallah).length;
+  const waitlistCount = guests.filter((g) => g.status === RsvpStatus.Waitlist).length;
   const noCount = guests.filter((g) => g.status === RsvpStatus.No).length;
   const totalChildren = guests
     .filter((g) => g.status === RsvpStatus.Yes)
     .reduce((sum, g) => sum + g.children_count, 0);
-  const totalHeadcount = yesCount + totalChildren;
+  const totalPlusOnes = guests
+    .filter((g) => g.status === RsvpStatus.Yes)
+    .reduce((sum, g) => sum + g.plus_one_names.length, 0);
+  const totalHeadcount = yesCount + totalChildren + totalPlusOnes;
 
   return (
     <View style={styles.container}>
@@ -97,14 +119,15 @@ export default function GuestListDashboard({ eventId, visible, refreshKey }: Gue
       <View style={styles.summaryRow}>
         <SummaryCard label="Going" count={yesCount} color={COLORS.green} />
         <SummaryCard label="Inshallah" count={inshallahCount} color={COLORS.amber} />
+        {waitlistCount > 0 && <SummaryCard label="Waitlist" count={waitlistCount} color={COLORS.blue} />}
         <SummaryCard label="Can't Go" count={noCount} color={COLORS.red} />
       </View>
 
-      {totalChildren > 0 && (
+      {(totalChildren > 0 || totalPlusOnes > 0) && (
         <View style={styles.headcountRow}>
           <Text style={styles.headcountText}>
             Total headcount: <Text style={styles.headcountBold}>{totalHeadcount}</Text>
-            {' '}({yesCount} adults + {totalChildren} {totalChildren === 1 ? 'child' : 'children'})
+            {' '}({yesCount} adults{totalPlusOnes > 0 ? ` + ${totalPlusOnes} +1s` : ''}{totalChildren > 0 ? ` + ${totalChildren} ${totalChildren === 1 ? 'child' : 'children'}` : ''})
           </Text>
         </View>
       )}
@@ -135,7 +158,11 @@ export default function GuestListDashboard({ eventId, visible, refreshKey }: Gue
       ) : (
         <View>
           {filtered.map((guest) => (
-            <GuestItem key={guest.id} guest={guest} />
+            <GuestItem
+              key={guest.id}
+              guest={guest}
+              onAdmit={guest.status === RsvpStatus.Waitlist ? () => admitFromWaitlist(guest.id) : undefined}
+            />
           ))}
         </View>
       )}
@@ -152,17 +179,19 @@ function SummaryCard({ label, count, color }: { label: string; count: number; co
   );
 }
 
-function GuestItem({ guest }: { guest: GuestRow }) {
+function GuestItem({ guest, onAdmit }: { guest: GuestRow; onAdmit?: () => void }) {
   const statusColor = {
     [RsvpStatus.Yes]: COLORS.green,
     [RsvpStatus.Inshallah]: COLORS.amber,
     [RsvpStatus.No]: COLORS.red,
+    [RsvpStatus.Waitlist]: COLORS.blue,
   }[guest.status];
 
   const statusLabel = {
     [RsvpStatus.Yes]: 'Going',
     [RsvpStatus.Inshallah]: 'Inshallah',
     [RsvpStatus.No]: "Can't Go",
+    [RsvpStatus.Waitlist]: 'Waitlisted',
   }[guest.status];
 
   const name = guest.display_name || guest.email || 'Guest';
@@ -179,10 +208,24 @@ function GuestItem({ guest }: { guest: GuestRow }) {
             +{guest.children_count} {guest.children_count === 1 ? 'child' : 'children'}
           </Text>
         )}
+        {guest.plus_one_names.length > 0 && (
+          <Text style={styles.plusOneText}>
+            +{guest.plus_one_names.length}: {guest.plus_one_names.join(', ')}
+          </Text>
+        )}
       </View>
-      <View style={[styles.statusPill, { backgroundColor: `${statusColor}20` }]}>
-        <Text style={[styles.statusPillText, { color: statusColor }]}>{statusLabel}</Text>
-      </View>
+      {onAdmit ? (
+        <Pressable
+          style={({ pressed }) => [styles.admitBtn, pressed && { opacity: 0.8 }]}
+          onPress={onAdmit}
+        >
+          <Text style={styles.admitBtnText}>Admit</Text>
+        </Pressable>
+      ) : (
+        <View style={[styles.statusPill, { backgroundColor: `${statusColor}20` }]}>
+          <Text style={[styles.statusPillText, { color: statusColor }]}>{statusLabel}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -191,8 +234,8 @@ const styles = StyleSheet.create({
   container: {
     marginTop: SPACING.lg,
     paddingTop: SPACING.lg,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255, 223, 161, 0.10)',
   },
   sectionTitle: {
     fontSize: 18,
@@ -207,9 +250,9 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     flex: 1,
-    backgroundColor: COLORS.card,
+    backgroundColor: 'rgba(30, 30, 30, 0.55)',
     borderRadius: RADIUS.md,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     paddingVertical: SPACING.md,
     alignItems: 'center',
   },
@@ -224,10 +267,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   headcountRow: {
-    backgroundColor: COLORS.card,
+    backgroundColor: 'rgba(30, 30, 30, 0.55)',
     borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 223, 161, 0.10)',
     padding: SPACING.md,
     marginBottom: SPACING.lg,
   },
@@ -243,31 +286,28 @@ const styles = StyleSheet.create({
   },
   tabRow: {
     flexDirection: 'row',
-    gap: SPACING.sm,
+    gap: SPACING.xs,
     marginBottom: SPACING.lg,
   },
   tab: {
     flex: 1,
     paddingVertical: SPACING.sm,
     borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 223, 161, 0.10)',
     alignItems: 'center',
   },
   tabText: {
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.muted,
     ...FONTS.semibold,
-  },
-  listContainer: {
-    minHeight: 100,
   },
   guestRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255, 223, 161, 0.06)',
     gap: SPACING.md,
   },
   avatar: {
@@ -275,8 +315,8 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: RADIUS.full,
     backgroundColor: COLORS.card2,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 223, 161, 0.10)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -299,6 +339,12 @@ const styles = StyleSheet.create({
     ...FONTS.regular,
     marginTop: 2,
   },
+  plusOneText: {
+    fontSize: 12,
+    color: COLORS.gold,
+    ...FONTS.regular,
+    marginTop: 2,
+  },
   statusPill: {
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.xs,
@@ -307,6 +353,17 @@ const styles = StyleSheet.create({
   statusPillText: {
     fontSize: 11,
     ...FONTS.semibold,
+  },
+  admitBtn: {
+    backgroundColor: COLORS.green,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.full,
+  },
+  admitBtnText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    ...FONTS.bold,
   },
   emptyText: {
     fontSize: 14,

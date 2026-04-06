@@ -48,7 +48,7 @@ export default function DiscoverScreen() {
 
     const { data: soonData } = await supabase
       .from('events')
-      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status)')
+      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
       .eq('is_published', true)
       .eq('is_cancelled', false)
       .gte('date_time', now)
@@ -64,7 +64,7 @@ export default function DiscoverScreen() {
 
     const { data: popData } = await supabase
       .from('events')
-      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status)')
+      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
       .eq('is_published', true)
       .eq('is_cancelled', false)
       .order('created_at', { ascending: false })
@@ -99,7 +99,7 @@ export default function DiscoverScreen() {
     setSearching(true);
     const { data } = await supabase
       .from('events')
-      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status)')
+      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
       .eq('is_published', true)
       .eq('is_cancelled', false)
       .or(`title.ilike.%${query}%,location_name.ilike.%${query}%`)
@@ -123,7 +123,8 @@ export default function DiscoverScreen() {
 
   const renderEventCard = (event: DiscoverEvent) => {
     const rsvps = event.rsvps ?? [];
-    const yesCount = rsvps.filter((r) => r.status === 'yes').length;
+    const yesRsvps = rsvps.filter((r: any) => r.status === 'yes');
+    const yesCount = yesRsvps.reduce((sum: number, r: any) => sum + 1 + (r.children_count ?? 0) + (r.plus_one_names?.length ?? 0), 0);
     const inshallahCount = rsvps.filter((r) => r.status === 'inshallah').length;
     return (
       <EventCard

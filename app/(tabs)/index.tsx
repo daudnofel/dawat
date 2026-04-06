@@ -34,7 +34,7 @@ interface FeedEvent {
   location_name: string | null;
   host_id: string;
   slug: string;
-  rsvps: { status: string }[] | null;
+  rsvps: { status: string; children_count: number; plus_one_names: string[] }[] | null;
 }
 
 export default function HomeScreen() {
@@ -48,7 +48,7 @@ export default function HomeScreen() {
   const fetchEvents = useCallback(async () => {
     let query = supabase
       .from('events')
-      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status)')
+      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
       .eq('is_published', true)
       .eq('is_cancelled', false)
       .order('created_at', { ascending: false })
@@ -179,7 +179,8 @@ export default function HomeScreen() {
 
           {!loading && events.map((event) => {
             const rsvps = event.rsvps ?? [];
-            const yesCount = rsvps.filter((r) => r.status === 'yes').length;
+            const yesRsvps = rsvps.filter((r) => r.status === 'yes');
+            const yesCount = yesRsvps.reduce((sum, r) => sum + 1 + (r.children_count ?? 0) + (r.plus_one_names?.length ?? 0), 0);
             const inshallahCount = rsvps.filter((r) => r.status === 'inshallah').length;
             return (
               <EventCard

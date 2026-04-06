@@ -48,6 +48,7 @@ export default function EventDetailScreen() {
   const [rsvpStatus, setRsvpStatus] = useState<RsvpStatus | null>(null);
   const [yesCount, setYesCount] = useState(0);
   const [inshallahCount, setInshallahCount] = useState(0);
+  const [waitlistCount, setWaitlistCount] = useState(0);
   const [showFamilyModal, setShowFamilyModal] = useState(false);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
@@ -79,21 +80,22 @@ export default function EventDetailScreen() {
       setEvent(data as EventDetail);
     }
 
-    // Fetch RSVP counts
-    const { count: yc } = await supabase
+    // Fetch RSVPs with full details to compute headcount
+    const { data: allRsvps } = await supabase
       .from('rsvps')
-      .select('*', { count: 'exact', head: true })
-      .eq('event_id', id)
-      .eq('status', 'yes');
+      .select('status, children_count, plus_one_names')
+      .eq('event_id', id);
 
-    const { count: ic } = await supabase
-      .from('rsvps')
-      .select('*', { count: 'exact', head: true })
-      .eq('event_id', id)
-      .eq('status', 'inshallah');
+    const yesRsvps = (allRsvps ?? []).filter((r) => r.status === 'yes');
+    const yesHeadcount = yesRsvps.reduce(
+      (sum, r) => sum + 1 + (r.children_count ?? 0) + (r.plus_one_names?.length ?? 0), 0
+    );
+    const ic = (allRsvps ?? []).filter((r) => r.status === 'inshallah').length;
+    const wc = (allRsvps ?? []).filter((r) => r.status === 'waitlist').length;
 
-    setYesCount(yc ?? 0);
-    setInshallahCount(ic ?? 0);
+    setYesCount(yesHeadcount);
+    setInshallahCount(ic);
+    setWaitlistCount(wc);
 
     // Check current user's RSVP and host status
     const { data: { user } } = await supabase.auth.getUser();
@@ -121,14 +123,17 @@ export default function EventDetailScreen() {
     const { data } = await supabase.from('events').select('*').eq('id', id).single();
     if (data) setEvent(data as EventDetail);
 
-    const { count: yc } = await supabase
-      .from('rsvps').select('*', { count: 'exact', head: true })
-      .eq('event_id', id).eq('status', 'yes');
-    const { count: ic } = await supabase
-      .from('rsvps').select('*', { count: 'exact', head: true })
-      .eq('event_id', id).eq('status', 'inshallah');
-    setYesCount(yc ?? 0);
-    setInshallahCount(ic ?? 0);
+    const { data: allRsvps } = await supabase
+      .from('rsvps')
+      .select('status, children_count, plus_one_names')
+      .eq('event_id', id);
+    const yesRsvps = (allRsvps ?? []).filter((r) => r.status === 'yes');
+    const yesHeadcount = yesRsvps.reduce(
+      (sum, r) => sum + 1 + (r.children_count ?? 0) + (r.plus_one_names?.length ?? 0), 0
+    );
+    setYesCount(yesHeadcount);
+    setInshallahCount((allRsvps ?? []).filter((r) => r.status === 'inshallah').length);
+    setWaitlistCount((allRsvps ?? []).filter((r) => r.status === 'waitlist').length);
     setGuestRefreshKey((k) => k + 1);
   };
 
@@ -141,6 +146,8 @@ export default function EventDetailScreen() {
 
     // Tapping the same option again = de-select (remove RSVP)
     if (rsvpStatus === status) {
+      const prevStatus = rsvpStatus;
+      setRsvpStatus(null); // Optimistic
       const { error } = await supabase
         .from('rsvps')
         .delete()
@@ -148,12 +155,12 @@ export default function EventDetailScreen() {
         .eq('user_id', userId);
 
       if (error) {
+        setRsvpStatus(prevStatus); // Revert
         Alert.alert('Error', 'Could not remove RSVP');
         return;
       }
-      setRsvpStatus(null);
       setGuestRefreshKey((k) => k + 1);
-      fetchEvent();
+      fetchEventSilent();
       return;
     }
 
@@ -163,20 +170,44 @@ export default function EventDetailScreen() {
       return;
     }
 
-    // Check capacity for "Yes" RSVPs
-    if (status === RsvpStatus.Yes && event?.capacity && yesCount >= event.capacity && rsvpStatus !== RsvpStatus.Yes) {
-      Alert.alert('Event Full', 'This event has reached its capacity.');
+    // If tapping "Yes" and event is at capacity → waitlist
+    // Capacity counts total headcount: yes RSVPs + their children + their plus-ones
+    const { data: yesRsvps } = await supabase
+      .from('rsvps')
+      .select('children_count, plus_one_names')
+      .eq('event_id', id)
+      .eq('status', 'yes');
+    const totalHeadcount = (yesRsvps ?? []).reduce(
+      (sum, r) => sum + 1 + (r.children_count ?? 0) + (r.plus_one_names?.length ?? 0), 0
+    );
+    if (status === RsvpStatus.Yes && event?.capacity && totalHeadcount >= event.capacity && rsvpStatus !== RsvpStatus.Yes) {
+      Alert.alert(
+        'Event Full',
+        'This event is at capacity. Would you like to join the waitlist?',
+        [
+          { text: 'No thanks' },
+          {
+            text: 'Join Waitlist',
+            onPress: async () => {
+              setRsvpStatus(RsvpStatus.Waitlist); // Optimistic
+              await saveRsvp(userId, RsvpStatus.Waitlist, 0, []);
+            },
+          },
+        ],
+      );
       return;
     }
 
-    // If tapping "Yes", show family modal before saving
+    // If tapping "Yes", show family/+1 modal before saving
     if (status === RsvpStatus.Yes) {
       setPendingUserId(userId);
       setShowFamilyModal(true);
       return;
     }
 
-    // For Inshallah / No, save directly
+    // For Inshallah / No, save directly with optimistic update
+    const prevStatus = rsvpStatus;
+    setRsvpStatus(status); // Optimistic
     await saveRsvp(userId, status, 0, []);
   };
 
@@ -184,9 +215,8 @@ export default function EventDetailScreen() {
     userId: string,
     status: RsvpStatus,
     childrenCount: number,
-    childrenNames: string[],
+    plusOneNames: string[],
   ) => {
-    // Delete existing RSVP first, then insert new one
     await supabase
       .from('rsvps')
       .delete()
@@ -200,7 +230,7 @@ export default function EventDetailScreen() {
         user_id: userId,
         status,
         children_count: childrenCount,
-        children_names: childrenNames.length > 0 ? childrenNames : null,
+        plus_one_names: plusOneNames.length > 0 ? plusOneNames : [],
       });
 
     if (error) {
@@ -210,20 +240,42 @@ export default function EventDetailScreen() {
 
     setRsvpStatus(status);
     setGuestRefreshKey((k) => k + 1);
-    fetchEvent();
+    fetchEventSilent();
   };
 
-  const handleFamilySubmit = (childrenCount: number) => {
+  const handleFamilySubmit = async (childrenCount: number, plusOneNames: string[]) => {
     setShowFamilyModal(false);
-    if (pendingUserId) {
-      saveRsvp(pendingUserId, RsvpStatus.Yes, childrenCount, []);
-      setPendingUserId(null);
+    if (!pendingUserId) return;
+
+    // Check if adding this group would exceed capacity
+    if (event?.capacity) {
+      const { data: yesRsvps } = await supabase
+        .from('rsvps')
+        .select('children_count, plus_one_names')
+        .eq('event_id', id)
+        .eq('status', 'yes');
+      const currentHeadcount = (yesRsvps ?? []).reduce(
+        (sum, r) => sum + 1 + (r.children_count ?? 0) + (r.plus_one_names?.length ?? 0), 0
+      );
+      const newGroupSize = 1 + childrenCount + plusOneNames.length;
+      if (currentHeadcount + newGroupSize > event.capacity) {
+        Alert.alert(
+          'Not enough spots',
+          `Only ${event.capacity - currentHeadcount} spots left, but your group is ${newGroupSize}. Try reducing your group size or join the waitlist.`,
+        );
+        return;
+      }
     }
+
+    setRsvpStatus(RsvpStatus.Yes);
+    saveRsvp(pendingUserId, RsvpStatus.Yes, childrenCount, plusOneNames);
+    setPendingUserId(null);
   };
 
   const handleFamilySkip = () => {
     setShowFamilyModal(false);
     if (pendingUserId) {
+      setRsvpStatus(RsvpStatus.Yes); // Optimistic
       saveRsvp(pendingUserId, RsvpStatus.Yes, 0, []);
       setPendingUserId(null);
     }
@@ -322,7 +374,7 @@ export default function EventDetailScreen() {
           <Text style={styles.title}>{event.title}</Text>
           <GuestAvatars eventId={id!} refreshKey={guestRefreshKey} />
           <Text style={styles.attendance}>
-            {yesCount} confirmed · {inshallahCount} Inshallah
+            {yesCount} confirmed · {inshallahCount} Inshallah{waitlistCount > 0 ? ` · ${waitlistCount} waitlisted` : ''}
           </Text>
           {event.capacity && (
             <View style={styles.capacityBar}>
@@ -391,6 +443,7 @@ export default function EventDetailScreen() {
 
       <FamilyRegistration
         visible={showFamilyModal}
+        maxGuests={event?.allow_plus_ones ? (event?.max_plus_ones ?? 0) : 10}
         onSubmit={handleFamilySubmit}
         onSkip={handleFamilySkip}
       />

@@ -16,6 +16,7 @@ export enum RsvpStatus {
   Yes = 'yes',
   Inshallah = 'inshallah',
   No = 'no',
+  Waitlist = 'waitlist',
 }
 
 export enum OrgType {
@@ -136,6 +137,7 @@ export interface Rsvp {
   status: RsvpStatus;
   children_count: number;
   children_names: string[] | null;
+  plus_one_names: string[];
   checked_in: boolean;
   created_at: string;
   updated_at: string;

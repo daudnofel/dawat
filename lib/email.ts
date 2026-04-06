@@ -1,29 +1,76 @@
-// Email client using Resend — server-side only (Edge Functions)
-// Not imported in the React Native app directly
+// lib/email.ts
+// Client-side trigger for email notifications.
+// Calls the Supabase Edge Function 'send-email' — the Resend API key
+// never touches the mobile app. All sending happens server-side.
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY ?? '';
+import { supabase } from './supabase';
 
-export async function sendEmail(to: string, subject: string, html: string) {
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: 'Dawat <events@dawatapp.com>',
-      to,
-      subject,
-      html,
-    }),
-  });
-  return response.json();
+// ─── Payload types ────────────────────────────────────────────
+// These must stay in sync with supabase/functions/send-email/index.ts
+
+export interface RsvpConfirmationPayload {
+  to: string;
+  guestName: string;
+  eventTitle: string;
+  eventDate: string;
+  eventLocation: string;
+  eventUrl: string;
+  status: 'yes' | 'inshallah' | 'no';
 }
 
-export async function sendRsvpConfirmation(to: string, eventTitle: string, eventDate: string) {
-  return sendEmail(
-    to,
-    `You're going to ${eventTitle}! 🌙`,
-    `<h2>You're going to ${eventTitle}</h2><p>${eventDate}</p><p>JazakAllah khair for RSVPing via Dawat 🤲</p>`,
-  );
+export interface HostNewRsvpPayload {
+  to: string;
+  hostName: string;
+  guestName: string;
+  eventTitle: string;
+  status: 'yes' | 'inshallah' | 'no';
+  totalYes: number;
+  totalInshallah: number;
+  eventUrl: string;
+}
+
+export interface EventPublishedPayload {
+  to: string;
+  hostName: string;
+  eventTitle: string;
+  eventDate: string;
+  eventUrl: string;
+}
+
+export interface EventCancelledPayload {
+  to: string;
+  guestName: string;
+  eventTitle: string;
+  eventDate: string;
+  hostName: string;
+}
+
+export interface EventReminderPayload {
+  to: string;
+  guestName: string;
+  eventTitle: string;
+  eventDate: string;
+  eventLocation: string;
+  eventUrl: string;
+  hoursUntil: 24 | 2;
+}
+
+export type EmailParams =
+  | { type: 'rsvp_confirmation'; payload: RsvpConfirmationPayload }
+  | { type: 'host_new_rsvp'; payload: HostNewRsvpPayload }
+  | { type: 'event_published'; payload: EventPublishedPayload }
+  | { type: 'event_cancelled'; payload: EventCancelledPayload }
+  | { type: 'event_reminder'; payload: EventReminderPayload };
+
+// ─── Public API ───────────────────────────────────────────────
+// Fire-and-forget safe: silently logs on failure, never throws.
+// Call without await from the mobile app when you want non-blocking send.
+
+export async function triggerEmail(params: EmailParams): Promise<void> {
+  const { error } = await supabase.functions.invoke('send-email', {
+    body: params,
+  });
+  if (error) {
+    console.error('[email] Failed to send:', params.type, error.message);
+  }
 }

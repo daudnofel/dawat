@@ -36,7 +36,7 @@ export default function EventsScreen() {
       setNoAuth(false);
 
       const [hostedResult, rsvpResult] = await Promise.all([
-        supabase.from('events').select('*, rsvps(status)').eq('host_id', userId).eq('is_cancelled', false).order('created_at', { ascending: false }),
+        supabase.from('events').select('*, rsvps(status, children_count, plus_one_names)').eq('host_id', userId).eq('is_cancelled', false).order('created_at', { ascending: false }),
         supabase.from('rsvps').select('event_id').eq('user_id', userId).in('status', ['yes', 'inshallah']),
       ]);
 
@@ -44,7 +44,7 @@ export default function EventsScreen() {
 
       if (rsvpResult.data && rsvpResult.data.length > 0) {
         const ids = rsvpResult.data.map((r: any) => r.event_id);
-        const { data: events } = await supabase.from('events').select('*, rsvps(status)').in('id', ids).eq('is_cancelled', false);
+        const { data: events } = await supabase.from('events').select('*, rsvps(status, children_count, plus_one_names)').in('id', ids).eq('is_cancelled', false);
         setAttending(events ?? []);
       } else {
         setAttending([]);
@@ -66,7 +66,8 @@ export default function EventsScreen() {
 
   const renderCard = (e: any, label: string) => {
     const rsvps = Array.isArray(e.rsvps) ? e.rsvps : [];
-    const yesCount = rsvps.filter((r: any) => r.status === 'yes').length;
+    const yesRsvps = rsvps.filter((r: any) => r.status === 'yes');
+    const yesCount = yesRsvps.reduce((sum: number, r: any) => sum + 1 + (r.children_count ?? 0) + (r.plus_one_names?.length ?? 0), 0);
     const inshallahCount = rsvps.filter((r: any) => r.status === 'inshallah').length;
     return (
       <EventCard

@@ -2,50 +2,88 @@ import { useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   Pressable,
   Modal,
   StyleSheet,
+  ScrollView,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
 
+interface Guest {
+  name: string;
+  isChild: boolean;
+}
+
 interface FamilyRegistrationProps {
   visible: boolean;
-  onSubmit: (childrenCount: number) => void;
+  maxGuests: number;
+  onSubmit: (childrenCount: number, namedGuests: string[]) => void;
   onSkip: () => void;
 }
 
-const MAX_CHILDREN = 10;
-
 export default function FamilyRegistration({
   visible,
+  maxGuests,
   onSubmit,
   onSkip,
 }: FamilyRegistrationProps) {
-  const [count, setCount] = useState(0);
+  const [guests, setGuests] = useState<Guest[]>([]);
 
-  const handleIncrement = () => {
-    if (count >= MAX_CHILDREN) return;
+  const addGuest = () => {
+    if (guests.length >= maxGuests) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setCount(count + 1);
+    setGuests([...guests, { name: '', isChild: false }]);
   };
 
-  const handleDecrement = () => {
-    if (count <= 0) return;
+  const removeGuest = (index: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setCount(count - 1);
+    setGuests(guests.filter((_, i) => i !== index));
+  };
+
+  const updateGuestName = (index: number, name: string) => {
+    const updated = [...guests];
+    updated[index] = { ...updated[index], name };
+    setGuests(updated);
+  };
+
+  const toggleChild = (index: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const updated = [...guests];
+    updated[index] = { ...updated[index], isChild: !updated[index].isChild };
+    setGuests(updated);
   };
 
   const handleSubmit = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onSubmit(count);
-    setCount(0);
+    // Children = guests marked as child (named or unnamed)
+    const childrenCount = guests.filter((g) => g.isChild).length;
+    // Named guests = adults with a name (not children, not unnamed)
+    const namedGuests = guests
+      .filter((g) => !g.isChild && g.name.trim().length > 0)
+      .map((g) => g.name.trim());
+    // Unnamed adult guests need to count too
+    const unnamedAdults = guests.filter((g) => !g.isChild && g.name.trim().length === 0).length;
+    // Pad named guests with empty placeholders for unnamed adults
+    const allAdultEntries = [...namedGuests, ...Array(unnamedAdults).fill('Guest')];
+    onSubmit(childrenCount, allAdultEntries);
+    reset();
   };
 
   const handleSkip = () => {
     onSkip();
-    setCount(0);
+    reset();
   };
+
+  const reset = () => {
+    setGuests([]);
+  };
+
+  const totalGuests = guests.length;
+  const confirmLabel = totalGuests > 0
+    ? `Confirm — bringing ${totalGuests}`
+    : 'Just me';
 
   return (
     <Modal
@@ -58,72 +96,60 @@ export default function FamilyRegistration({
         <Pressable style={styles.sheet} onPress={() => {}}>
           <View style={styles.handle} />
 
-          <Text style={styles.title}>Bringing family? 👨‍👩‍👧‍👦</Text>
-          <Text style={styles.subtitle}>
-            Let the host know how many children you're bringing
-          </Text>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Text style={styles.title}>Who's coming? 👨‍👩‍👧‍👦</Text>
+            <Text style={styles.subtitle}>
+              {maxGuests > 0
+                ? `Add up to ${maxGuests} guests. Names are optional.`
+                : `Let the host know who you're bringing`}
+            </Text>
 
-          {/* Counter */}
-          <View style={styles.counterRow}>
-            <Pressable
-              style={[styles.counterBtn, count <= 0 && styles.counterBtnDisabled]}
-              onPress={handleDecrement}
-              disabled={count <= 0}
-            >
-              <Text
-                style={[
-                  styles.counterBtnText,
-                  count <= 0 && styles.counterBtnTextDisabled,
-                ]}
+            {/* Guest list */}
+            {guests.map((guest, index) => (
+              <View key={index} style={styles.guestRow}>
+                <TextInput
+                  style={styles.guestInput}
+                  value={guest.name}
+                  onChangeText={(text) => updateGuestName(index, text)}
+                  placeholder={`Guest ${index + 1} name (optional)`}
+                  placeholderTextColor={COLORS.hint}
+                  maxLength={40}
+                />
+                <Pressable
+                  style={[styles.childChip, guest.isChild && styles.childChipActive]}
+                  onPress={() => toggleChild(index)}
+                >
+                  <Text style={[styles.childChipText, guest.isChild && styles.childChipTextActive]}>
+                    Child
+                  </Text>
+                </Pressable>
+                <Pressable style={styles.removeBtn} onPress={() => removeGuest(index)}>
+                  <Text style={styles.removeBtnText}>✕</Text>
+                </Pressable>
+              </View>
+            ))}
+
+            {/* Add guest button */}
+            {(maxGuests === 0 || guests.length < maxGuests) && (
+              <Pressable style={styles.addGuestBtn} onPress={addGuest}>
+                <Text style={styles.addGuestText}>+ Add a guest</Text>
+              </Pressable>
+            )}
+
+            {/* Actions */}
+            <View style={styles.actions}>
+              <Pressable
+                style={({ pressed }) => [styles.confirmBtn, pressed && styles.btnPressed]}
+                onPress={handleSubmit}
               >
-                −
-              </Text>
-            </Pressable>
+                <Text style={styles.confirmText}>{confirmLabel}</Text>
+              </Pressable>
 
-            <View style={styles.countDisplay}>
-              <Text style={styles.countNumber}>{count}</Text>
-              <Text style={styles.countLabel}>
-                {count === 1 ? 'child' : 'children'}
-              </Text>
+              <Pressable style={styles.skipBtn} onPress={handleSkip}>
+                <Text style={styles.skipText}>Skip</Text>
+              </Pressable>
             </View>
-
-            <Pressable
-              style={[
-                styles.counterBtn,
-                count >= MAX_CHILDREN && styles.counterBtnDisabled,
-              ]}
-              onPress={handleIncrement}
-              disabled={count >= MAX_CHILDREN}
-            >
-              <Text
-                style={[
-                  styles.counterBtnText,
-                  count >= MAX_CHILDREN && styles.counterBtnTextDisabled,
-                ]}
-              >
-                +
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* Actions */}
-          <View style={styles.actions}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.confirmBtn,
-                pressed && styles.btnPressed,
-              ]}
-              onPress={handleSubmit}
-            >
-              <Text style={styles.confirmText}>
-                {count > 0 ? `Confirm — ${count} ${count === 1 ? 'child' : 'children'}` : 'Just me'}
-              </Text>
-            </Pressable>
-
-            <Pressable style={styles.skipBtn} onPress={handleSkip}>
-              <Text style={styles.skipText}>Skip</Text>
-            </Pressable>
-          </View>
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>
@@ -143,7 +169,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl,
     paddingBottom: SPACING.xxl + 8,
     paddingTop: SPACING.md,
-    maxHeight: '80%',
+    maxHeight: '85%',
   },
   handle: {
     width: 36,
@@ -167,74 +193,78 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
     marginBottom: SPACING.xl,
   },
-  counterRow: {
+
+  // Guest rows
+  guestRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.xl,
-    marginBottom: SPACING.xl,
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
   },
-  counterBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.card2,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  counterBtnDisabled: {
-    opacity: 0.3,
-  },
-  counterBtnText: {
-    fontSize: 24,
-    color: COLORS.gold,
-    ...FONTS.bold,
-  },
-  counterBtnTextDisabled: {
-    color: COLORS.hint,
-  },
-  countDisplay: {
-    alignItems: 'center',
-    minWidth: 60,
-  },
-  countNumber: {
-    fontSize: 36,
+  guestInput: {
+    flex: 1,
+    backgroundColor: COLORS.input,
+    borderRadius: RADIUS.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 223, 161, 0.10)',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
     color: COLORS.white,
-    ...FONTS.bold,
+    fontSize: 15,
+    ...FONTS.medium,
   },
-  countLabel: {
-    fontSize: 13,
+  childChip: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
+    borderRadius: RADIUS.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 223, 161, 0.10)',
+    backgroundColor: 'rgba(30, 30, 30, 0.55)',
+  },
+  childChipActive: {
+    backgroundColor: `${COLORS.teal}20`,
+    borderColor: `${COLORS.teal}50`,
+  },
+  childChipText: {
+    fontSize: 12,
     color: COLORS.muted,
     ...FONTS.medium,
-    marginTop: -2,
   },
-  actions: {
-    marginTop: SPACING.lg,
-    gap: SPACING.sm,
+  childChipTextActive: {
+    color: COLORS.teal,
   },
+  removeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.card2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeBtnText: { fontSize: 13, color: COLORS.muted },
+
+  // Add guest button
+  addGuestBtn: {
+    paddingVertical: SPACING.md,
+    alignItems: 'center',
+    borderRadius: RADIUS.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 223, 161, 0.10)',
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  addGuestText: { fontSize: 14, color: COLORS.gold, ...FONTS.medium },
+
+  // Actions
+  actions: { marginTop: SPACING.lg, gap: SPACING.sm },
   confirmBtn: {
     backgroundColor: COLORS.gold,
     paddingVertical: SPACING.lg,
     borderRadius: RADIUS.md,
     alignItems: 'center',
   },
-  btnPressed: {
-    transform: [{ scale: 0.97 }],
-  },
-  confirmText: {
-    fontSize: 16,
-    color: COLORS.dark,
-    ...FONTS.bold,
-  },
-  skipBtn: {
-    paddingVertical: SPACING.md,
-    alignItems: 'center',
-  },
-  skipText: {
-    fontSize: 14,
-    color: COLORS.muted,
-    ...FONTS.medium,
-  },
+  btnPressed: { transform: [{ scale: 0.97 }] },
+  confirmText: { fontSize: 16, color: COLORS.dark, ...FONTS.bold },
+  skipBtn: { paddingVertical: SPACING.md, alignItems: 'center' },
+  skipText: { fontSize: 14, color: COLORS.muted, ...FONTS.medium },
 });

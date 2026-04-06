@@ -17,6 +17,9 @@ const OPTIONS = [
 export default function RsvpButtons({ currentStatus, onSelect }: RsvpButtonsProps) {
   return (
     <View style={styles.container}>
+      {currentStatus === RsvpStatus.Waitlist && (
+        <Text style={styles.waitlistBanner}>You're on the waitlist — the host will admit you when a spot opens</Text>
+      )}
       <Text style={styles.prompt}>Will you be attending?</Text>
       <View style={styles.row}>
         {OPTIONS.map((opt) => {
@@ -50,10 +53,17 @@ const styles = StyleSheet.create({
     textAlign: 'center', marginBottom: SPACING.md,
   },
   row: { flexDirection: 'row', gap: SPACING.sm, justifyContent: 'center' },
+  waitlistBanner: {
+    fontSize: 13, color: COLORS.blue, ...FONTS.medium,
+    textAlign: 'center', marginBottom: SPACING.md,
+    backgroundColor: `${COLORS.blue}15`, paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md, borderRadius: RADIUS.md,
+  },
   button: {
     flex: 1, alignItems: 'center', paddingVertical: SPACING.md + 2,
-    borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.border,
-    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.md, borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 223, 161, 0.10)',
+    backgroundColor: 'rgba(30, 30, 30, 0.55)',
   },
   emoji: { fontSize: 20, marginBottom: SPACING.xs },
   label: { fontSize: 13, color: COLORS.muted, ...FONTS.semibold },

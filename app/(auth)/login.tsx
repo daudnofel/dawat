@@ -16,7 +16,6 @@ import * as WebBrowser from 'expo-web-browser';
 import Svg, { Defs, RadialGradient, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
-import { makeRedirectUri } from 'expo-auth-session';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -47,7 +46,10 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      const redirectUri = makeRedirectUri();
+      // Fixed app-scheme redirect — works identically for every developer's
+      // Expo Go device because it doesn't depend on local IP / tunnel URL.
+      // The scheme "dawat" is registered in app.json.
+      const redirectUri = 'dawat://auth-callback';
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',

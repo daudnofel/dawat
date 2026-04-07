@@ -45,8 +45,19 @@ export default function ChatScreen() {
         (payload) => {
           const newMsg = payload.new as Message;
           setMessages((prev) => {
-            // Skip if we already have this message (optimistic insert)
+            // Already have this exact server message? skip
             if (prev.some((m) => m.id === newMsg.id)) return prev;
+            // It's our own message arriving via Realtime — replace the optimistic temp message
+            // Match by sender + body (the temp message has a temp- id but same content)
+            const tempIdx = prev.findIndex(
+              (m) => m.id.startsWith('temp-') && m.sender_id === newMsg.sender_id && m.body === newMsg.body,
+            );
+            if (tempIdx !== -1) {
+              const next = [...prev];
+              next[tempIdx] = newMsg;
+              return next;
+            }
+            // Otherwise it's a real new message from the other person
             return [...prev, newMsg];
           });
         },

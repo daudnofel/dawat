@@ -13,10 +13,14 @@ export async function createOrFindConversation(
   recipientId: string,
 ): Promise<string | null> {
   // Find any conversation where both users are participants
-  const { data: myConvs } = await supabase
+  const { data: myConvs, error: myConvsErr } = await supabase
     .from('conversation_participants')
     .select('conversation_id')
     .eq('user_id', currentUserId);
+
+  if (myConvsErr) {
+    console.error('[messaging] Failed to fetch my conversations:', myConvsErr.message);
+  }
 
   if (myConvs && myConvs.length > 0) {
     const myConvIds = myConvs.map((c) => c.conversation_id);
@@ -38,7 +42,10 @@ export async function createOrFindConversation(
     .select('id')
     .single();
 
-  if (convErr || !newConv) return null;
+  if (convErr || !newConv) {
+    console.error('[messaging] Failed to create conversation:', convErr?.message);
+    return null;
+  }
 
   // Add both participants
   const { error: partErr } = await supabase
@@ -48,7 +55,10 @@ export async function createOrFindConversation(
       { conversation_id: newConv.id, user_id: recipientId },
     ]);
 
-  if (partErr) return null;
+  if (partErr) {
+    console.error('[messaging] Failed to add participants:', partErr.message);
+    return null;
+  }
 
   return newConv.id;
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet, ScrollView,
-  ActivityIndicator, Image, Dimensions,
+  ActivityIndicator, Image, Dimensions, Alert,
 } from 'react-native';
 import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -61,11 +61,16 @@ export default function NewMessageScreen() {
   }, [query, currentUserId]);
 
   const handleSelectUser = async (user: UserResult) => {
-    if (!currentUserId) return;
+    if (!currentUserId) {
+      Alert.alert('Not signed in', 'Please sign in to send messages.');
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const convId = await createOrFindConversation(currentUserId, user.id);
     if (convId) {
       router.replace(`/chat/${convId}`);
+    } else {
+      Alert.alert('Could not start chat', 'Something went wrong. Please try again.');
     }
   };
 

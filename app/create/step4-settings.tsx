@@ -7,6 +7,7 @@ import { useEventStore } from '../../store/useEventStore';
 import { supabase } from '../../lib/supabase';
 import { getCurrentUserId } from '../../lib/auth-cache';
 import { generateSlug } from '../../lib/slugify';
+import { triggerEmail } from '../../lib/email';
 import { GenderMode } from '../../types';
 
 const GENDER_OPTIONS = [
@@ -72,6 +73,27 @@ export default function Step4Settings({ onPublish }: { onPublish?: () => void })
       const err = await res.json();
       Alert.alert('Error publishing', err.message ?? 'Unknown error');
       return;
+    }
+
+    // Fire event_published email — non-blocking, never affects publish flow
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser?.email) {
+        void triggerEmail({
+          type: 'event_published',
+          payload: {
+            to: authUser.email,
+            hostName: draft.host_name || 'there',
+            eventTitle: draft.title,
+            eventDate: draft.date_time
+              ? draft.date_time.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+              : 'TBD',
+            eventUrl: `https://dawat.app/e/${slug}`,
+          },
+        });
+      }
+    } catch {
+      // Never block publish for email
     }
 
     onPublish?.();

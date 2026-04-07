@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet,
-  KeyboardAvoidingView, Platform, Alert,
+  Alert,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
@@ -13,6 +13,7 @@ interface Comment {
   created_at: string;
   user_id: string;
   display_name: string | null;
+  _pending?: boolean; // true while optimistic insert is in-flight
 }
 
 interface EventCommentsProps {
@@ -25,6 +26,7 @@ export default function EventComments({ eventId, hostId }: EventCommentsProps) {
   const [newComment, setNewComment] = useState('');
   const [sending, setSending] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserDisplayName, setCurrentUserDisplayName] = useState<string | null>(null);
 
   useEffect(() => {
     fetchComments();
@@ -33,7 +35,15 @@ export default function EventComments({ eventId, hostId }: EventCommentsProps) {
 
   const fetchUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    setCurrentUserId(user?.id ?? null);
+    if (!user) return;
+    setCurrentUserId(user.id);
+
+    const { data } = await supabase
+      .from('users')
+      .select('display_name')
+      .eq('id', user.id)
+      .single();
+    setCurrentUserDisplayName(data?.display_name ?? null);
   };
 
   const fetchComments = async () => {
@@ -48,7 +58,7 @@ export default function EventComments({ eventId, hostId }: EventCommentsProps) {
       return;
     }
 
-    // Fetch display names
+    // Fetch display names in one query
     const userIds = [...new Set(data.map((c) => c.user_id))];
     const { data: users } = await supabase
       .from('users')
@@ -76,22 +86,48 @@ export default function EventComments({ eventId, hostId }: EventCommentsProps) {
       return;
     }
 
-    setSending(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    const { error } = await supabase
+    // 1. Create optimistic comment and show it immediately
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: Comment = {
+      id: tempId,
+      body: trimmed,
+      created_at: new Date().toISOString(),
+      user_id: currentUserId,
+      display_name: currentUserDisplayName,
+      _pending: true,
+    };
+
+    setComments((prev) => [...prev, optimistic]);
+    setNewComment('');
+    setSending(true);
+
+    // 2. Fire insert and get the real row back
+    const { data: inserted, error } = await supabase
       .from('comments')
-      .insert({ event_id: eventId, user_id: currentUserId, body: trimmed });
+      .insert({ event_id: eventId, user_id: currentUserId, body: trimmed })
+      .select('id, body, created_at, user_id')
+      .single();
 
     setSending(false);
 
-    if (error) {
-      Alert.alert('Error', 'Could not post comment');
+    if (error || !inserted) {
+      // Roll back — remove the optimistic comment and restore the input
+      setComments((prev) => prev.filter((c) => c.id !== tempId));
+      setNewComment(trimmed);
+      Alert.alert('Error', 'Could not post comment. Please try again.');
       return;
     }
 
-    setNewComment('');
-    fetchComments();
+    // 3. Replace temp comment with the confirmed server version
+    setComments((prev) =>
+      prev.map((c) =>
+        c.id === tempId
+          ? { ...inserted, display_name: currentUserDisplayName, _pending: false }
+          : c,
+      ),
+    );
   };
 
   const handleDelete = (commentId: string) => {
@@ -102,7 +138,7 @@ export default function EventComments({ eventId, hostId }: EventCommentsProps) {
         style: 'destructive',
         onPress: async () => {
           await supabase.from('comments').delete().eq('id', commentId);
-          fetchComments();
+          setComments((prev) => prev.filter((c) => c.id !== commentId));
         },
       },
     ]);
@@ -144,8 +180,8 @@ export default function EventComments({ eventId, hostId }: EventCommentsProps) {
         return (
           <Pressable
             key={comment.id}
-            style={styles.commentRow}
-            onLongPress={() => canDelete(comment) && handleDelete(comment.id)}
+            style={[styles.commentRow, comment._pending && styles.commentPending]}
+            onLongPress={() => !comment._pending && canDelete(comment) && handleDelete(comment.id)}
           >
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{initial}</Text>
@@ -158,7 +194,9 @@ export default function EventComments({ eventId, hostId }: EventCommentsProps) {
                     <Text style={styles.hostBadgeText}>Host</Text>
                   </View>
                 )}
-                <Text style={styles.commentTime}>{formatTime(comment.created_at)}</Text>
+                <Text style={styles.commentTime}>
+                  {comment._pending ? 'Sending…' : formatTime(comment.created_at)}
+                </Text>
               </View>
               <Text style={styles.commentText}>{comment.body}</Text>
             </View>
@@ -215,6 +253,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: SPACING.md,
     marginBottom: SPACING.lg,
+  },
+  commentPending: {
+    opacity: 0.55,
   },
   avatar: {
     width: 32,

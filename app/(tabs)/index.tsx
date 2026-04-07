@@ -8,13 +8,13 @@ import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { GenderMode } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { getCurrentUserId } from '../../lib/auth-cache';
-import { getRecentlyViewed } from '../../lib/recently-viewed';
 import EventCard from '../../components/EventCard';
 import SkeletonCard from '../../components/SkeletonCard';
 import EmptyState from '../../components/EmptyState';
 import HomeSection from '../../components/HomeSection';
 import HomeChipPrompts from '../../components/HomeChipPrompts';
 import HomeThemeCarousel from '../../components/HomeThemeCarousel';
+import HomeFeaturedCollections from '../../components/HomeFeaturedCollections';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -67,24 +67,49 @@ export default function HomeScreen() {
     if (data) setDiscoverEvents(data as FeedEvent[]);
   }, []);
 
-  // Fetch recently viewed events from AsyncStorage + DB
+  // Fetch recently viewed events from event_views table (Supabase)
   const fetchRecentlyViewed = useCallback(async () => {
-    const ids = await getRecentlyViewed();
-    if (ids.length === 0) {
+    const userId = await getCurrentUserId();
+    if (!userId) {
       setRecentEvents([]);
       return;
     }
+    // Get the last 5 distinct events the user viewed
+    const { data: views } = await supabase
+      .from('event_views')
+      .select('event_id, viewed_at')
+      .eq('user_id', userId)
+      .order('viewed_at', { ascending: false })
+      .limit(20);
+
+    if (!views || views.length === 0) {
+      setRecentEvents([]);
+      return;
+    }
+
+    // Dedupe event_ids preserving order
+    const seen = new Set<string>();
+    const distinctIds: string[] = [];
+    for (const v of views) {
+      if (!seen.has(v.event_id)) {
+        seen.add(v.event_id);
+        distinctIds.push(v.event_id);
+        if (distinctIds.length >= 5) break;
+      }
+    }
+
     const { data } = await supabase
       .from('events')
       .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
-      .in('id', ids)
+      .in('id', distinctIds)
       .eq('is_cancelled', false);
+
     if (data) {
-      // Preserve original order from AsyncStorage
-      const ordered = ids
+      // Preserve original recency order
+      const ordered = distinctIds
         .map((id) => data.find((e: any) => e.id === id))
         .filter(Boolean) as FeedEvent[];
-      setRecentEvents(ordered.slice(0, 5));
+      setRecentEvents(ordered);
     }
   }, []);
 
@@ -250,13 +275,37 @@ export default function HomeScreen() {
                 </HomeSection>
               )}
 
-              {/* Discover events */}
+              {/* Out and About — featured collections */}
+              <HomeSection
+                title="Out and About"
+                subtitle="Curated picks from the community"
+              >
+                <View style={styles.bleed}>
+                  <HomeFeaturedCollections />
+                </View>
+              </HomeSection>
+
+              {/* Discover events — horizontal scroll */}
               <HomeSection
                 title="Discover events"
-                onViewAll={() => router.push('/(tabs)/trending')}
+                onViewAll={() => router.navigate('/(tabs)/trending')}
               >
                 {discoverEvents.length > 0 ? (
-                  discoverEvents.slice(0, 5).map(renderEventCard)
+                  <View style={styles.bleed}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.discoverRow}
+                      decelerationRate="fast"
+                      snapToInterval={SCREEN_WIDTH * 0.8 + SPACING.md}
+                    >
+                      {discoverEvents.slice(0, 10).map((event) => (
+                        <View key={event.id} style={styles.discoverCardWrap}>
+                          {renderEventCard(event)}
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </View>
                 ) : (
                   <EmptyState emoji="🌙" title="No events yet" subtitle="Be the first to host one" />
                 )}
@@ -390,5 +439,14 @@ const styles = StyleSheet.create({
   // Sections render their own padding; bleed lets horizontal scrollers extend edge-to-edge
   bleed: {
     marginHorizontal: -SPACING.xl,
+  },
+
+  // Discover events horizontal scroll
+  discoverRow: {
+    paddingHorizontal: SPACING.xl,
+    gap: SPACING.md,
+  },
+  discoverCardWrap: {
+    width: SCREEN_WIDTH * 0.8,
   },
 });

@@ -41,13 +41,13 @@ export default function HomeThemeCarousel() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     reset();
     updateDraft({ theme_id: themeId });
-    router.push('/(tabs)/create');
+    router.navigate('/(tabs)/create');
   };
 
   const handleCreatePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     reset();
-    router.push('/(tabs)/create');
+    router.navigate('/(tabs)/create');
   };
 
   return (

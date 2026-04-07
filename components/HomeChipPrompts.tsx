@@ -1,40 +1,39 @@
+import { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
 import { useEventStore } from '../store/useEventStore';
-
-interface ChipPrompt {
-  emoji: string;
-  label: string;
-  title: string;     // pre-fills draft.title
-  themeId?: string;  // optional pre-selected theme
-}
-
-const PROMPTS: ChipPrompt[] = [
-  { emoji: '🌙', label: 'Iftar party',     title: 'Iftar Party',           themeId: 'iftar_glow' },
-  { emoji: '🎉', label: 'Eid gathering',   title: 'Eid Gathering',         themeId: 'eid_gala' },
-  { emoji: '📿', label: 'Quran circle',    title: 'Quran Circle',          themeId: 'quran_circle' },
-  { emoji: '🤝', label: 'Sisters meetup',  title: 'Sisters Meetup',        themeId: 'sisters_halaqa' },
-  { emoji: '🍽️', label: 'Potluck dinner',  title: 'Potluck Dinner',        themeId: 'community_table' },
-  { emoji: '💍', label: 'Nikah',           title: 'Nikah Celebration',     themeId: 'nikah_garden' },
-  { emoji: '📚', label: 'Halaqa',          title: 'Halaqa',                themeId: 'scholars_minimal' },
-  { emoji: '🏟️', label: 'Brothers night',  title: 'Brothers Night',        themeId: 'brothers_minimal' },
-];
+import { supabase } from '../lib/supabase';
+import { TrendingTheme } from '../types';
 
 export default function HomeChipPrompts() {
   const router = useRouter();
   const { reset, updateDraft } = useEventStore();
+  const [prompts, setPrompts] = useState<TrendingTheme[]>([]);
 
-  const handlePress = (prompt: ChipPrompt) => {
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('trending_themes')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order');
+      if (data) setPrompts(data as TrendingTheme[]);
+    })();
+  }, []);
+
+  const handlePress = (prompt: TrendingTheme) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     reset();
     updateDraft({
-      title: prompt.title,
-      theme_id: prompt.themeId ?? '',
+      title: prompt.description ?? prompt.name,
+      theme_id: prompt.theme_id,
     });
-    router.push('/(tabs)/create');
+    router.navigate('/(tabs)/create');
   };
+
+  if (prompts.length === 0) return null;
 
   return (
     <ScrollView
@@ -42,14 +41,14 @@ export default function HomeChipPrompts() {
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.row}
     >
-      {PROMPTS.map((prompt) => (
+      {prompts.map((prompt) => (
         <Pressable
-          key={prompt.label}
+          key={prompt.id}
           style={({ pressed }) => [styles.chip, pressed && { opacity: 0.75 }]}
           onPress={() => handlePress(prompt)}
         >
           <Text style={styles.emoji}>{prompt.emoji}</Text>
-          <Text style={styles.label}>{prompt.label}</Text>
+          <Text style={styles.label}>{prompt.name}</Text>
         </Pressable>
       ))}
     </ScrollView>

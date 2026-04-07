@@ -17,7 +17,6 @@ import MapPreview from '../../components/MapPreview';
 import EventComments from '../../components/EventComments';
 import ShareSheet from '../../components/ShareSheet';
 import { getThemeById } from '../../lib/themes';
-import { pushRecentlyViewed } from '../../lib/recently-viewed';
 import { getCurrentUserId } from '../../lib/auth-cache';
 
 interface EventDetail {
@@ -61,8 +60,7 @@ export default function EventDetailScreen() {
   useEffect(() => {
     fetchEvent();
     if (id) {
-      pushRecentlyViewed(id);
-      // Also log to event_views table (fire-and-forget) — used for future analytics + DB-backed recently viewed
+      // Log view to event_views table (fire-and-forget) for recently viewed + analytics
       (async () => {
         try {
           const userId = await getCurrentUserId();

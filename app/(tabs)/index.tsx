@@ -6,21 +6,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { GenderMode } from '../../types';
-import { useFeedStore } from '../../store/useFeedStore';
 import { supabase } from '../../lib/supabase';
 import { getCurrentUserId } from '../../lib/auth-cache';
 import EventCard from '../../components/EventCard';
 import SkeletonCard from '../../components/SkeletonCard';
 import EmptyState from '../../components/EmptyState';
+import HomeSection from '../../components/HomeSection';
+import HomeChipPrompts from '../../components/HomeChipPrompts';
+import HomeThemeCarousel from '../../components/HomeThemeCarousel';
+import HomeFeaturedCollections from '../../components/HomeFeaturedCollections';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-const FILTER_TABS = [
-  { label: 'All Events', value: 'all' as const },
-  { label: 'Brothers', value: GenderMode.BrothersOnly },
-  { label: 'Sisters', value: GenderMode.SistersOnly },
-  { label: 'Family', value: GenderMode.Family },
-];
 
 interface FeedEvent {
   id: string;
@@ -39,72 +35,175 @@ interface FeedEvent {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { activeFilter, setFilter } = useFeedStore();
-  const [events, setEvents] = useState<FeedEvent[]>([]);
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [discoverEvents, setDiscoverEvents] = useState<FeedEvent[]>([]);
+  const [recentEvents, setRecentEvents] = useState<FeedEvent[]>([]);
+  const [pendingInvite, setPendingInvite] = useState<FeedEvent | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const fetchEvents = useCallback(async () => {
-    let query = supabase
+  // Fetch greeting name from cached user
+  const fetchProfile = useCallback(async () => {
+    const userId = await getCurrentUserId();
+    if (!userId) return;
+    const { data } = await supabase
+      .from('users')
+      .select('display_name')
+      .eq('id', userId)
+      .single();
+    if (data?.display_name) setDisplayName(data.display_name.split(' ')[0]); // first name
+  }, []);
+
+  // Fetch discover events (public, recent)
+  const fetchDiscover = useCallback(async () => {
+    const { data } = await supabase
       .from('events')
       .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
       .eq('is_published', true)
       .eq('is_cancelled', false)
       .order('created_at', { ascending: false })
       .limit(20);
+    if (data) setDiscoverEvents(data as FeedEvent[]);
+  }, []);
 
-    if (activeFilter !== 'all') {
-      query = query.eq('gender_mode', activeFilter);
+  // Fetch recently viewed events from event_views table (Supabase)
+  const fetchRecentlyViewed = useCallback(async () => {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      setRecentEvents([]);
+      return;
+    }
+    // Get the last 5 distinct events the user viewed
+    const { data: views } = await supabase
+      .from('event_views')
+      .select('event_id, viewed_at')
+      .eq('user_id', userId)
+      .order('viewed_at', { ascending: false })
+      .limit(20);
+
+    if (!views || views.length === 0) {
+      setRecentEvents([]);
+      return;
     }
 
-    const { data, error } = await query;
-
-    if (error) {
-      console.log('Feed error:', error.message);
+    // Dedupe event_ids preserving order
+    const seen = new Set<string>();
+    const distinctIds: string[] = [];
+    for (const v of views) {
+      if (!seen.has(v.event_id)) {
+        seen.add(v.event_id);
+        distinctIds.push(v.event_id);
+        if (distinctIds.length >= 5) break;
+      }
     }
+
+    const { data } = await supabase
+      .from('events')
+      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
+      .in('id', distinctIds)
+      .eq('is_cancelled', false);
+
     if (data) {
-      setEvents(data as FeedEvent[]);
+      // Preserve original recency order
+      const ordered = distinctIds
+        .map((id) => data.find((e: any) => e.id === id))
+        .filter(Boolean) as FeedEvent[];
+      setRecentEvents(ordered);
     }
-    setLoading(false);
-    setRefreshing(false);
-  }, [activeFilter]);
+  }, []);
+
+  // Phase 2 placeholder: most recent event the user RSVPd to (treat as "new invite")
+  const fetchPendingInvite = useCallback(async () => {
+    const userId = await getCurrentUserId();
+    if (!userId) return;
+    const { data: rsvps } = await supabase
+      .from('rsvps')
+      .select('event_id, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (rsvps && rsvps.length > 0) {
+      const { data: ev } = await supabase
+        .from('events')
+        .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
+        .eq('id', rsvps[0].event_id)
+        .eq('is_cancelled', false)
+        .single();
+      if (ev) setPendingInvite(ev as FeedEvent);
+    }
+  }, []);
 
   const fetchUnreadCount = useCallback(async () => {
     const userId = await getCurrentUserId();
     if (!userId) return;
-
     const { count } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('is_read', false);
-
     setUnreadCount(count ?? 0);
   }, []);
 
-  // Initial fetch + re-fetch when filter changes
-  useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+  const loadAll = useCallback(async () => {
+    await Promise.all([
+      fetchProfile(),
+      fetchDiscover(),
+      fetchRecentlyViewed(),
+      fetchPendingInvite(),
+    ]);
+    setLoading(false);
+    setRefreshing(false);
+  }, [fetchProfile, fetchDiscover, fetchRecentlyViewed, fetchPendingInvite]);
 
-  // Lightweight: just refresh badge count on focus
+  useEffect(() => {
+    loadAll();
+  }, []);
+
+  // Light refresh on focus: badge count + recently viewed (cheap)
   useFocusEffect(
     useCallback(() => {
       fetchUnreadCount();
-    }, [fetchUnreadCount]),
+      fetchRecentlyViewed();
+    }, [fetchUnreadCount, fetchRecentlyViewed]),
   );
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchEvents();
+    loadAll();
+  };
+
+  const renderEventCard = (event: FeedEvent) => {
+    const rsvps = event.rsvps ?? [];
+    const yesRsvps = rsvps.filter((r) => r.status === 'yes');
+    const yesCount = yesRsvps.reduce(
+      (sum, r) => sum + 1 + (r.children_count ?? 0) + (r.plus_one_names?.length ?? 0), 0,
+    );
+    const inshallahCount = rsvps.filter((r) => r.status === 'inshallah').length;
+    return (
+      <EventCard
+        key={event.id}
+        id={event.id}
+        title={event.title}
+        theme_id={event.theme_id}
+        org_name="Personal Event"
+        date_label={event.date_time ? new Date(event.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Date TBD'}
+        location_name={event.location_name ?? 'Location TBD'}
+        price={event.price}
+        gender_mode={event.gender_mode as GenderMode}
+        is_halal_venue={event.is_halal_venue}
+        yes_count={yesCount}
+        inshallah_count={inshallahCount}
+        capacity={event.capacity}
+      />
+    );
   };
 
   return (
     <View style={styles.container}>
-      {/* Golden atmospheric glow — soft radial wash from top center */}
+      {/* Golden atmospheric glow */}
       <View style={styles.atmosphereLayer} pointerEvents="none">
-        <Svg width={SCREEN_WIDTH} height={400} style={styles.glowSvg}>
+        <Svg width={SCREEN_WIDTH} height={420} style={styles.glowSvg}>
           <Defs>
             <RadialGradient id="atmosphere" cx="50%" cy="0%" rx="70%" ry="80%">
               <Stop offset="0" stopColor="#FFDFA1" stopOpacity="0.18" />
@@ -112,12 +211,12 @@ export default function HomeScreen() {
               <Stop offset="1" stopColor={COLORS.dark} stopOpacity="0" />
             </RadialGradient>
           </Defs>
-          <Rect x="0" y="0" width={SCREEN_WIDTH} height={400} fill="url(#atmosphere)" />
+          <Rect x="0" y="0" width={SCREEN_WIDTH} height={420} fill="url(#atmosphere)" />
         </Svg>
       </View>
 
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Logo — DAWAT | دعوت  centered, editorial */}
+        {/* Header — logo + bell */}
         <View style={styles.header}>
           <View style={styles.brandRow}>
             <Text style={styles.brandEnglish}>DAWAT</Text>
@@ -137,73 +236,118 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        {/* Filter pills */}
-        <View style={styles.filterWrapper}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterRow}
-          >
-            {FILTER_TABS.map((tab) => {
-              const isActive = activeFilter === tab.value;
-              return (
-                <Pressable
-                  key={tab.value}
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setFilter(tab.value); }}
-                >
-                  <View style={[styles.filterPill, isActive && styles.filterPillActive]}>
-                    <Text style={[styles.filterText, isActive && styles.filterTextActive]}>{tab.label}</Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {/* Feed */}
         <ScrollView
-          style={styles.feed}
-          contentContainerStyle={styles.feedContent}
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gold} />
           }
         >
+          {/* Personal greeting */}
+          <View style={styles.greetingBlock}>
+            <Text style={styles.greeting}>
+              {displayName ? `Hey ${displayName}` : 'Welcome'}
+            </Text>
+            <Text style={styles.tagline}>You're invited! RSVP if you can make it</Text>
+          </View>
+
           {loading && (
+            <View style={{ paddingHorizontal: SPACING.xl, marginTop: SPACING.xl }}>
+              <SkeletonCard />
+              <SkeletonCard />
+            </View>
+          )}
+
+          {!loading && (
             <>
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
+              {/* New invite (Phase 1 placeholder: most recent RSVP) */}
+              {pendingInvite && (
+                <HomeSection title="Your most recent invite">
+                  {renderEventCard(pendingInvite)}
+                </HomeSection>
+              )}
+
+              {/* Recently viewed — horizontal scroll */}
+              {recentEvents.length > 0 && (
+                <HomeSection title="Recently viewed">
+                  <View style={styles.bleed}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.discoverRow}
+                      decelerationRate="fast"
+                      snapToInterval={SCREEN_WIDTH * 0.8 + SPACING.md}
+                    >
+                      {recentEvents.map((event) => (
+                        <View key={event.id} style={styles.discoverCardWrap}>
+                          {renderEventCard(event)}
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </View>
+                </HomeSection>
+              )}
+
+              {/* Out and About — featured collections */}
+              <HomeSection
+                title="Out and About"
+                subtitle="Curated picks from the community"
+              >
+                <View style={styles.bleed}>
+                  <HomeFeaturedCollections />
+                </View>
+              </HomeSection>
+
+              {/* Discover events — horizontal scroll */}
+              <HomeSection
+                title="Discover events"
+                onViewAll={() => router.navigate('/(tabs)/trending')}
+              >
+                {discoverEvents.length > 0 ? (
+                  <View style={styles.bleed}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.discoverRow}
+                      decelerationRate="fast"
+                      snapToInterval={SCREEN_WIDTH * 0.8 + SPACING.md}
+                    >
+                      {discoverEvents.slice(0, 10).map((event) => (
+                        <View key={event.id} style={styles.discoverCardWrap}>
+                          {renderEventCard(event)}
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </View>
+                ) : (
+                  <EmptyState emoji="🌙" title="No events yet" subtitle="Be the first to host one" />
+                )}
+              </HomeSection>
+
+              {/* Why not host a... */}
+              <HomeSection
+                title="Why not host a..."
+                subtitle="Quick prompts to spark a gathering"
+              >
+                <View style={styles.bleed}>
+                  <HomeChipPrompts />
+                </View>
+              </HomeSection>
+
+              {/* Every party must come to an end */}
+              <HomeSection
+                title="Every party must come to an end..."
+                subtitle="Unless you host one"
+              >
+                <View style={styles.bleed}>
+                  <HomeThemeCarousel />
+                </View>
+              </HomeSection>
             </>
           )}
 
-          {!loading && events.map((event) => {
-            const rsvps = event.rsvps ?? [];
-            const yesRsvps = rsvps.filter((r) => r.status === 'yes');
-            const yesCount = yesRsvps.reduce((sum, r) => sum + 1 + (r.children_count ?? 0) + (r.plus_one_names?.length ?? 0), 0);
-            const inshallahCount = rsvps.filter((r) => r.status === 'inshallah').length;
-            return (
-              <EventCard
-                key={event.id}
-                id={event.id}
-                title={event.title}
-                theme_id={event.theme_id}
-                org_name="Personal Event"
-                date_label={event.date_time ? new Date(event.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Date TBD'}
-                location_name={event.location_name ?? 'Location TBD'}
-                price={event.price}
-                gender_mode={event.gender_mode as GenderMode}
-                is_halal_venue={event.is_halal_venue}
-                yes_count={yesCount}
-                inshallah_count={inshallahCount}
-                capacity={event.capacity}
-              />
-            );
-          })}
-
-          {!loading && events.length === 0 && (
-            <EmptyState emoji="🌙" title="No events yet" subtitle="Create the first event for your community" />
-          )}
+          <View style={{ height: 120 }} />
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -219,7 +363,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Golden atmospheric glow
   atmosphereLayer: {
     ...StyleSheet.absoluteFillObject,
     overflow: 'hidden',
@@ -230,13 +373,13 @@ const styles = StyleSheet.create({
     left: 0,
   },
 
-  // Logo — Manrope Light, editorial
+  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.xxl,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.md,
     paddingHorizontal: SPACING.xl,
   },
   brandRow: {
@@ -244,20 +387,20 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
   },
   brandEnglish: {
-    fontSize: 30,
+    fontSize: 26,
     color: COLORS.white,
     fontFamily: 'ManropeLight',
     letterSpacing: 4,
   },
   brandPipe: {
-    fontSize: 28,
+    fontSize: 24,
     color: COLORS.muted,
     fontFamily: 'ManropeLight',
     marginHorizontal: SPACING.md,
     opacity: 0.4,
   },
   brandArabic: {
-    fontSize: 28,
+    fontSize: 24,
     color: COLORS.gold,
     fontWeight: '300',
   },
@@ -281,42 +424,43 @@ const styles = StyleSheet.create({
   },
   badgeText: { fontSize: 10, color: '#FFFFFF', ...FONTS.bold },
 
-  // Filters
-  filterWrapper: { height: 48 },
-  filterRow: {
-    paddingHorizontal: SPACING.xl,
-    gap: SPACING.sm,
-    alignItems: 'center',
-    height: 48,
-  },
-  filterPill: {
-    paddingHorizontal: SPACING.lg + 2,
-    paddingVertical: SPACING.sm + 2,
-    borderRadius: RADIUS.full,
-    backgroundColor: `${COLORS.surfaceVariant}30`,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.ghostBorder,
-  },
-  filterPillActive: {
-    backgroundColor: `${COLORS.gold}25`,
-    borderColor: `${COLORS.gold}50`,
-  },
-  filterText: {
-    fontSize: 14,
-    color: COLORS.muted,
-    ...FONTS.medium,
-  },
-  filterTextActive: {
-    fontSize: 14,
-    color: COLORS.gold,
-    ...FONTS.medium,
+  // Scroll
+  scroll: { flex: 1 },
+  scrollContent: {
+    paddingBottom: 100,
   },
 
-  // Feed
-  feed: { flex: 1 },
-  feedContent: {
+  // Greeting
+  greetingBlock: {
     paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.lg,
-    paddingBottom: 100,
+    paddingTop: SPACING.xl,
+    alignItems: 'center',
+  },
+  greeting: {
+    fontSize: 28,
+    color: COLORS.white,
+    ...FONTS.bold,
+    letterSpacing: -0.5,
+  },
+  tagline: {
+    fontSize: 15,
+    color: COLORS.muted,
+    ...FONTS.regular,
+    marginTop: SPACING.xs,
+    textAlign: 'center',
+  },
+
+  // Sections render their own padding; bleed lets horizontal scrollers extend edge-to-edge
+  bleed: {
+    marginHorizontal: -SPACING.xl,
+  },
+
+  // Discover events horizontal scroll
+  discoverRow: {
+    paddingHorizontal: SPACING.xl,
+    gap: SPACING.md,
+  },
+  discoverCardWrap: {
+    width: SCREEN_WIDTH * 0.8,
   },
 });

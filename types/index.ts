@@ -143,6 +143,46 @@ export interface Rsvp {
   updated_at: string;
 }
 
+// ─── Home Tab Refactor (DAW-23) ──────────────────────────────
+
+export interface EventView {
+  id: string;
+  event_id: string;
+  user_id: string;
+  viewed_at: string;
+}
+
+export interface EventInvite {
+  id: string;
+  event_id: string;
+  invited_user_id: string;
+  invited_by: string;
+  created_at: string;
+  viewed_at: string | null;
+  responded_at: string | null;
+}
+
+export interface FeaturedCollection {
+  id: string;
+  name: string;
+  description: string | null;
+  cover_image: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface TrendingTheme {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string | null;
+  theme_id: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface Organisation {
   id: string;
   name: string;

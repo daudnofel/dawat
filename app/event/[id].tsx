@@ -17,6 +17,8 @@ import MapPreview from '../../components/MapPreview';
 import EventComments from '../../components/EventComments';
 import ShareSheet from '../../components/ShareSheet';
 import { getThemeById } from '../../lib/themes';
+import { pushRecentlyViewed } from '../../lib/recently-viewed';
+import { getCurrentUserId } from '../../lib/auth-cache';
 
 interface EventDetail {
   id: string;
@@ -58,6 +60,18 @@ export default function EventDetailScreen() {
 
   useEffect(() => {
     fetchEvent();
+    if (id) {
+      pushRecentlyViewed(id);
+      // Also log to event_views table (fire-and-forget) — used for future analytics + DB-backed recently viewed
+      (async () => {
+        try {
+          const userId = await getCurrentUserId();
+          if (userId) {
+            await supabase.from('event_views').insert({ event_id: id, user_id: userId });
+          }
+        } catch {}
+      })();
+    }
   }, [id]);
 
   useFocusEffect(

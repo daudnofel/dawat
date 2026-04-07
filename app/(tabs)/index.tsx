@@ -8,6 +8,7 @@ import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { GenderMode } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { getCurrentUserId } from '../../lib/auth-cache';
+import { fetchUnreadMessageCount } from '../../lib/messaging';
 import EventCard from '../../components/EventCard';
 import SkeletonCard from '../../components/SkeletonCard';
 import EmptyState from '../../components/EmptyState';
@@ -42,6 +43,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   // Fetch greeting name from cached user
   const fetchProfile = useCallback(async () => {
@@ -143,6 +145,10 @@ export default function HomeScreen() {
       .eq('user_id', userId)
       .eq('is_read', false);
     setUnreadCount(count ?? 0);
+
+    // Also refresh unread messages count
+    const msgCount = await fetchUnreadMessageCount(userId);
+    setUnreadMessages(msgCount);
   }, []);
 
   const loadAll = useCallback(async () => {
@@ -216,24 +222,37 @@ export default function HomeScreen() {
       </View>
 
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Header — logo + bell */}
+        {/* Header — logo + bell + message icon */}
         <View style={styles.header}>
           <View style={styles.brandRow}>
             <Text style={styles.brandEnglish}>DAWAT</Text>
             <Text style={styles.brandPipe}>|</Text>
             <Text style={styles.brandArabic}>دعوت</Text>
           </View>
-          <Pressable
-            style={styles.bellButton}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/notifications'); }}
-          >
-            <Text style={styles.bellIcon}>🔔</Text>
-            {unreadCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-              </View>
-            )}
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              style={styles.iconButton}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/notifications'); }}
+            >
+              <Text style={styles.iconText}>🔔</Text>
+              {unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                </View>
+              )}
+            </Pressable>
+            <Pressable
+              style={styles.iconButton}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/inbox'); }}
+            >
+              <Text style={styles.iconText}>💬</Text>
+              {unreadMessages > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unreadMessages > 9 ? '9+' : unreadMessages}</Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
         </View>
 
         <ScrollView
@@ -404,12 +423,21 @@ const styles = StyleSheet.create({
     color: COLORS.gold,
     fontWeight: '300',
   },
-  bellButton: {
+  headerActions: {
     position: 'absolute',
     right: SPACING.xl,
-    padding: SPACING.sm,
+    flexDirection: 'row',
+    gap: SPACING.sm,
   },
-  bellIcon: { fontSize: 22 },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  iconText: { fontSize: 20 },
   badge: {
     position: 'absolute',
     top: 2,

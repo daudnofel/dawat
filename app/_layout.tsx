@@ -70,7 +70,7 @@ export default function RootLayout() {
           <StatusBar barStyle="light-content" />
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.dark } }}>
             <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
           </Stack>
         </ThemeProvider>
       </HeroUINativeProvider>

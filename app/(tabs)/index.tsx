@@ -268,10 +268,24 @@ export default function HomeScreen() {
                 </HomeSection>
               )}
 
-              {/* Recently viewed */}
+              {/* Recently viewed — horizontal scroll */}
               {recentEvents.length > 0 && (
                 <HomeSection title="Recently viewed">
-                  {recentEvents.map(renderEventCard)}
+                  <View style={styles.bleed}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.discoverRow}
+                      decelerationRate="fast"
+                      snapToInterval={SCREEN_WIDTH * 0.8 + SPACING.md}
+                    >
+                      {recentEvents.map((event) => (
+                        <View key={event.id} style={styles.discoverCardWrap}>
+                          {renderEventCard(event)}
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </View>
                 </HomeSection>
               )}
 

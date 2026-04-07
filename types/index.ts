@@ -183,6 +183,49 @@ export interface TrendingTheme {
   created_at: string;
 }
 
+// ─── Messaging (DAW-24) ──────────────────────────────────────
+
+export interface Conversation {
+  id: string;
+  created_at: string;
+  last_message_at: string;
+}
+
+export interface ConversationParticipant {
+  conversation_id: string;
+  user_id: string;
+  joined_at: string;
+  last_read_at: string;
+}
+
+export interface Message {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+}
+
+export interface Boop {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  created_at: string;
+}
+
+// Convenience joined types for the inbox UI
+export interface ConversationWithMeta extends Conversation {
+  other_user: { id: string; display_name: string | null; avatar_url: string | null };
+  last_message: Message | null;
+  unread_count: number;
+}
+
+export interface BoopSuggestion {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
 export interface Organisation {
   id: string;
   name: string;

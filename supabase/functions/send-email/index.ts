@@ -4,7 +4,8 @@
 // Requires: RESEND_API_KEY secret set in Supabase dashboard.
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? '';
-const FROM = 'Dawat <events@dawat.app>';
+// Using Resend's sandbox sender until dawat.app domain is verified
+const FROM = 'Dawat <onboarding@resend.dev>';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

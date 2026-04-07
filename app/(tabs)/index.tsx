@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, Dimensions } from 'react-native';
-import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
+import Svg, { Defs, RadialGradient, Stop, Rect, Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -231,10 +231,25 @@ export default function HomeScreen() {
           </View>
           <View style={styles.headerActions}>
             <Pressable
-              style={styles.iconButton}
+              style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.7 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/notifications'); }}
             >
-              <Text style={styles.iconText}>🔔</Text>
+              <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M18 16v-5a6 6 0 1 0-12 0v5l-1.5 2.5h15L18 16z"
+                  stroke="#FFFFFF"
+                  strokeWidth={1.8}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <Path
+                  d="M10 21a2 2 0 0 0 4 0"
+                  stroke="#FFFFFF"
+                  strokeWidth={1.8}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
               {unreadCount > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
@@ -242,10 +257,25 @@ export default function HomeScreen() {
               )}
             </Pressable>
             <Pressable
-              style={styles.iconButton}
+              style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.7 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/inbox'); }}
             >
-              <Text style={styles.iconText}>💬</Text>
+              <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M16 11.5a4.5 4.5 0 0 1-4.5 4.5H9l-3 2.5V16h-.5A2.5 2.5 0 0 1 3 13.5v-6A2.5 2.5 0 0 1 5.5 5h6A4.5 4.5 0 0 1 16 9.5z"
+                  stroke="#FFFFFF"
+                  strokeWidth={1.8}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <Path
+                  d="M9 11.5a6.5 6.5 0 0 1 6.5-6.5h3A2.5 2.5 0 0 1 21 7.5v6a2.5 2.5 0 0 1-2.5 2.5H18v2.5l-3-2.5h-2"
+                  stroke="#FFFFFF"
+                  strokeWidth={1.8}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
               {unreadMessages > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{unreadMessages > 9 ? '9+' : unreadMessages}</Text>
@@ -395,7 +425,7 @@ const styles = StyleSheet.create({
   // Header
   header: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: SPACING.lg,
     paddingBottom: SPACING.md,
@@ -404,53 +434,56 @@ const styles = StyleSheet.create({
   brandRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
+    flexShrink: 1,
   },
   brandEnglish: {
-    fontSize: 26,
+    fontSize: 22,
     color: COLORS.white,
     fontFamily: 'ManropeLight',
-    letterSpacing: 4,
+    letterSpacing: 3,
   },
   brandPipe: {
-    fontSize: 24,
+    fontSize: 20,
     color: COLORS.muted,
     fontFamily: 'ManropeLight',
-    marginHorizontal: SPACING.md,
+    marginHorizontal: SPACING.sm,
     opacity: 0.4,
   },
   brandArabic: {
-    fontSize: 24,
+    fontSize: 20,
     color: COLORS.gold,
     fontWeight: '300',
   },
   headerActions: {
-    position: 'absolute',
-    right: SPACING.xl,
     flexDirection: 'row',
-    gap: SPACING.sm,
+    gap: SPACING.md,
   },
   iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    backgroundColor: 'rgba(20, 20, 20, 0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
   },
-  iconText: { fontSize: 20 },
   badge: {
     position: 'absolute',
-    top: 2,
-    right: 2,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
+    top: -4,
+    right: -4,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: COLORS.red,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 5,
+    borderWidth: 2,
+    borderColor: COLORS.dark,
   },
-  badgeText: { fontSize: 10, color: '#FFFFFF', ...FONTS.bold },
+  badgeText: { fontSize: 11, color: '#FFFFFF', ...FONTS.bold },
 
   // Scroll
   scroll: { flex: 1 },

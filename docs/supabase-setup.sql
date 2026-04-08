@@ -235,3 +235,7 @@ CREATE POLICY "Users can add own reactions" ON comment_reactions FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can remove own reactions" ON comment_reactions FOR DELETE
   USING (auth.uid() = user_id);
+
+-- ─── DAW-35: Threaded replies (one level deep) ────────────────────
+ALTER TABLE comments ADD COLUMN parent_id uuid REFERENCES comments(id) ON DELETE CASCADE;
+CREATE INDEX idx_comments_parent ON comments(parent_id) WHERE parent_id IS NOT NULL;

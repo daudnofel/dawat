@@ -2,6 +2,7 @@
 // Helpers for the messaging + boops feature (DAW-24).
 
 import { supabase } from './supabase';
+import { triggerPush } from './push';
 import { ConversationWithMeta, BoopSuggestion } from '../types';
 
 /**
@@ -85,6 +86,29 @@ export async function sendMessage(
     .from('conversations')
     .update({ last_message_at: new Date().toISOString() })
     .eq('id', conversationId);
+
+  // Push the recipient (fire-and-forget) — figure out who the other participant is
+  // and look up the sender's display name for the title
+  void (async () => {
+    const { data: parts } = await supabase
+      .from('conversation_participants')
+      .select('user_id')
+      .eq('conversation_id', conversationId);
+    const otherUserId = parts?.find((p) => p.user_id !== senderId)?.user_id;
+    if (!otherUserId) return;
+
+    const { data: sender } = await supabase
+      .from('users')
+      .select('display_name')
+      .eq('id', senderId)
+      .single();
+
+    const senderName = sender?.display_name?.split(' ')[0] ?? 'Someone';
+    await triggerPush(otherUserId, senderName, trimmed, {
+      type: 'message',
+      conversation_id: conversationId,
+    });
+  })();
 
   return true;
 }

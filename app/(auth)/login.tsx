@@ -16,6 +16,7 @@ import * as WebBrowser from 'expo-web-browser';
 import Svg, { Defs, RadialGradient, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
+import { savePushToken } from '../../lib/push';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -82,6 +83,10 @@ export default function LoginScreen() {
             access_token: accessToken,
             refresh_token: refreshToken ?? '',
           });
+
+          // Register for push notifications (fire-and-forget, non-blocking)
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) void savePushToken(user.id);
 
           setLoading(false);
           router.replace('/(tabs)');

@@ -14,6 +14,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { setCurrentUserId } from '../../lib/auth-cache';
+import { savePushToken } from '../../lib/push';
 
 const OTP_LENGTH = 6;
 
@@ -57,6 +58,9 @@ export default function OtpScreen() {
 
     if (data.user) {
       setCurrentUserId(data.user.id);
+      // Register for push notifications (fire-and-forget, non-blocking)
+      void savePushToken(data.user.id);
+
       const { data: profile } = await supabase
         .from('users')
         .select('id')

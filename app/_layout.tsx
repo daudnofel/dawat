@@ -1,7 +1,8 @@
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
 import { View, ActivityIndicator, StatusBar, LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -38,6 +39,7 @@ const DawatDarkTheme = {
 };
 
 export default function RootLayout() {
+  const router = useRouter();
   const [fontsLoaded, fontError] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ManropeLight: require('@expo-google-fonts/manrope/300Light/Manrope_300Light.ttf'),
@@ -54,6 +56,21 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
+
+  // Handle taps on push notifications — route to the right in-app destination
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as any;
+      if (!data?.type) return;
+
+      if (data.type === 'message' && data.conversation_id) {
+        router.push(`/chat/${data.conversation_id}`);
+      } else if ((data.type === 'rsvp' || data.type === 'event_cancelled') && data.event_id) {
+        router.push(`/event/${data.event_id}`);
+      }
+    });
+    return () => sub.remove();
+  }, [router]);
 
   if (!fontsLoaded) {
     return (

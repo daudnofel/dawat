@@ -13,10 +13,12 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import Svg, { Defs, RadialGradient, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { savePushToken } from '../../lib/push';
+import { signInWithApple } from '../../lib/auth-apple';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -41,6 +43,30 @@ export default function LoginScreen() {
     }
 
     router.push({ pathname: '/(auth)/otp', params: { email } });
+  };
+
+  const handleAppleSignIn = async () => {
+    if (loading) return;
+    setLoading(true);
+
+    const result = await signInWithApple();
+
+    if (!result.ok) {
+      setLoading(false);
+      if (result.reason === 'cancelled') return;
+      Alert.alert('Apple Sign-In', result.message ?? 'Could not sign in with Apple');
+      return;
+    }
+
+    // Register for push notifications (fire-and-forget)
+    void savePushToken(result.userId);
+
+    setLoading(false);
+    if (result.isNewUser) {
+      router.replace('/(auth)/onboarding');
+    } else {
+      router.replace('/(tabs)');
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -177,6 +203,17 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
           </View>
 
+          {/* Apple — required by Apple HIG to use the native button component */}
+          {Platform.OS === 'ios' && (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+              cornerRadius={RADIUS.md}
+              style={styles.appleButton}
+              onPress={handleAppleSignIn}
+            />
+          )}
+
           {/* Google — glass button */}
           <Pressable
             style={({ pressed }) => [
@@ -287,6 +324,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 223, 161, 0.10)',
   },
   dividerText: { color: COLORS.hint, fontSize: 13, ...FONTS.medium },
+
+  // Apple — native button. Sized to match Google for visual consistency.
+  appleButton: {
+    height: 52,
+    width: '100%',
+    marginBottom: SPACING.md,
+  },
 
   // Google — glass button
   googleButton: {

@@ -211,3 +211,27 @@ CREATE POLICY "Authenticated users add spots" ON halal_spots FOR INSERT
 -- NOTIFICATIONS
 CREATE POLICY "Users see own notifications" ON notifications FOR SELECT
   USING (user_id = auth.uid());
+
+-- =============================================
+-- 9. COMMENT REACTIONS (DAW-39)
+-- =============================================
+
+CREATE TABLE comment_reactions (
+  id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  comment_id  uuid        NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+  user_id     uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  emoji       text        NOT NULL,
+  created_at  timestamptz DEFAULT now(),
+
+  UNIQUE(comment_id, user_id, emoji)
+);
+
+CREATE INDEX idx_comment_reactions_comment ON comment_reactions(comment_id);
+
+ALTER TABLE comment_reactions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can read reactions" ON comment_reactions FOR SELECT USING (true);
+CREATE POLICY "Users can add own reactions" ON comment_reactions FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can remove own reactions" ON comment_reactions FOR DELETE
+  USING (auth.uid() = user_id);

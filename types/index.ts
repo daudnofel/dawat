@@ -285,6 +285,19 @@ export interface Notification {
   created_at: string;
 }
 
+// ─── Comment Reactions (DAW-39) ─────────────────────────────
+
+export const REACTION_EMOJIS = ['👍', '❤️', '😂', '🤲', '🎉', '🙌', '🤍', '✅'] as const;
+export type ReactionEmoji = typeof REACTION_EMOJIS[number];
+
+export interface CommentReaction {
+  id: string;
+  comment_id: string;
+  user_id: string;
+  emoji: ReactionEmoji;
+  created_at: string;
+}
+
 // ─── Joined / Computed Types ─────────────────────────────────
 
 export interface EventWithDetails extends Event {

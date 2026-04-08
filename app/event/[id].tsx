@@ -18,6 +18,7 @@ import EventComments from '../../components/EventComments';
 import ShareSheet from '../../components/ShareSheet';
 import { getThemeById } from '../../lib/themes';
 import { getCurrentUserId } from '../../lib/auth-cache';
+import { triggerPush } from '../../lib/push';
 
 interface EventDetail {
   id: string;
@@ -253,6 +254,21 @@ export default function EventDetailScreen() {
     setRsvpStatus(status);
     setGuestRefreshKey((k) => k + 1);
     fetchEventSilent();
+
+    // Push notification to host (fire-and-forget) — only on Yes / Inshallah
+    if (event && event.host_id !== userId && (status === RsvpStatus.Yes || status === RsvpStatus.Inshallah)) {
+      void (async () => {
+        const { data: guest } = await supabase.from('users').select('display_name').eq('id', userId).single();
+        const guestName = guest?.display_name?.split(' ')[0] ?? 'Someone';
+        const statusLabel = status === RsvpStatus.Yes ? 'is going' : 'said Inshallah';
+        await triggerPush(
+          event.host_id,
+          `${guestName} ${statusLabel}`,
+          event.title,
+          { type: 'rsvp', event_id: id },
+        );
+      })();
+    }
   };
 
   const handleFamilySubmit = async (childrenCount: number, plusOneNames: string[]) => {
@@ -316,6 +332,24 @@ export default function EventDetailScreen() {
               Alert.alert('Error', error.message);
               return;
             }
+
+            // Push notification to all RSVPd guests (fire-and-forget)
+            void (async () => {
+              const { data: rsvps } = await supabase
+                .from('rsvps')
+                .select('user_id')
+                .eq('event_id', id)
+                .in('status', ['yes', 'inshallah', 'waitlist']);
+              const userIds = (rsvps ?? []).map((r) => r.user_id).filter(Boolean) as string[];
+              for (const uid of userIds) {
+                await triggerPush(
+                  uid,
+                  'Event cancelled',
+                  event?.title ?? 'An event you RSVPd to was cancelled',
+                  { type: 'event_cancelled', event_id: id },
+                );
+              }
+            })();
 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             Alert.alert('Event Cancelled', 'This event has been cancelled.');

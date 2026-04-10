@@ -99,6 +99,8 @@ export function useDiscoverFeed(filter?: DiscoverFilter): DiscoverFeed {
   const [error, setError] = useState<string | null>(null);
 
   const audienceFilter = filter?.audience;
+  const categoryFilter = filter?.category;
+  const timeFilter = filter?.time;
 
   const fetchFeed = useCallback(async () => {
     setError(null);
@@ -113,10 +115,20 @@ export function useDiscoverFeed(filter?: DiscoverFilter): DiscoverFeed {
       .order('date_time', { ascending: true })
       .limit(50);
 
+    // Audience → server-side gender_mode filter
     if (audienceFilter === 'sisters') {
       query = query.eq('gender_mode', 'sisters_only');
     } else if (audienceFilter === 'brothers') {
       query = query.eq('gender_mode', 'brothers_only');
+    }
+    // Note: 'singles' is not yet a first-class column; treated as a tag.
+    if (audienceFilter === 'singles') {
+      query = query.contains('custom_tags', ['singles']);
+    }
+
+    // Category → server-side custom_tags array contains
+    if (categoryFilter) {
+      query = query.contains('custom_tags', [categoryFilter]);
     }
 
     const { data, error: queryError } = await query;
@@ -136,7 +148,7 @@ export function useDiscoverFeed(filter?: DiscoverFilter): DiscoverFeed {
 
     setEvents(mapped);
     setLoading(false);
-  }, [audienceFilter]);
+  }, [audienceFilter, categoryFilter]);
 
   useEffect(() => {
     setLoading(true);
@@ -148,7 +160,20 @@ export function useDiscoverFeed(filter?: DiscoverFilter): DiscoverFeed {
     const eod = endOfToday();
     const oneWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    const withDate = events.filter((e) => e.date_time != null);
+    // Apply client-side time filter to the master event set first.
+    // This narrows every downstream slice (tonight / thisWeek / byDate / popular)
+    // so picking a time chip feels like "show me only this slice of time".
+    const timeFiltered = events.filter((e) => {
+      if (!timeFilter) return true;
+      if (!e.date_time) return false;
+      const d = new Date(e.date_time);
+      if (timeFilter === 'tonight') return d >= now && d <= eod;
+      if (timeFilter === 'this_week') return d >= now && d <= oneWeek;
+      if (timeFilter === 'after_maghrib') return d.getHours() >= 18;
+      return true;
+    });
+
+    const withDate = timeFiltered.filter((e) => e.date_time != null);
 
     const tonight = withDate.filter((e) => {
       const d = new Date(e.date_time!);
@@ -160,7 +185,9 @@ export function useDiscoverFeed(filter?: DiscoverFilter): DiscoverFeed {
       return d > eod && d <= oneWeek;
     });
 
-    const popular = [...events].sort((a, b) => b.going - a.going).slice(0, 10);
+    const popular = [...timeFiltered]
+      .sort((a, b) => b.going - a.going)
+      .slice(0, 10);
 
     const groups = new Map<string, DiscoverEvent[]>();
     for (const e of withDate) {
@@ -178,7 +205,7 @@ export function useDiscoverFeed(filter?: DiscoverFilter): DiscoverFeed {
       }));
 
     return { tonight, thisWeek, popular, byDate };
-  }, [events]);
+  }, [events, timeFilter]);
 
   return {
     ...sliced,

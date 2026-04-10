@@ -17,10 +17,12 @@ import EventCard from '../../components/EventCard';
 import HomeSection from '../../components/HomeSection';
 import SkeletonCard from '../../components/SkeletonCard';
 import EmptyState from '../../components/EmptyState';
+import DiscoverFilterBar from '../../components/DiscoverFilterBar';
 import {
   useDiscoverFeed,
   DiscoverEvent,
   DateGroup,
+  DiscoverFilter,
 } from '../../lib/hooks/useDiscoverFeed';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -77,9 +79,12 @@ export default function DiscoverScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<DiscoverEvent[] | null>(null);
   const [searching, setSearching] = useState(false);
+  const [filter, setFilter] = useState<DiscoverFilter>({});
+
+  const filterActive = !!(filter.time || filter.category || filter.audience);
 
   const { tonight, thisWeek, popular, byDate, loading, error, refresh } =
-    useDiscoverFeed();
+    useDiscoverFeed(filter);
 
   // Build sections list for the FlashList
   const sections: Section[] = [];
@@ -183,6 +188,26 @@ export default function DiscoverScreen() {
     }
 
     if (sections.length === 0) {
+      if (filterActive) {
+        return (
+          <View style={styles.headerContent}>
+            <EmptyState
+              emoji="🪄"
+              title="No events match these filters"
+              subtitle="Try clearing a filter or two"
+            />
+            <Pressable
+              onPress={() => setFilter({})}
+              style={({ pressed }) => [
+                styles.clearFiltersBtn,
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <Text style={styles.clearFiltersText}>Clear filters</Text>
+            </Pressable>
+          </View>
+        );
+      }
       return (
         <View style={styles.headerContent}>
           <EmptyState
@@ -195,7 +220,7 @@ export default function DiscoverScreen() {
     }
 
     return null;
-  }, [loading, error, sections.length]);
+  }, [loading, error, sections.length, filterActive]);
 
   return (
     <View style={styles.container}>
@@ -241,6 +266,13 @@ export default function DiscoverScreen() {
             </Pressable>
           )}
         </View>
+
+        {/* Filter chip bar — hidden during active search */}
+        {searchResults === null && (
+          <View style={styles.filterBarWrap}>
+            <DiscoverFilterBar filter={filter} onChange={setFilter} />
+          </View>
+        )}
 
         {searchResults !== null ? (
           // ─── Search results path ─────────────────────────────────
@@ -371,5 +403,25 @@ const styles = StyleSheet.create({
     ...FONTS.bold,
     marginTop: SPACING.lg,
     marginBottom: SPACING.md,
+  },
+
+  filterBarWrap: {
+    paddingBottom: SPACING.sm,
+  },
+
+  clearFiltersBtn: {
+    alignSelf: 'center',
+    marginTop: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 223, 161, 0.55)',
+    backgroundColor: 'rgba(201, 168, 76, 0.18)',
+  },
+  clearFiltersText: {
+    color: COLORS.gold2,
+    fontSize: 14,
+    ...FONTS.bold,
   },
 });

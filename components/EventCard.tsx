@@ -1,250 +1,246 @@
-import { View, Text, StyleSheet, Image } from 'react-native';
+// components/EventCard.tsx
+// DAW-22 — Partiful-inspired event card with three variants:
+//   vertical   → carousel/featured: tall, theme gradient bg, poster centered
+//   horizontal → list: compact, poster-left, details-right
+//   mini       → recently viewed: poster thumbnail + title only
+
+import { View, Text, StyleSheet, Image, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { BlurView } from 'expo-blur';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import AnimatedPress from './AnimatedPress';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
 import { GenderMode } from '../types';
 import { getThemeById } from '../lib/themes';
-import GenderBadge from './GenderBadge';
-import HalalBadge from './HalalBadge';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// ─── Props ──────────────────────────────────────────────────
+
+export type EventCardVariant = 'vertical' | 'horizontal' | 'mini';
 
 interface EventCardProps {
   id: string;
   title: string;
   theme_id: string;
   poster_url?: string | null;
-  org_name: string;
-  date_label: string;
-  location_name: string;
-  price: number;
-  gender_mode: GenderMode;
-  is_halal_venue: boolean;
-  yes_count: number;
-  inshallah_count: number;
-  capacity: number | null;
+  org_name?: string;
+  date_label?: string;
+  location_name?: string;
+  description?: string | null;
+  price?: number;
+  gender_mode?: GenderMode;
+  is_halal_venue?: boolean;
+  yes_count?: number;
+  inshallah_count?: number;
+  capacity?: number | null;
+  variant?: EventCardVariant;
+  width?: number;
 }
 
-export default function EventCard(props: EventCardProps) {
+export default function EventCard({
+  variant = 'horizontal',
+  ...props
+}: EventCardProps) {
   const router = useRouter();
   const theme = getThemeById(props.theme_id);
-  const totalGoing = props.yes_count + props.inshallah_count;
   const hasPoster = !!props.poster_url;
-
-  const priceLabel = props.price > 0
-    ? `$${(props.price / 100).toFixed(0)}`
-    : 'Free';
-
-  // DAW-22 Phase 2 — theme-infused card.
-  // - cardBg tints the glass with ~25% of the theme's accent color so
-  //   each event in the feed is visibly differentiated
-  // - border carries the same accent at 18% for a subtle outline match
-  // - primary is used for the "going" emphasis + accent dot
-  const themeCardBg = theme?.surface?.cardBg ?? 'rgba(30, 30, 30, 0.55)';
-  const themeBorder = theme?.surface?.border ?? 'rgba(255, 255, 255, 0.08)';
+  const totalGoing = (props.yes_count ?? 0) + (props.inshallah_count ?? 0);
   const themePrimary = theme?.accents?.primary ?? COLORS.gold;
+
+  const handlePress = () => router.push(`/event/${props.id}`);
+
+  if (variant === 'mini') {
+    return (
+      <MiniCard
+        title={props.title}
+        posterUrl={props.poster_url}
+        emoji={theme?.defaultEmoji ?? '🌙'}
+        gradientStops={theme?.background?.stops ?? [COLORS.card, COLORS.card2]}
+        onPress={handlePress}
+        width={props.width}
+      />
+    );
+  }
+
+  if (variant === 'vertical') {
+    return (
+      <VerticalCard
+        title={props.title}
+        dateLabel={props.date_label}
+        locationName={props.location_name}
+        description={props.description}
+        posterUrl={props.poster_url}
+        emoji={theme?.defaultEmoji ?? '🌙'}
+        gradientStops={theme?.background?.stops ?? [COLORS.card, COLORS.card2]}
+        totalGoing={totalGoing}
+        themePrimary={themePrimary}
+        themeBorder={theme?.surface?.border ?? 'rgba(255, 255, 255, 0.08)'}
+        onPress={handlePress}
+        width={props.width}
+      />
+    );
+  }
+
+  // Default: horizontal
+  return (
+    <HorizontalCard
+      title={props.title}
+      dateLabel={props.date_label}
+      locationName={props.location_name}
+      description={props.description}
+      posterUrl={props.poster_url}
+      emoji={theme?.defaultEmoji ?? '🌙'}
+      gradientStops={theme?.background?.stops ?? [COLORS.card, COLORS.card2]}
+      totalGoing={totalGoing}
+      themePrimary={themePrimary}
+      themeBorder={theme?.surface?.border ?? 'rgba(255, 255, 255, 0.08)'}
+      cardBg={theme?.surface?.cardBg ?? 'rgba(30, 30, 30, 0.55)'}
+      onPress={handlePress}
+    />
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VERTICAL — tall carousel card with theme gradient background
+// ═══════════════════════════════════════════════════════════════
+
+interface VerticalCardProps {
+  title: string;
+  dateLabel?: string;
+  locationName?: string;
+  description?: string | null;
+  posterUrl?: string | null;
+  emoji: string;
+  gradientStops: string[];
+  totalGoing: number;
+  themePrimary: string;
+  themeBorder: string;
+  onPress: () => void;
+  width?: number;
+}
+
+function VerticalCard(p: VerticalCardProps) {
+  const cardW = p.width ?? 280;
+  const posterW = cardW * 0.82;
+  const gradId = `vcard_${p.title.slice(0, 8).replace(/\W/g, '')}`;
 
   return (
     <AnimatedPress
-      style={styles.cardOuter}
-      onPress={() => router.push(`/event/${props.id}`)}
+      style={[v.card, { width: cardW, borderColor: p.themeBorder }]}
+      onPress={p.onPress}
     >
-      {/* Glass card — translucent surface with blur + glassy border */}
-      <View style={[styles.glassBorder, { borderColor: themeBorder }]}>
-        {/* DAW-22 — poster hero, square 1:1 at the top of the card */}
-        {hasPoster && (
-          <View style={styles.posterWrap}>
-            <Image
-              source={{ uri: props.poster_url! }}
-              style={styles.posterImage}
-              resizeMode="cover"
-            />
-            {/* Bottom fade so the card content reads cleanly when it overlaps */}
-            <View style={styles.posterFade} pointerEvents="none" />
+      {/* Theme gradient background */}
+      <Svg style={StyleSheet.absoluteFill}>
+        <Defs>
+          <LinearGradient id={gradId} x1="0" y1="0" x2="0.3" y2="1">
+            {p.gradientStops.map((stop, i, arr) => (
+              <Stop
+                key={i}
+                offset={arr.length === 1 ? '0' : (i / (arr.length - 1)).toString()}
+                stopColor={stop}
+              />
+            ))}
+          </LinearGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${gradId})`} />
+      </Svg>
+
+      {/* Poster or emoji fallback */}
+      <View style={[v.posterWrap, { width: posterW, height: posterW }]}>
+        {p.posterUrl ? (
+          <Image source={{ uri: p.posterUrl }} style={v.posterImage} resizeMode="cover" />
+        ) : (
+          <View style={v.emojiFallback}>
+            <Text style={v.emoji}>{p.emoji}</Text>
           </View>
         )}
-        <BlurView intensity={30} tint="dark" style={styles.blurCard}>
-          <View style={[styles.cardInner, { backgroundColor: themeCardBg }]}>
+      </View>
 
-            {/* Top edge highlight — brighter, like light catching glass */}
-            <View style={styles.topHighlight} />
+      {/* Text content */}
+      <View style={v.textBlock}>
+        <Text style={v.title} numberOfLines={2}>{p.title}</Text>
+        {p.dateLabel && (
+          <Text style={v.meta} numberOfLines={1}>
+            {p.dateLabel}{p.locationName ? ` · ${p.locationName}` : ''}
+          </Text>
+        )}
+        {p.description && (
+          <Text style={v.description} numberOfLines={2}>{p.description}</Text>
+        )}
+      </View>
 
-            {/* Emoji — only shown as fallback when there's no poster */}
-            {!hasPoster && (
-              <View style={styles.emojiRow}>
-                <View style={styles.emojiGlowOuter}>
-                  <View style={styles.emojiGlow}>
-                    <Text style={styles.emoji}>{theme?.defaultEmoji ?? '🌙'}</Text>
-                  </View>
-                </View>
-              </View>
-            )}
-
-          {/* Title — editorial scale */}
-          <Text style={styles.title} numberOfLines={2}>{props.title}</Text>
-          <Text style={styles.orgName} numberOfLines={1}>{props.org_name}</Text>
-
-          {/* Vertical meta stack with icons */}
-          <View style={styles.metaStack}>
-            <View style={styles.metaLine}>
-              <Text style={styles.metaIcon}>🕐</Text>
-              <Text style={styles.meta}>{props.date_label}</Text>
-            </View>
-            <View style={styles.metaLine}>
-              <Text style={styles.metaIcon}>📍</Text>
-              <Text style={styles.meta} numberOfLines={1}>{props.location_name}</Text>
-            </View>
-            <View style={styles.metaLine}>
-              <Text style={styles.metaIcon}>💲</Text>
-              <Text style={styles.meta}>{priceLabel}</Text>
-            </View>
-          </View>
-
-          {/* Bottom — badge left, going right */}
-          <View style={styles.bottomRow}>
-            <View style={styles.badgeGroup}>
-              <GenderBadge mode={props.gender_mode} />
-              {props.is_halal_venue && <HalalBadge />}
-            </View>
-            <View style={styles.goingWrap}>
-              {totalGoing > 0 && (
-                <View style={[styles.accentDot, { backgroundColor: themePrimary }]} />
-              )}
-              <Text
-                style={[
-                  styles.goingText,
-                  totalGoing > 0 && { color: themePrimary },
-                ]}
-              >
-                {totalGoing > 0 ? `${totalGoing} going` : 'Be the first'}
-              </Text>
-            </View>
-          </View>
-          </View>
-        </BlurView>
+      {/* Bottom row */}
+      <View style={v.bottomRow}>
+        <View style={v.goingWrap}>
+          {p.totalGoing > 0 && (
+            <View style={[v.accentDot, { backgroundColor: p.themePrimary }]} />
+          )}
+          <Text style={[v.goingText, p.totalGoing > 0 && { color: p.themePrimary }]}>
+            {p.totalGoing > 0 ? `${p.totalGoing} going` : 'Be the first'}
+          </Text>
+        </View>
+        <Text style={v.shareIcon}>↗</Text>
       </View>
     </AnimatedPress>
   );
 }
 
-const styles = StyleSheet.create({
-  cardOuter: {
-    marginBottom: SPACING.xl,
-    borderRadius: 22,
-  },
-  glassBorder: {
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+const v = StyleSheet.create({
+  card: {
+    borderRadius: RADIUS.xl,
     overflow: 'hidden',
+    borderWidth: 1,
+    paddingBottom: SPACING.lg,
   },
-
-  // DAW-22 — poster hero
   posterWrap: {
-    width: '100%',
-    aspectRatio: 1,
-    backgroundColor: COLORS.card,
-    position: 'relative',
+    alignSelf: 'center',
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    marginTop: SPACING.xl,
+    marginBottom: SPACING.lg,
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
   posterImage: {
     width: '100%',
     height: '100%',
   },
-  posterFade: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 32,
-    backgroundColor: 'rgba(30, 30, 30, 0.35)',
-  },
-  blurCard: {
-    borderRadius: 21,
-    overflow: 'hidden',
-  },
-  cardInner: {
-    backgroundColor: 'rgba(30, 30, 30, 0.55)',
-    padding: SPACING.xl,
-  },
-
-  // Top edge highlight — brighter line simulating light reflection on glass
-  topHighlight: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-  },
-
-  // Emoji — warm radiant glow (two layers for soft falloff)
-  emojiRow: {
-    marginBottom: SPACING.lg,
-  },
-  emojiGlowOuter: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(255, 223, 161, 0.06)',
+  emojiFallback: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  emojiGlow: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(255, 223, 161, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.15)',
   },
   emoji: {
-    fontSize: 28,
+    fontSize: 48,
   },
-
-  // Typography — editorial hierarchy
+  textBlock: {
+    paddingHorizontal: SPACING.lg,
+    gap: 3,
+  },
   title: {
-    fontSize: 28,
+    fontSize: 18,
     color: COLORS.white,
     ...FONTS.bold,
-    marginBottom: 4,
-    letterSpacing: -0.5,
-  },
-  orgName: {
-    fontSize: 14,
-    color: COLORS.muted,
-    ...FONTS.medium,
-    marginBottom: SPACING.xl,
-  },
-
-  // Meta — vertical stack with icon prefix
-  metaStack: {
-    gap: SPACING.sm,
-    marginBottom: SPACING.xl,
-  },
-  metaLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  metaIcon: {
-    fontSize: 14,
-    width: 22,
-    textAlign: 'center',
+    letterSpacing: -0.3,
   },
   meta: {
-    fontSize: 15,
-    color: COLORS.white,
-    ...FONTS.regular,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.65)',
+    ...FONTS.medium,
   },
-
-  // Bottom row
+  description: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.5)',
+    ...FONTS.regular,
+    lineHeight: 18,
+    marginTop: 2,
+  },
   bottomRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  badgeGroup: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    marginTop: SPACING.lg,
   },
   goingWrap: {
     flexDirection: 'row',
@@ -257,8 +253,264 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   goingText: {
-    fontSize: 14,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.55)',
+    ...FONTS.medium,
+  },
+  shareIcon: {
+    fontSize: 18,
+    color: 'rgba(255,255,255,0.45)',
+    ...FONTS.medium,
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════
+// HORIZONTAL — compact list card, poster-left details-right
+// ═══════════════════════════════════════════════════════════════
+
+interface HorizontalCardProps {
+  title: string;
+  dateLabel?: string;
+  locationName?: string;
+  description?: string | null;
+  posterUrl?: string | null;
+  emoji: string;
+  gradientStops: string[];
+  totalGoing: number;
+  themePrimary: string;
+  themeBorder: string;
+  cardBg: string;
+  onPress: () => void;
+}
+
+function HorizontalCard(p: HorizontalCardProps) {
+  const gradId = `hcard_${p.title.slice(0, 8).replace(/\W/g, '')}`;
+
+  return (
+    <AnimatedPress
+      style={[h.card, { borderColor: p.themeBorder }]}
+      onPress={p.onPress}
+    >
+      <View style={[h.inner, { backgroundColor: p.cardBg }]}>
+        {/* Poster thumbnail or gradient+emoji fallback */}
+        <View style={h.posterWrap}>
+          {p.posterUrl ? (
+            <Image source={{ uri: p.posterUrl }} style={h.posterImage} resizeMode="cover" />
+          ) : (
+            <View style={h.posterFallback}>
+              <Svg style={StyleSheet.absoluteFill}>
+                <Defs>
+                  <LinearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+                    {p.gradientStops.map((stop, i, arr) => (
+                      <Stop
+                        key={i}
+                        offset={arr.length === 1 ? '0' : (i / (arr.length - 1)).toString()}
+                        stopColor={stop}
+                      />
+                    ))}
+                  </LinearGradient>
+                </Defs>
+                <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${gradId})`} />
+              </Svg>
+              <Text style={h.emoji}>{p.emoji}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Details column */}
+        <View style={h.details}>
+          <View style={h.textStack}>
+            <Text style={h.title} numberOfLines={2}>{p.title}</Text>
+            {p.dateLabel && (
+              <Text style={h.meta} numberOfLines={1}>
+                {p.dateLabel}{p.locationName ? ` · ${p.locationName}` : ''}
+              </Text>
+            )}
+            {p.description && (
+              <Text style={h.description} numberOfLines={2}>{p.description}</Text>
+            )}
+          </View>
+
+          <View style={h.bottomRow}>
+            <View style={h.goingWrap}>
+              {p.totalGoing > 0 && (
+                <View style={[h.accentDot, { backgroundColor: p.themePrimary }]} />
+              )}
+              <Text style={[h.goingText, p.totalGoing > 0 && { color: p.themePrimary }]}>
+                {p.totalGoing > 0 ? `${p.totalGoing} going` : 'Be the first'}
+              </Text>
+            </View>
+            <Text style={h.shareIcon}>↗</Text>
+          </View>
+        </View>
+      </View>
+    </AnimatedPress>
+  );
+}
+
+const POSTER_THUMB = 110;
+
+const h = StyleSheet.create({
+  card: {
+    marginBottom: SPACING.md,
+    borderRadius: RADIUS.xl,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  inner: {
+    flexDirection: 'row',
+    padding: SPACING.md,
+    gap: SPACING.md,
+  },
+  posterWrap: {
+    width: POSTER_THUMB,
+    height: POSTER_THUMB,
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    backgroundColor: COLORS.card,
+  },
+  posterImage: {
+    width: '100%',
+    height: '100%',
+  },
+  posterFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emoji: {
+    fontSize: 32,
+    zIndex: 1,
+  },
+  details: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  textStack: {
+    gap: 2,
+  },
+  title: {
+    fontSize: 16,
+    color: COLORS.white,
+    ...FONTS.bold,
+    letterSpacing: -0.2,
+  },
+  meta: {
+    fontSize: 13,
     color: COLORS.muted,
     ...FONTS.medium,
+    marginTop: 2,
+  },
+  description: {
+    fontSize: 12,
+    color: COLORS.hint,
+    ...FONTS.regular,
+    lineHeight: 17,
+    marginTop: 3,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: SPACING.sm,
+  },
+  goingWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  accentDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  goingText: {
+    fontSize: 12,
+    color: COLORS.muted,
+    ...FONTS.medium,
+  },
+  shareIcon: {
+    fontSize: 16,
+    color: COLORS.hint,
+    ...FONTS.medium,
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════
+// MINI — poster thumbnail + title only (recently viewed)
+// ═══════════════════════════════════════════════════════════════
+
+interface MiniCardProps {
+  title: string;
+  posterUrl?: string | null;
+  emoji: string;
+  gradientStops: string[];
+  onPress: () => void;
+  width?: number;
+}
+
+function MiniCard(p: MiniCardProps) {
+  const cardW = p.width ?? 110;
+  const gradId = `mcard_${p.title.slice(0, 8).replace(/\W/g, '')}`;
+
+  return (
+    <AnimatedPress style={[m.card, { width: cardW }]} onPress={p.onPress}>
+      <View style={[m.posterWrap, { height: cardW }]}>
+        {p.posterUrl ? (
+          <Image source={{ uri: p.posterUrl }} style={m.posterImage} resizeMode="cover" />
+        ) : (
+          <View style={m.posterFallback}>
+            <Svg style={StyleSheet.absoluteFill}>
+              <Defs>
+                <LinearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+                  {p.gradientStops.map((stop, i, arr) => (
+                    <Stop
+                      key={i}
+                      offset={arr.length === 1 ? '0' : (i / (arr.length - 1)).toString()}
+                      stopColor={stop}
+                    />
+                  ))}
+                </LinearGradient>
+              </Defs>
+              <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${gradId})`} />
+            </Svg>
+            <Text style={m.emoji}>{p.emoji}</Text>
+          </View>
+        )}
+      </View>
+      <Text style={m.title} numberOfLines={2}>{p.title}</Text>
+    </AnimatedPress>
+  );
+}
+
+const m = StyleSheet.create({
+  card: {
+    marginRight: SPACING.md,
+  },
+  posterWrap: {
+    width: '100%',
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+    backgroundColor: COLORS.card,
+  },
+  posterImage: {
+    width: '100%',
+    height: '100%',
+  },
+  posterFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emoji: {
+    fontSize: 28,
+    zIndex: 1,
+  },
+  title: {
+    fontSize: 12,
+    color: COLORS.white,
+    ...FONTS.medium,
+    marginTop: SPACING.xs,
+    lineHeight: 16,
   },
 });

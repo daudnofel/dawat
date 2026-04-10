@@ -24,6 +24,7 @@ interface FeedEvent {
   title: string;
   theme_id: string;
   poster_url: string | null;
+  description: string | null;
   gender_mode: GenderMode;
   is_halal_venue: boolean;
   price: number;
@@ -62,7 +63,7 @@ export default function HomeScreen() {
   const fetchDiscover = useCallback(async () => {
     const { data } = await supabase
       .from('events')
-      .select('id, title, theme_id, poster_url, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
+      .select('id, title, theme_id, poster_url, description, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
       .eq('is_published', true)
       .eq('is_cancelled', false)
       .order('created_at', { ascending: false })
@@ -103,7 +104,7 @@ export default function HomeScreen() {
 
     const { data } = await supabase
       .from('events')
-      .select('id, title, theme_id, poster_url, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
+      .select('id, title, theme_id, poster_url, description, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
       .in('id', distinctIds)
       .eq('is_cancelled', false);
 
@@ -129,7 +130,7 @@ export default function HomeScreen() {
     if (rsvps && rsvps.length > 0) {
       const { data: ev } = await supabase
         .from('events')
-        .select('id, title, theme_id, poster_url, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
+        .select('id, title, theme_id, poster_url, description, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
         .eq('id', rsvps[0].event_id)
         .eq('is_cancelled', false)
         .single();
@@ -180,7 +181,7 @@ export default function HomeScreen() {
     loadAll();
   };
 
-  const renderEventCard = (event: FeedEvent) => {
+  const renderEventCard = (event: FeedEvent, cardVariant: 'vertical' | 'horizontal' | 'mini' = 'vertical') => {
     const rsvps = event.rsvps ?? [];
     const yesRsvps = rsvps.filter((r) => r.status === 'yes');
     const yesCount = yesRsvps.reduce(
@@ -194,6 +195,8 @@ export default function HomeScreen() {
         title={event.title}
         theme_id={event.theme_id}
         poster_url={event.poster_url}
+        description={event.description}
+        variant={cardVariant}
         org_name="Personal Event"
         date_label={event.date_time ? new Date(event.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Date TBD'}
         location_name={event.location_name ?? 'Location TBD'}
@@ -315,7 +318,7 @@ export default function HomeScreen() {
               {/* New invite (Phase 1 placeholder: most recent RSVP) */}
               {pendingInvite && (
                 <HomeSection title="Your most recent invite">
-                  {renderEventCard(pendingInvite)}
+                  {renderEventCard(pendingInvite, 'horizontal')}
                 </HomeSection>
               )}
 
@@ -326,13 +329,12 @@ export default function HomeScreen() {
                     <ScrollView
                       horizontal
                       showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.discoverRow}
+                      contentContainerStyle={styles.recentRow}
                       decelerationRate="fast"
-                      snapToInterval={SCREEN_WIDTH * 0.8 + SPACING.md}
                     >
                       {recentEvents.map((event) => (
-                        <View key={event.id} style={styles.discoverCardWrap}>
-                          {renderEventCard(event)}
+                        <View key={event.id}>
+                          {renderEventCard(event, 'mini')}
                         </View>
                       ))}
                     </ScrollView>
@@ -362,11 +364,24 @@ export default function HomeScreen() {
                       showsHorizontalScrollIndicator={false}
                       contentContainerStyle={styles.discoverRow}
                       decelerationRate="fast"
-                      snapToInterval={SCREEN_WIDTH * 0.8 + SPACING.md}
+                      snapToInterval={SCREEN_WIDTH * 0.72 + SPACING.md}
                     >
                       {discoverEvents.slice(0, 10).map((event) => (
                         <View key={event.id} style={styles.discoverCardWrap}>
-                          {renderEventCard(event)}
+                          <EventCard
+                            key={event.id}
+                            id={event.id}
+                            title={event.title}
+                            theme_id={event.theme_id}
+                            poster_url={event.poster_url}
+                            description={event.description}
+                            variant="vertical"
+                            width={SCREEN_WIDTH * 0.72}
+                            date_label={event.date_time ? new Date(event.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Date TBD'}
+                            location_name={event.location_name ?? 'Location TBD'}
+                            yes_count={(event.rsvps ?? []).filter((r) => r.status === 'yes').length}
+                            inshallah_count={(event.rsvps ?? []).filter((r) => r.status === 'inshallah').length}
+                          />
                         </View>
                       ))}
                     </ScrollView>
@@ -518,12 +533,18 @@ const styles = StyleSheet.create({
     marginHorizontal: -SPACING.xl,
   },
 
-  // Discover events horizontal scroll
+  // Recently viewed mini card row
+  recentRow: {
+    paddingHorizontal: SPACING.xl,
+    gap: SPACING.sm,
+  },
+
+  // Discover events horizontal scroll (vertical cards)
   discoverRow: {
     paddingHorizontal: SPACING.xl,
     gap: SPACING.md,
   },
   discoverCardWrap: {
-    width: SCREEN_WIDTH * 0.8,
+    width: SCREEN_WIDTH * 0.72,
   },
 });

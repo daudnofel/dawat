@@ -1,3 +1,7 @@
+// components/RsvpButtons.tsx
+// DAW-22 — clean inline RSVP bar (Partiful-style), replaces the old chunky cards.
+// Three options in a compact dark pill: Yes · Inshallah · Can't Go
+
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
@@ -9,36 +13,46 @@ interface RsvpButtonsProps {
 }
 
 const OPTIONS = [
-  { status: RsvpStatus.Yes, label: 'Yes!', emoji: '✅', color: COLORS.green },
-  { status: RsvpStatus.Inshallah, label: 'Inshallah', emoji: '🤲', color: COLORS.amber },
-  { status: RsvpStatus.No, label: "Can't Go", emoji: '❌', color: COLORS.hint },
+  { status: RsvpStatus.Yes, label: 'Yes', color: COLORS.green },
+  { status: RsvpStatus.Inshallah, label: 'Inshallah', color: COLORS.amber },
+  { status: RsvpStatus.No, label: "Can't Go", color: COLORS.red },
 ];
 
 export default function RsvpButtons({ currentStatus, onSelect }: RsvpButtonsProps) {
   return (
     <View style={styles.container}>
       {currentStatus === RsvpStatus.Waitlist && (
-        <Text style={styles.waitlistBanner}>You're on the waitlist — the host will admit you when a spot opens</Text>
+        <Text style={styles.waitlistBanner}>
+          You're on the waitlist — the host will admit you when a spot opens
+        </Text>
       )}
-      <Text style={styles.prompt}>Will you be attending?</Text>
-      <View style={styles.row}>
-        {OPTIONS.map((opt) => {
+
+      <View style={styles.pill}>
+        {OPTIONS.map((opt, i) => {
           const isActive = currentStatus === opt.status;
           return (
-            <Pressable
-              key={opt.status}
-              style={[
-                styles.button,
-                isActive && { borderColor: opt.color, backgroundColor: `${opt.color}20` },
-              ]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                onSelect(opt.status);
-              }}
-            >
-              <Text style={styles.emoji}>{opt.emoji}</Text>
-              <Text style={[styles.label, isActive && { color: opt.color }]}>{opt.label}</Text>
-            </Pressable>
+            <View key={opt.status} style={styles.optionWrap}>
+              {i > 0 && <View style={styles.divider} />}
+              <Pressable
+                style={[
+                  styles.option,
+                  isActive && { backgroundColor: `${opt.color}20` },
+                ]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  onSelect(opt.status);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.optionText,
+                    isActive && { color: opt.color, ...FONTS.bold },
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </Pressable>
+            </View>
           );
         })}
       </View>
@@ -47,24 +61,47 @@ export default function RsvpButtons({ currentStatus, onSelect }: RsvpButtonsProp
 }
 
 const styles = StyleSheet.create({
-  container: { paddingVertical: SPACING.lg },
-  prompt: {
-    fontSize: 15, color: COLORS.muted, ...FONTS.medium,
-    textAlign: 'center', marginBottom: SPACING.md,
+  container: {
+    paddingVertical: SPACING.md,
   },
-  row: { flexDirection: 'row', gap: SPACING.sm, justifyContent: 'center' },
   waitlistBanner: {
-    fontSize: 13, color: COLORS.blue, ...FONTS.medium,
-    textAlign: 'center', marginBottom: SPACING.md,
-    backgroundColor: `${COLORS.blue}15`, paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md, borderRadius: RADIUS.md,
+    fontSize: 13,
+    color: COLORS.blue,
+    ...FONTS.medium,
+    textAlign: 'center',
+    marginBottom: SPACING.md,
+    backgroundColor: `${COLORS.blue}15`,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.md,
   },
-  button: {
-    flex: 1, alignItems: 'center', paddingVertical: SPACING.md + 2,
-    borderRadius: RADIUS.md, borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 223, 161, 0.10)',
-    backgroundColor: 'rgba(30, 30, 30, 0.55)',
+  pill: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(30, 30, 30, 0.65)',
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
   },
-  emoji: { fontSize: 20, marginBottom: SPACING.xs },
-  label: { fontSize: 13, color: COLORS.muted, ...FONTS.semibold },
+  optionWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  divider: {
+    width: 1,
+    height: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  option: {
+    flex: 1,
+    paddingVertical: SPACING.md + 2,
+    alignItems: 'center',
+    borderRadius: RADIUS.full,
+  },
+  optionText: {
+    fontSize: 14,
+    color: COLORS.muted,
+    ...FONTS.semibold,
+  },
 });

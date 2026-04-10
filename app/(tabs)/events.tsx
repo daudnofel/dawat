@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, Dimensions, Pressable } from 'react-native';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Dimensions, Pressable, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SPACING } from '../../lib/theme';
@@ -14,8 +14,15 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 type Tab = 'hosting' | 'attending' | 'past';
 
+const TABS_LIST: { key: Tab; label: string }[] = [
+  { key: 'hosting', label: 'Hosting' },
+  { key: 'attending', label: 'Attending' },
+  { key: 'past', label: 'Past' },
+];
+
 export default function EventsScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('hosting');
+  const pagerRef = useRef<ScrollView>(null);
   const [hosting, setHosting] = useState<any[]>([]);
   const [attending, setAttending] = useState<any[]>([]);
   const [past, setPast] = useState<any[]>([]);
@@ -98,6 +105,8 @@ export default function EventsScreen() {
       <EventCard
         key={e.id} id={e.id} title={e.title} theme_id={e.theme_id}
         poster_url={e.poster_url}
+        description={e.description}
+        variant="horizontal"
         org_name={label}
         date_label={e.date_time ? new Date(e.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD'}
         location_name={e.location_name ?? 'TBD'} price={e.price}
@@ -133,11 +142,34 @@ export default function EventsScreen() {
       : <EmptyState emoji="📖" title="No past events yet" subtitle="Events you've hosted or attended will appear here" />;
   };
 
-  const TABS: { key: Tab; label: string }[] = [
-    { key: 'hosting', label: 'Hosting' },
-    { key: 'attending', label: 'Attending' },
-    { key: 'past', label: 'Past' },
-  ];
+  const handleTabPress = (tab: Tab) => {
+    setActiveTab(tab);
+    const idx = TABS_LIST.findIndex((t) => t.key === tab);
+    pagerRef.current?.scrollTo({ x: idx * SCREEN_WIDTH, animated: true });
+  };
+
+  const handlePageScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    const tab = TABS_LIST[page]?.key;
+    if (tab && tab !== activeTab) setActiveTab(tab);
+  };
+
+  const renderTabPage = (tab: Tab) => {
+    const data = tab === 'hosting' ? hosting : tab === 'attending' ? attending : past;
+    const label = tab === 'hosting' ? 'Hosted by you' : tab === 'attending' ? "RSVP'd" : 'Past';
+
+    if (loading) return <><SkeletonCard /><SkeletonCard /></>;
+    if (noAuth) return <EmptyState emoji="🔐" title="Sign in to see your events" subtitle="Your hosted and attending events will appear here" />;
+    if (data.length === 0) {
+      const empty = {
+        hosting: { emoji: '🎉' as const, title: 'No events hosted yet', subtitle: 'Tap + to create your first event' },
+        attending: { emoji: '🌙' as const, title: 'No upcoming events', subtitle: 'Explore what\'s on and RSVP to events near you' },
+        past: { emoji: '📖' as const, title: 'No past events yet', subtitle: 'Events you\'ve hosted or attended will appear here' },
+      };
+      return <EmptyState {...empty[tab]} />;
+    }
+    return data.map((e: any) => renderCard(e, label));
+  };
 
   return (
     <View style={styles.container}>
@@ -160,13 +192,13 @@ export default function EventsScreen() {
           <Text style={styles.title}>My Events</Text>
         </View>
 
-        {/* Tab bar */}
+        {/* Tab bar — tap or swipe to switch */}
         <View style={styles.tabBar}>
-          {TABS.map((tab) => (
+          {TABS_LIST.map((tab) => (
             <Pressable
               key={tab.key}
               style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-              onPress={() => setActiveTab(tab.key)}
+              onPress={() => handleTabPress(tab.key)}
             >
               <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
                 {tab.label}
@@ -175,16 +207,28 @@ export default function EventsScreen() {
           ))}
         </View>
 
+        {/* Swipeable pager — 3 full-width pages, swipe left/right to switch tabs */}
         <ScrollView
-          key={activeTab}
+          ref={pagerRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={handlePageScroll}
+          scrollEventThrottle={16}
           style={{ flex: 1 }}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          decelerationRate="fast"
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gold} />}
         >
-          {renderContent()}
-          <View style={{ height: 120 }} />
+          {TABS_LIST.map((tab) => (
+            <ScrollView
+              key={tab.key}
+              style={{ width: SCREEN_WIDTH }}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gold} />}
+            >
+              {renderTabPage(tab.key)}
+              <View style={{ height: 120 }} />
+            </ScrollView>
+          ))}
         </ScrollView>
       </SafeAreaView>
     </View>

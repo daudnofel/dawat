@@ -1,12 +1,22 @@
 import { DawatTheme } from '../types';
 
+// =============================================================
+// DAW-22 Phase 2 — Theme enrichment
+// -------------------------------------------------------------
+// Every theme is authored with the legacy fields (bannerBgImage,
+// accentColor, etc.) and then automatically enriched at export time
+// with a full design token bundle — background gradient stops,
+// accents, surface, typography. Individual themes can override
+// any token; the helper only fills in what's missing.
+// =============================================================
+
 export const THEME_CATEGORIES = [
   'Trending', 'Ramadan', 'Eid', 'Sisters', 'Brothers',
   'Family', 'Nikah', 'Iftar', 'Scholars', 'Minimal',
   'Eclectic', 'Elegant', 'Community',
 ] as const;
 
-export const THEMES: DawatTheme[] = [
+const RAW_THEMES: DawatTheme[] = [
   {
     id: 'ramadan_kareem',
     name: 'Ramadan Kareem',
@@ -248,6 +258,145 @@ export const THEMES: DawatTheme[] = [
     defaultEmoji: '📜',
   },
 ];
+
+// ─── Enrichment helpers ──────────────────────────────────────
+
+/**
+ * Parse hex color stops out of a CSS-style linear-gradient() string.
+ * Returns the hex values in order.
+ */
+function parseGradientStops(css: string): string[] {
+  const matches = css.match(/#[0-9A-Fa-f]{6}/g);
+  return matches ?? [];
+}
+
+/**
+ * Parse the angle from a gradient string. Defaults to 135 if not found.
+ */
+function parseGradientAngle(css: string): number {
+  const m = css.match(/(-?\d+)deg/);
+  return m ? parseInt(m[1], 10) : 135;
+}
+
+/**
+ * Convert hex to RGB [0-255].
+ */
+function hexToRgb(hex: string): [number, number, number] {
+  const clean = hex.replace('#', '');
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  return [r, g, b];
+}
+
+/**
+ * Relative luminance (0..1) per WCAG.
+ */
+function luminance(hex: string): number {
+  const [r, g, b] = hexToRgb(hex).map((c) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * Compute a readable foreground color ('#FFFFFF' | '#0D0D0D') for a given bg hex.
+ */
+function contrastFg(bg: string): string {
+  return luminance(bg) > 0.5 ? '#0D0D0D' : '#FFFFFF';
+}
+
+/**
+ * Append an rgba-style alpha suffix to a hex color by converting it
+ * to rgba(). Returns e.g. "rgba(201, 168, 76, 0.18)".
+ */
+function hexWithAlpha(hex: string, alpha: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/**
+ * Mix two hex colors. `weight2` is how much of hex2 ends up in the
+ * result (0 = pure hex1, 1 = pure hex2). Used to tint the dark page
+ * background with a theme's accent color.
+ */
+function mixHex(hex1: string, hex2: string, weight2: number): string {
+  const [r1, g1, b1] = hexToRgb(hex1);
+  const [r2, g2, b2] = hexToRgb(hex2);
+  const r = Math.round(r1 * (1 - weight2) + r2 * weight2);
+  const g = Math.round(g1 * (1 - weight2) + g2 * weight2);
+  const b = Math.round(b1 * (1 - weight2) + b2 * weight2);
+  const toHex = (c: number) => c.toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+/**
+ * Mix a theme accent into a base hex and return an rgba() string at
+ * the given alpha. Used to build the tinted glass background for
+ * EventCard surfaces.
+ */
+function rgbaMix(baseHex: string, tintHex: string, tintWeight: number, alpha: number): string {
+  const mixed = mixHex(baseHex, tintHex, tintWeight);
+  const [r, g, b] = hexToRgb(mixed);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// App base surfaces from lib/theme.ts (kept in sync by hand — these
+// are the only hardcoded hex values here, because importing from
+// lib/theme would create a circular dep.)
+const APP_DARK = '#0D0D0D';
+const APP_CARD = '#161616';
+
+/**
+ * Fill in any missing design-token fields on a theme from its legacy
+ * fields. Themes that already define a token keep their override.
+ */
+function enrichTheme(t: DawatTheme): DawatTheme {
+  const stops = parseGradientStops(t.bannerBgImage);
+  const angle = parseGradientAngle(t.bannerBgImage);
+  const isLight = luminance(t.bannerBg) > 0.5;
+
+  return {
+    ...t,
+    background: t.background ?? {
+      type: 'gradient',
+      stops: stops.length >= 2 ? stops : [t.bannerBg, t.bannerBg],
+      angle,
+    },
+    typography: t.typography ?? {
+      titleFont: 'ManropeExtraBold',
+      titleLetterSpacing: -0.5,
+    },
+    accents: t.accents ?? {
+      primary: t.accentColor,
+      secondary: hexWithAlpha(t.accentColor, 0.25),
+      onAccent: contrastFg(t.accentColor),
+    },
+    surface: t.surface ?? {
+      bg: isLight ? 'rgba(255, 255, 255, 0.55)' : 'rgba(30, 30, 30, 0.55)',
+      border: hexWithAlpha(t.accentColor, 0.18),
+      borderRadius: 22,
+
+      // DAW-22 Phase 2 — theme-tinted surfaces
+      // Whole event detail page: 15% accent tint on the app's dark base.
+      // Still dark enough to keep the app chrome cohesive but each event
+      // page is now visibly differentiated.
+      pageBg: mixHex(APP_DARK, t.accentColor, 0.15),
+
+      // EventCard glass: 25% accent tint on the card base, 0.55 alpha so
+      // the BlurView still reads as glass. Cards in the feed now each
+      // carry their theme's chromatic signature.
+      cardBg: rgbaMix(APP_CARD, t.accentColor, 0.25, 0.55),
+    },
+  };
+}
+
+/**
+ * The public, fully-enriched themes array. Consumers import THIS,
+ * never RAW_THEMES.
+ */
+export const THEMES: DawatTheme[] = RAW_THEMES.map(enrichTheme);
 
 export function getThemeById(id: string): DawatTheme | undefined {
   return THEMES.find((t) => t.id === id);

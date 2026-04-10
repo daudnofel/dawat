@@ -239,3 +239,77 @@ CREATE POLICY "Users can remove own reactions" ON comment_reactions FOR DELETE
 -- ─── DAW-35: Threaded replies (one level deep) ────────────────────
 ALTER TABLE comments ADD COLUMN parent_id uuid REFERENCES comments(id) ON DELETE CASCADE;
 CREATE INDEX idx_comments_parent ON comments(parent_id) WHERE parent_id IS NOT NULL;
+
+-- =============================================
+-- 10. EVENT IDENTITY SYSTEM (DAW-22)
+-- Poster + Theme + Effects — Partiful-style 3-layer refactor
+-- =============================================
+
+-- New columns on events for the 3 identity layers
+ALTER TABLE events ADD COLUMN IF NOT EXISTS poster_url         text;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS poster_type        text;  -- 'upload' | 'library' | 'builder'
+ALTER TABLE events ADD COLUMN IF NOT EXISTS poster_library_id  text;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS effect_id          text;  -- nullable Lottie effect
+
+COMMENT ON COLUMN events.poster_url IS 'Public URL of the hero image/GIF for this event';
+COMMENT ON COLUMN events.poster_type IS 'Source of the poster: upload | library | builder';
+COMMENT ON COLUMN events.poster_library_id IS 'If poster_type = library, references poster_library.id';
+COMMENT ON COLUMN events.effect_id IS 'Optional ambient Lottie effect on the event detail page';
+
+-- Curated poster library (our own assets)
+CREATE TABLE IF NOT EXISTS poster_library (
+  id              text        PRIMARY KEY,
+  category        text        NOT NULL,       -- 'nikkah' | 'iftar' | 'eid' | ...
+  storage_path    text        NOT NULL,
+  thumbnail_path  text        NOT NULL,
+  name            text,
+  tags            text[]      DEFAULT '{}',
+  sort_order      integer     DEFAULT 0,
+  is_active       boolean     DEFAULT true,
+  created_at      timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_poster_library_category
+  ON poster_library(category) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_poster_library_sort
+  ON poster_library(sort_order) WHERE is_active = true;
+
+ALTER TABLE poster_library ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can read poster library" ON poster_library;
+CREATE POLICY "Anyone can read poster library" ON poster_library
+  FOR SELECT USING (is_active = true);
+
+-- ─── Storage buckets (created via API in this PR) ─────────────────
+-- poster-library (public, 5MB, png/jpeg/webp/gif) — our curated assets
+-- event-posters (private, 10MB, png/jpeg/webp/gif) — user-uploaded posters
+
+-- Storage RLS: event-posters — users can only manage files under their own uid folder
+DROP POLICY IF EXISTS "Users upload own event posters" ON storage.objects;
+CREATE POLICY "Users upload own event posters" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'event-posters'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+DROP POLICY IF EXISTS "Users read own event posters" ON storage.objects;
+CREATE POLICY "Users read own event posters" ON storage.objects
+  FOR SELECT TO authenticated
+  USING (
+    bucket_id = 'event-posters'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+DROP POLICY IF EXISTS "Users delete own event posters" ON storage.objects;
+CREATE POLICY "Users delete own event posters" ON storage.objects
+  FOR DELETE TO authenticated
+  USING (
+    bucket_id = 'event-posters'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Storage RLS: poster-library — anyone can read (it's public anyway, but make it explicit)
+DROP POLICY IF EXISTS "Anyone reads poster library objects" ON storage.objects;
+CREATE POLICY "Anyone reads poster library objects" ON storage.objects
+  FOR SELECT USING (bucket_id = 'poster-library');

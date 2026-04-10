@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import AnimatedPress from './AnimatedPress';
@@ -12,6 +12,7 @@ interface EventCardProps {
   id: string;
   title: string;
   theme_id: string;
+  poster_url?: string | null;
   org_name: string;
   date_label: string;
   location_name: string;
@@ -27,10 +28,20 @@ export default function EventCard(props: EventCardProps) {
   const router = useRouter();
   const theme = getThemeById(props.theme_id);
   const totalGoing = props.yes_count + props.inshallah_count;
+  const hasPoster = !!props.poster_url;
 
   const priceLabel = props.price > 0
     ? `$${(props.price / 100).toFixed(0)}`
     : 'Free';
+
+  // DAW-22 Phase 2 — theme-infused card.
+  // - cardBg tints the glass with ~25% of the theme's accent color so
+  //   each event in the feed is visibly differentiated
+  // - border carries the same accent at 18% for a subtle outline match
+  // - primary is used for the "going" emphasis + accent dot
+  const themeCardBg = theme?.surface?.cardBg ?? 'rgba(30, 30, 30, 0.55)';
+  const themeBorder = theme?.surface?.border ?? 'rgba(255, 255, 255, 0.08)';
+  const themePrimary = theme?.accents?.primary ?? COLORS.gold;
 
   return (
     <AnimatedPress
@@ -38,21 +49,35 @@ export default function EventCard(props: EventCardProps) {
       onPress={() => router.push(`/event/${props.id}`)}
     >
       {/* Glass card — translucent surface with blur + glassy border */}
-      <View style={styles.glassBorder}>
+      <View style={[styles.glassBorder, { borderColor: themeBorder }]}>
+        {/* DAW-22 — poster hero, square 1:1 at the top of the card */}
+        {hasPoster && (
+          <View style={styles.posterWrap}>
+            <Image
+              source={{ uri: props.poster_url! }}
+              style={styles.posterImage}
+              resizeMode="cover"
+            />
+            {/* Bottom fade so the card content reads cleanly when it overlaps */}
+            <View style={styles.posterFade} pointerEvents="none" />
+          </View>
+        )}
         <BlurView intensity={30} tint="dark" style={styles.blurCard}>
-          <View style={styles.cardInner}>
+          <View style={[styles.cardInner, { backgroundColor: themeCardBg }]}>
 
             {/* Top edge highlight — brighter, like light catching glass */}
             <View style={styles.topHighlight} />
 
-            {/* Emoji — small, top-left with warm radiant glow */}
-            <View style={styles.emojiRow}>
-              <View style={styles.emojiGlowOuter}>
-                <View style={styles.emojiGlow}>
-                  <Text style={styles.emoji}>{theme?.defaultEmoji ?? '🌙'}</Text>
+            {/* Emoji — only shown as fallback when there's no poster */}
+            {!hasPoster && (
+              <View style={styles.emojiRow}>
+                <View style={styles.emojiGlowOuter}>
+                  <View style={styles.emojiGlow}>
+                    <Text style={styles.emoji}>{theme?.defaultEmoji ?? '🌙'}</Text>
+                  </View>
                 </View>
               </View>
-            </View>
+            )}
 
           {/* Title — editorial scale */}
           <Text style={styles.title} numberOfLines={2}>{props.title}</Text>
@@ -80,9 +105,19 @@ export default function EventCard(props: EventCardProps) {
               <GenderBadge mode={props.gender_mode} />
               {props.is_halal_venue && <HalalBadge />}
             </View>
-            <Text style={styles.goingText}>
-              {totalGoing > 0 ? `${totalGoing} going` : 'Be the first'}
-            </Text>
+            <View style={styles.goingWrap}>
+              {totalGoing > 0 && (
+                <View style={[styles.accentDot, { backgroundColor: themePrimary }]} />
+              )}
+              <Text
+                style={[
+                  styles.goingText,
+                  totalGoing > 0 && { color: themePrimary },
+                ]}
+              >
+                {totalGoing > 0 ? `${totalGoing} going` : 'Be the first'}
+              </Text>
+            </View>
           </View>
           </View>
         </BlurView>
@@ -101,6 +136,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
     overflow: 'hidden',
+  },
+
+  // DAW-22 — poster hero
+  posterWrap: {
+    width: '100%',
+    aspectRatio: 1,
+    backgroundColor: COLORS.card,
+    position: 'relative',
+  },
+  posterImage: {
+    width: '100%',
+    height: '100%',
+  },
+  posterFade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 32,
+    backgroundColor: 'rgba(30, 30, 30, 0.35)',
   },
   blurCard: {
     borderRadius: 21,
@@ -190,6 +245,16 @@ const styles = StyleSheet.create({
   badgeGroup: {
     flexDirection: 'row',
     gap: SPACING.sm,
+  },
+  goingWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  accentDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   goingText: {
     fontSize: 14,

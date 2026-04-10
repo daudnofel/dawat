@@ -5,19 +5,19 @@ import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { useEventStore } from '../../store/useEventStore';
 
 export default function Step2Basics() {
-  const { draft, updateDraft, nextStep, prevStep } = useEventStore();
+  const { draft, updateDraft, nextStep } = useEventStore();
   const canContinue = draft.title.trim().length >= 2 && draft.host_name.trim().length >= 2;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => prevStep()}><Text style={styles.backText}>Back</Text></Pressable>
-        <Text style={styles.stepLabel}>Step 2 of 4</Text>
+        <View style={{ width: 50 }} />
+        <Text style={styles.stepLabel}>Step 1 of 6</Text>
         <View style={{ width: 50 }} />
       </View>
       <View style={styles.progressRow}>
-        {[1, 2, 3, 4].map((s) => (
-          <View key={s} style={[styles.dot, s <= 2 && styles.dotActive, s === 2 && styles.dotCurrent]} />
+        {[1, 2, 3, 4, 5, 6].map((s) => (
+          <View key={s} style={[styles.dot, s <= 1 && styles.dotActive, s === 1 && styles.dotCurrent]} />
         ))}
       </View>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>

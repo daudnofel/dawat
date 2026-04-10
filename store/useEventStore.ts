@@ -35,6 +35,11 @@ const INITIAL_DRAFT: EventDraft = {
   virtual_link: '',
   allow_plus_ones: false,
   max_plus_ones: 0,
+  // DAW-22 — 3-layer identity system
+  poster_url: null,
+  poster_type: null,
+  poster_library_id: null,
+  effect_id: null,
 };
 
 export const useEventStore = create<EventStoreState>((set) => ({
@@ -47,7 +52,7 @@ export const useEventStore = create<EventStoreState>((set) => ({
   setStep: (step) => set({ currentStep: step }),
 
   nextStep: () =>
-    set((state) => ({ currentStep: Math.min(state.currentStep + 1, 4) })),
+    set((state) => ({ currentStep: Math.min(state.currentStep + 1, 6) })),
 
   prevStep: () =>
     set((state) => ({ currentStep: Math.max(state.currentStep - 1, 1) })),

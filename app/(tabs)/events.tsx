@@ -97,6 +97,7 @@ export default function EventsScreen() {
     return (
       <EventCard
         key={e.id} id={e.id} title={e.title} theme_id={e.theme_id}
+        poster_url={e.poster_url}
         org_name={label}
         date_label={e.date_time ? new Date(e.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD'}
         location_name={e.location_name ?? 'TBD'} price={e.price}
@@ -179,6 +180,7 @@ export default function EventsScreen() {
           style={{ flex: 1 }}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          decelerationRate="fast"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gold} />}
         >
           {renderContent()}

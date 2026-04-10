@@ -82,7 +82,10 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <HeroUINativeProvider colorScheme="dark">
+      <HeroUINativeProvider
+        colorScheme="dark"
+        config={{ devInfo: { stylingPrinciples: false } }}
+      >
         <ThemeProvider value={DawatDarkTheme}>
           <StatusBar barStyle="light-content" />
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.dark } }}>

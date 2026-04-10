@@ -63,13 +63,13 @@ export default function Step3Details() {
         <Pressable onPress={() => prevStep()}>
           <Text style={styles.backText}>Back</Text>
         </Pressable>
-        <Text style={styles.stepLabel}>Step 3 of 4</Text>
+        <Text style={styles.stepLabel}>Step 4 of 6</Text>
         <View style={{ width: 50 }} />
       </View>
 
       <View style={styles.progressRow}>
-        {[1, 2, 3, 4].map((s) => (
-          <View key={s} style={[styles.dot, s <= 3 && styles.dotActive, s === 3 && styles.dotCurrent]} />
+        {[1, 2, 3, 4, 5, 6].map((s) => (
+          <View key={s} style={[styles.dot, s <= 4 && styles.dotActive, s === 4 && styles.dotCurrent]} />
         ))}
       </View>
 

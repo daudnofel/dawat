@@ -3,6 +3,11 @@ import { supabase } from '../supabase';
 import { GenderMode } from '../../types';
 
 // ─── Types ────────────────────────────────────────────────────────────
+export interface Attendee {
+  avatarUrl: string | null;
+  displayName: string;
+}
+
 export interface DiscoverEvent {
   id: string;
   title: string;
@@ -21,6 +26,7 @@ export interface DiscoverEvent {
     | { status: string; children_count?: number; plus_one_names?: string[] }[]
     | null;
   going: number;
+  attendees: Attendee[];
 }
 
 export type DiscoverFilter = {
@@ -47,7 +53,7 @@ export interface DiscoverFeed {
 
 // ─── Internals ────────────────────────────────────────────────────────
 const SELECT =
-  'id, title, theme_id, poster_url, description, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)';
+  'id, title, theme_id, poster_url, description, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names, user_id, users(avatar_url, display_name))';
 
 function endOfToday(): Date {
   const d = new Date();
@@ -139,12 +145,23 @@ export function useDiscoverFeed(filter?: DiscoverFilter): DiscoverFeed {
       return;
     }
 
-    const mapped: DiscoverEvent[] = (data ?? []).map((e: any) => ({
-      ...e,
-      going: (e.rsvps ?? []).filter(
+    const mapped: DiscoverEvent[] = (data ?? []).map((e: any) => {
+      const rsvps = e.rsvps ?? [];
+      const goingRsvps = rsvps.filter(
         (r: any) => r.status === 'yes' || r.status === 'inshallah'
-      ).length,
-    }));
+      );
+      const attendees: Attendee[] = goingRsvps
+        .filter((r: any) => r.users)
+        .map((r: any) => ({
+          avatarUrl: r.users?.avatar_url ?? null,
+          displayName: r.users?.display_name ?? '',
+        }));
+      return {
+        ...e,
+        going: goingRsvps.length,
+        attendees,
+      };
+    });
 
     setEvents(mapped);
     setLoading(false);

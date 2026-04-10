@@ -15,11 +15,11 @@ import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import EventCard from '../../components/EventCard';
 import HomeSection from '../../components/HomeSection';
-import SkeletonCard from '../../components/SkeletonCard';
 import EmptyState from '../../components/EmptyState';
 import DiscoverFilterBar from '../../components/DiscoverFilterBar';
 import TonightFeaturedGrid from '../../components/TonightFeaturedGrid';
 import DateGroupedSection from '../../components/DateGroupedSection';
+import DiscoverFeedSkeleton from '../../components/DiscoverFeedSkeleton';
 import {
   useDiscoverFeed,
   DiscoverEvent,
@@ -173,13 +173,8 @@ export default function DiscoverScreen() {
 
   // ─── Header (renders inside FlashList ListHeaderComponent) ───────
   const renderHeader = useCallback(() => {
-    if (loading) {
-      return (
-        <View style={styles.headerContent}>
-          <SkeletonCard />
-          <SkeletonCard />
-        </View>
-      );
+    if (loading && sections.length === 0) {
+      return <DiscoverFeedSkeleton />;
     }
 
     if (error) {
@@ -190,6 +185,15 @@ export default function DiscoverScreen() {
             title="Couldn't load Discover"
             subtitle={error}
           />
+          <Pressable
+            onPress={refresh}
+            style={({ pressed }) => [
+              styles.retryBtn,
+              pressed && { opacity: 0.7 },
+            ]}
+          >
+            <Text style={styles.retryText}>Try again</Text>
+          </Pressable>
         </View>
       );
     }
@@ -227,7 +231,7 @@ export default function DiscoverScreen() {
     }
 
     return null;
-  }, [loading, error, sections.length, filterActive]);
+  }, [loading, error, sections.length, filterActive, refresh]);
 
   return (
     <View style={styles.container}>
@@ -463,6 +467,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(201, 168, 76, 0.18)',
   },
   clearFiltersText: {
+    color: COLORS.gold2,
+    fontSize: 14,
+    ...FONTS.bold,
+  },
+
+  retryBtn: {
+    alignSelf: 'center',
+    marginTop: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 223, 161, 0.55)',
+    backgroundColor: 'rgba(201, 168, 76, 0.18)',
+  },
+  retryText: {
     color: COLORS.gold2,
     fontSize: 14,
     ...FONTS.bold,

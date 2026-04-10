@@ -54,6 +54,7 @@ function renderEventCard(event: DiscoverEvent) {
       description={event.description}
       variant="horizontal"
       org_name="Community Event"
+      host_name="Community Event"
       date_label={
         event.date_time
           ? new Date(event.date_time).toLocaleDateString('en-US', {
@@ -71,6 +72,7 @@ function renderEventCard(event: DiscoverEvent) {
       yes_count={yesCount}
       inshallah_count={inshallahCount}
       capacity={event.capacity}
+      attendee_avatar_urls={event.attendees.map((a) => a.avatarUrl)}
     />
   );
 }

@@ -8,6 +8,8 @@ import { View, Text, StyleSheet, Image, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import AnimatedPress from './AnimatedPress';
+import AttendeeAvatarStack from './AttendeeAvatarStack';
+import EventMetaRow from './EventMetaRow';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
 import { GenderMode } from '../types';
 import { getThemeById } from '../lib/themes';
@@ -35,6 +37,10 @@ interface EventCardProps {
   capacity?: number | null;
   variant?: EventCardVariant;
   width?: number;
+  /** DAW-30: avatar URLs for the AttendeeAvatarStack (horizontal variant). */
+  attendee_avatar_urls?: (string | null)[];
+  /** DAW-30: host or org name for the EventMetaRow (horizontal variant). */
+  host_name?: string;
 }
 
 export default function EventCard({
@@ -96,6 +102,9 @@ export default function EventCard({
       themeBorder={theme?.surface?.border ?? 'rgba(255, 255, 255, 0.08)'}
       cardBg={theme?.surface?.cardBg ?? 'rgba(30, 30, 30, 0.55)'}
       onPress={handlePress}
+      hostName={props.host_name}
+      price={props.price}
+      attendeeAvatarUrls={props.attendee_avatar_urls ?? []}
     />
   );
 }
@@ -281,6 +290,9 @@ interface HorizontalCardProps {
   themeBorder: string;
   cardBg: string;
   onPress: () => void;
+  hostName?: string;
+  price?: number;
+  attendeeAvatarUrls: (string | null)[];
 }
 
 function HorizontalCard(p: HorizontalCardProps) {
@@ -321,25 +333,31 @@ function HorizontalCard(p: HorizontalCardProps) {
         <View style={h.details}>
           <View style={h.textStack}>
             <Text style={h.title} numberOfLines={2}>{p.title}</Text>
-            {p.dateLabel && (
-              <Text style={h.meta} numberOfLines={1}>
-                {p.dateLabel}{p.locationName ? ` · ${p.locationName}` : ''}
-              </Text>
-            )}
+            <View style={h.metaRowWrap}>
+              <EventMetaRow
+                host={p.hostName}
+                dateLabel={p.dateLabel}
+                location={p.locationName}
+                price={p.price}
+              />
+            </View>
             {p.description && (
               <Text style={h.description} numberOfLines={2}>{p.description}</Text>
             )}
           </View>
 
           <View style={h.bottomRow}>
-            <View style={h.goingWrap}>
-              {p.totalGoing > 0 && (
-                <View style={[h.accentDot, { backgroundColor: p.themePrimary }]} />
-              )}
-              <Text style={[h.goingText, p.totalGoing > 0 && { color: p.themePrimary }]}>
-                {p.totalGoing > 0 ? `${p.totalGoing} going` : 'Be the first'}
-              </Text>
-            </View>
+            {p.totalGoing > 0 ? (
+              <AttendeeAvatarStack
+                avatarUrls={p.attendeeAvatarUrls}
+                totalCount={p.totalGoing}
+                size="sm"
+              />
+            ) : (
+              <View style={h.goingWrap}>
+                <Text style={h.goingText}>Be the first</Text>
+              </View>
+            )}
             <Text style={h.shareIcon}>↗</Text>
           </View>
         </View>
@@ -395,11 +413,8 @@ const h = StyleSheet.create({
     ...FONTS.bold,
     letterSpacing: -0.2,
   },
-  meta: {
-    fontSize: 13,
-    color: COLORS.muted,
-    ...FONTS.medium,
-    marginTop: 2,
+  metaRowWrap: {
+    marginTop: 4,
   },
   description: {
     fontSize: 12,
@@ -418,11 +433,6 @@ const h = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-  },
-  accentDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
   },
   goingText: {
     fontSize: 12,

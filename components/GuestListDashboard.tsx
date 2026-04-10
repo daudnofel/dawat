@@ -113,24 +113,16 @@ export default function GuestListDashboard({ eventId, visible, refreshKey }: Gue
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Guest List</Text>
-
-      {/* Summary cards */}
-      <View style={styles.summaryRow}>
-        <SummaryCard label="Going" count={yesCount} color={COLORS.green} />
-        <SummaryCard label="Inshallah" count={inshallahCount} color={COLORS.amber} />
-        {waitlistCount > 0 && <SummaryCard label="Waitlist" count={waitlistCount} color={COLORS.blue} />}
-        <SummaryCard label="Can't Go" count={noCount} color={COLORS.red} />
-      </View>
-
-      {(totalChildren > 0 || totalPlusOnes > 0) && (
-        <View style={styles.headcountRow}>
-          <Text style={styles.headcountText}>
-            Total headcount: <Text style={styles.headcountBold}>{totalHeadcount}</Text>
-            {' '}({yesCount} adults{totalPlusOnes > 0 ? ` + ${totalPlusOnes} +1s` : ''}{totalChildren > 0 ? ` + ${totalChildren} ${totalChildren === 1 ? 'child' : 'children'}` : ''})
-          </Text>
-        </View>
-      )}
+      {/* Clean summary line — no colored cards */}
+      <Text style={styles.summaryText}>
+        <Text style={{ color: COLORS.green }}>{yesCount}</Text> going
+        {inshallahCount > 0 && <> · <Text style={{ color: COLORS.amber }}>{inshallahCount}</Text> inshallah</>}
+        {waitlistCount > 0 && <> · <Text style={{ color: COLORS.blue }}>{waitlistCount}</Text> waitlist</>}
+        {noCount > 0 && <> · <Text style={{ color: COLORS.hint }}>{noCount}</Text> declined</>}
+        {(totalChildren > 0 || totalPlusOnes > 0) && (
+          <>  ·  {totalHeadcount} total</>
+        )}
+      </Text>
 
       {/* Filter tabs */}
       <View style={styles.tabRow}>
@@ -170,14 +162,6 @@ export default function GuestListDashboard({ eventId, visible, refreshKey }: Gue
   );
 }
 
-function SummaryCard({ label, count, color }: { label: string; count: number; color: string }) {
-  return (
-    <View style={[styles.summaryCard, { borderColor: `${color}40` }]}>
-      <Text style={[styles.summaryCount, { color }]}>{count}</Text>
-      <Text style={styles.summaryLabel}>{label}</Text>
-    </View>
-  );
-}
 
 function GuestItem({ guest, onAdmit }: { guest: GuestRow; onAdmit?: () => void }) {
   const statusColor = {
@@ -232,57 +216,13 @@ function GuestItem({ guest, onAdmit }: { guest: GuestRow; onAdmit?: () => void }
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: SPACING.lg,
-    paddingTop: SPACING.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255, 223, 161, 0.10)',
+    marginTop: SPACING.md,
   },
-  sectionTitle: {
-    fontSize: 18,
-    color: COLORS.white,
-    ...FONTS.bold,
-    marginBottom: SPACING.lg,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    marginBottom: SPACING.lg,
-  },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: 'rgba(30, 30, 30, 0.55)',
-    borderRadius: RADIUS.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    paddingVertical: SPACING.md,
-    alignItems: 'center',
-  },
-  summaryCount: {
-    fontSize: 24,
-    ...FONTS.bold,
-  },
-  summaryLabel: {
-    fontSize: 11,
+  summaryText: {
+    fontSize: 14,
     color: COLORS.muted,
     ...FONTS.medium,
-    marginTop: 2,
-  },
-  headcountRow: {
-    backgroundColor: 'rgba(30, 30, 30, 0.55)',
-    borderRadius: RADIUS.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 223, 161, 0.10)',
-    padding: SPACING.md,
-    marginBottom: SPACING.lg,
-  },
-  headcountText: {
-    fontSize: 13,
-    color: COLORS.muted,
-    ...FONTS.regular,
-    textAlign: 'center',
-  },
-  headcountBold: {
-    color: COLORS.white,
-    ...FONTS.bold,
+    marginBottom: SPACING.md,
   },
   tabRow: {
     flexDirection: 'row',
@@ -306,8 +246,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: SPACING.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255, 223, 161, 0.06)',
     gap: SPACING.md,
   },
   avatar: {

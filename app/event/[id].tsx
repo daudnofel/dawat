@@ -386,15 +386,30 @@ export default function EventDetailScreen() {
     [GenderMode.Family]: '👨‍👩‍👧 Family',
   }[event.gender_mode];
 
-  // DAW-22 Phase 2 — tint the whole page with the theme's pageBg,
-  // falling back to COLORS.dark if the event has no theme or the theme
-  // didn't provide an enriched surface.
-  const pageBg = theme?.surface?.pageBg ?? COLORS.dark;
+  // Use the theme's actual first gradient stop as the page background.
+  // For light themes (Cream Elegance, Sky Blue, etc.) this makes the whole
+  // page LIGHT with dark text — exactly like Partiful.
+  // For dark themes it's the theme's dark base.
+  const pageBg = theme?.background?.stops?.[0] ?? theme?.bannerBg ?? COLORS.dark;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: pageBg }]} edges={['top']}>
-      {/* DAW-22 Phase 4 — ambient effect overlay (pointerEvents="none" so it
-          doesn't block scroll or taps) */}
+      {/* Render the full theme gradient behind the scroll content */}
+      <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
+        <Defs>
+          <LinearGradient id="pageGrad" x1="0" y1="0" x2="0" y2="1">
+            {(theme?.background?.stops ?? [pageBg, pageBg]).map((stop, i, arr) => (
+              <Stop
+                key={`pg-${i}`}
+                offset={arr.length === 1 ? '0' : (i / (arr.length - 1)).toString()}
+                stopColor={stop}
+              />
+            ))}
+          </LinearGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill="url(#pageGrad)" />
+      </Svg>
+
       {event.effect_id && (
         <EventEffect effectId={event.effect_id as EffectId} />
       )}
@@ -472,31 +487,45 @@ export default function EventDetailScreen() {
         )}
 
         <View style={styles.body}>
-          <Text style={styles.title}>{event.title}</Text>
-          <GuestAvatars eventId={id!} refreshKey={guestRefreshKey} />
-          <Text style={styles.attendance}>
-            {yesCount} confirmed · {inshallahCount} Inshallah{waitlistCount > 0 ? ` · ${waitlistCount} waitlisted` : ''}
+          {/* ── Partiful-style clean layout: icon+text rows, no pills, no cards ── */}
+
+          {/* Date — big bold, like Partiful's "Thursday, Apr 9" */}
+          <Text style={[styles.dateMain, { color: theme?.textColor ?? COLORS.white }]}>
+            {event.date_tbd
+              ? 'Date TBD'
+              : event.date_time
+                ? new Date(event.date_time).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+                : 'Date TBD'}
           </Text>
-          {event.capacity && (
-            <View style={styles.capacityBar}>
-              <View style={[styles.capacityFill, { width: `${Math.min((yesCount / event.capacity) * 100, 100)}%` }]} />
-            </View>
+          {event.date_time && (
+            <Text style={[styles.dateTime, { color: theme?.textColor ?? COLORS.white }]}>
+              {new Date(event.date_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+            </Text>
           )}
 
-          <View style={[styles.infoCard, { borderColor: theme?.surface?.border ?? COLORS.border }]}>
-            <InfoRow icon="📅" text={event.date_tbd ? 'Date TBD' : (event.date_time ? new Date(event.date_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'Date TBD')} />
-            {event.date_time && <InfoRow icon="⏰" text={new Date(event.date_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} />}
-            <InfoRow icon="📍" text={event.is_location_hidden && !isHost && rsvpStatus !== RsvpStatus.Yes ? 'Address revealed after RSVP' : (event.location_name ?? 'Location TBD')} />
-            <InfoRow icon="💵" text={event.price === 0 ? 'Free' : `$${(event.price / 100).toFixed(2)}`} />
-            {event.is_halal_venue && <InfoRow icon="✅" text="Halal venue" />}
-            {event.virtual_link && <InfoRow icon="🔗" text="Virtual event — link available" />}
-            {event.rsvp_deadline && (
-              <InfoRow icon="⏳" text={`RSVP by ${new Date(event.rsvp_deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`} />
-            )}
-            {event.allow_plus_ones && (
-              <InfoRow icon="👥" text={`Plus-ones allowed (up to ${event.max_plus_ones})`} />
-            )}
+          {/* Hosted by — icon + text row */}
+          <View style={styles.infoRow}>
+            <Text style={styles.infoIcon}>🎯</Text>
+            <Text style={[styles.infoLabel, { color: theme?.textColor ? `${theme.textColor}AA` : COLORS.muted }]}>
+              Hosted by
+            </Text>
           </View>
+          <GuestAvatars eventId={id!} refreshKey={guestRefreshKey} />
+
+          {/* Location — icon + text, Partiful style */}
+          <View style={styles.infoRow}>
+            <Text style={styles.infoIcon}>📍</Text>
+            <Text style={[styles.infoValue, { color: theme?.textColor ?? COLORS.white }]}>
+              {event.is_location_hidden && !isHost && rsvpStatus !== RsvpStatus.Yes
+                ? 'Address revealed after RSVP'
+                : event.location_name ?? 'Location TBD'}
+            </Text>
+          </View>
+          {event.location_address && !event.is_location_hidden && (
+            <Text style={[styles.locationAddress, { color: theme?.textColor ? `${theme.textColor}88` : COLORS.muted }]}>
+              {event.location_address}
+            </Text>
+          )}
 
           <MapPreview
             locationName={event.location_name}
@@ -504,19 +533,48 @@ export default function EventDetailScreen() {
             isHidden={event.is_location_hidden && !isHost && rsvpStatus !== RsvpStatus.Yes}
           />
 
-          <AddToCalendar
-            title={event.title}
-            dateTime={event.date_time}
-            locationName={event.location_name}
-            description={event.description}
-          />
-
-          {event.description && (
-            <Text style={styles.description}>{event.description}</Text>
+          {/* Capacity — icon + "X/Y spots left" like Partiful */}
+          {event.capacity && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoIcon}>👥</Text>
+              <Text style={[styles.infoValue, { color: theme?.textColor ?? COLORS.white }]}>
+                {Math.max(event.capacity - yesCount, 0)}/{event.capacity} spots left
+              </Text>
+            </View>
           )}
 
-          <View style={styles.rsvpSection}>
-            <RsvpButtons currentStatus={rsvpStatus} onSelect={handleRsvp} />
+          {/* Price — only show if not free */}
+          {event.price > 0 && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoIcon}>🎟</Text>
+              <Text style={[styles.infoValue, { color: theme?.textColor ?? COLORS.white }]}>
+                ${(event.price / 100).toFixed(0)}
+              </Text>
+            </View>
+          )}
+
+          {event.rsvp_deadline && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoIcon}>⏳</Text>
+              <Text style={[styles.infoValue, { color: theme?.textColor ?? COLORS.white }]}>
+                RSVP by {new Date(event.rsvp_deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </Text>
+            </View>
+          )}
+
+          {/* Description — large flowing text, like Partiful */}
+          {event.description && (
+            <Text style={[styles.description, { color: theme?.textColor ?? COLORS.white }]}>
+              {event.description}
+            </Text>
+          )}
+
+          {/* Guest list — heading + count + avatars, clean */}
+          <View style={styles.guestSection}>
+            <Text style={[styles.guestHeading, { color: theme?.textColor ?? COLORS.white }]}>Guest List</Text>
+            <Text style={[styles.attendance, { color: theme?.textColor ? `${theme.textColor}88` : COLORS.muted }]}>
+              {yesCount > 0 ? `${yesCount} Going` : ''}{yesCount > 0 && inshallahCount > 0 ? ' · ' : ''}{inshallahCount > 0 ? `${inshallahCount} Inshallah` : ''}{yesCount === 0 && inshallahCount === 0 ? 'No guests yet' : ''}
+            </Text>
           </View>
 
           <GuestListDashboard eventId={id!} visible={isHost} refreshKey={guestRefreshKey} />
@@ -557,21 +615,26 @@ export default function EventDetailScreen() {
           eventSlug={event.slug}
         />
       )}
+
+      {/* Floating RSVP bar — pinned to the bottom, always visible like Partiful */}
+      <View style={styles.floatingRsvp}>
+        <RsvpButtons currentStatus={rsvpStatus} onSelect={handleRsvp} />
+      </View>
     </SafeAreaView>
   );
 }
 
-function InfoRow({ icon, text }: { icon: string; text: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoIcon}>{icon}</Text>
-      <Text style={styles.infoText}>{text}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.dark },
+  container: { flex: 1, backgroundColor: COLORS.dark, position: 'relative' },
+  floatingRsvp: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: SPACING.xl,
+    paddingBottom: SPACING.xxl + SPACING.lg,
+    paddingTop: SPACING.md,
+  },
   topBar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md,
@@ -610,34 +673,80 @@ const styles = StyleSheet.create({
   halalBadge: { backgroundColor: 'rgba(76,175,80,0.2)', paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: RADIUS.full },
   halalBadgeText: { color: COLORS.green, fontSize: 12, ...FONTS.medium },
   body: { paddingHorizontal: SPACING.xl, paddingTop: SPACING.lg },
-  title: { fontSize: 24, color: COLORS.white, ...FONTS.bold, marginBottom: SPACING.sm },
-  attendance: { fontSize: 14, color: COLORS.muted, ...FONTS.regular, marginBottom: SPACING.sm },
-  capacityBar: { height: 4, backgroundColor: COLORS.border, borderRadius: 2, marginBottom: SPACING.lg },
-  capacityFill: { height: 4, backgroundColor: COLORS.gold, borderRadius: 2 },
-  infoCard: {
-    backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1,
-    borderColor: COLORS.border, padding: SPACING.lg, marginBottom: SPACING.lg, gap: SPACING.md,
+
+  // Date — large bold like Partiful's "Thursday, Apr 9"
+  dateMain: {
+    fontSize: 28,
+    ...FONTS.bold,
+    letterSpacing: -0.3,
   },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
-  infoIcon: { fontSize: 16 },
-  infoText: { fontSize: 14, color: COLORS.white, ...FONTS.regular, flex: 1 },
-  description: { fontSize: 14, color: COLORS.muted, ...FONTS.regular, lineHeight: 22, marginBottom: SPACING.lg },
-  rsvpSection: { borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: SPACING.md, marginBottom: SPACING.xxl + SPACING.xxl },
-  rsvpConfirm: { fontSize: 14, color: COLORS.green, ...FONTS.medium, textAlign: 'center', marginTop: SPACING.sm },
+  dateTime: {
+    fontSize: 18,
+    ...FONTS.regular,
+    marginBottom: SPACING.xl,
+  },
+
+  // Icon + text info rows — clean Partiful style
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    marginBottom: SPACING.sm,
+    marginTop: SPACING.lg,
+  },
+  infoIcon: {
+    fontSize: 18,
+    width: 28,
+  },
+  infoLabel: {
+    fontSize: 16,
+    ...FONTS.medium,
+  },
+  infoValue: {
+    fontSize: 18,
+    ...FONTS.bold,
+  },
+  locationAddress: {
+    fontSize: 15,
+    ...FONTS.regular,
+    marginLeft: 28 + SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+
+  // Description — large flowing text like Partiful
+  description: {
+    fontSize: 17,
+    ...FONTS.regular,
+    lineHeight: 28,
+    marginTop: SPACING.xxl,
+    marginBottom: SPACING.xl,
+  },
+
+  // Guest section
+  guestSection: {
+    marginTop: SPACING.xxl,
+    marginBottom: SPACING.lg,
+  },
+  guestHeading: {
+    fontSize: 20,
+    ...FONTS.bold,
+    marginBottom: SPACING.xs,
+  },
+  attendance: {
+    fontSize: 15,
+    ...FONTS.regular,
+    marginBottom: SPACING.md,
+  },
   hostActions: {
     marginTop: SPACING.xl, paddingTop: SPACING.lg,
-    borderTopWidth: 1, borderTopColor: COLORS.border,
-    gap: SPACING.sm, marginBottom: SPACING.xxl + SPACING.xxl,
+    gap: SPACING.sm, marginBottom: 120,
   },
   editButton: {
-    backgroundColor: COLORS.gold, borderRadius: RADIUS.md,
-    paddingVertical: SPACING.lg, alignItems: 'center',
-  },
-  editButtonText: { color: COLORS.dark, fontSize: 16, ...FONTS.bold },
-  cancelEventButton: {
-    backgroundColor: 'transparent', borderRadius: RADIUS.md,
     paddingVertical: SPACING.md, alignItems: 'center',
-    borderWidth: 1, borderColor: COLORS.red,
   },
-  cancelEventText: { color: COLORS.red, fontSize: 14, ...FONTS.medium },
+  editButtonText: { color: COLORS.gold, fontSize: 15, ...FONTS.semibold },
+  cancelEventButton: {
+    paddingVertical: SPACING.sm, alignItems: 'center',
+  },
+  cancelEventText: { color: COLORS.hint, fontSize: 13, ...FONTS.medium },
 });

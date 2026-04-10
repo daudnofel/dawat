@@ -797,10 +797,8 @@ export default function EventComments({ eventId, hostId }: EventCommentsProps) {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: SPACING.lg,
-    paddingTop: SPACING.lg,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    marginTop: SPACING.xl,
+    paddingTop: SPACING.md,
   },
   sectionTitle: {
     fontSize: 18,

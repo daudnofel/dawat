@@ -19,6 +19,7 @@ import SkeletonCard from '../../components/SkeletonCard';
 import EmptyState from '../../components/EmptyState';
 import DiscoverFilterBar from '../../components/DiscoverFilterBar';
 import TonightFeaturedGrid from '../../components/TonightFeaturedGrid';
+import DateGroupedSection from '../../components/DateGroupedSection';
 import {
   useDiscoverFeed,
   DiscoverEvent,
@@ -153,14 +154,13 @@ export default function DiscoverScreen() {
         );
       case 'byDate':
         return (
-          <HomeSection title="All upcoming" subtitle="Browse by day">
-            {item.data.map((group) => (
-              <View key={group.date} style={styles.dateGroup}>
-                <Text style={styles.dateLabel}>{group.label}</Text>
-                {group.events.map(renderEventCard)}
-              </View>
-            ))}
-          </HomeSection>
+          <View style={styles.byDateSection}>
+            <View style={styles.byDateHeader}>
+              <Text style={styles.byDateTitle}>All upcoming</Text>
+              <Text style={styles.byDateSubtitle}>Browse by day</Text>
+            </View>
+            <DateGroupedSection groups={item.data} renderEvent={renderEventCard} />
+          </View>
         );
       case 'popular':
         return (
@@ -391,17 +391,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl,
   },
 
-  // Date group inside the byDate section
-  dateGroup: {
+  // byDate section custom header (DateGroupedSection manages its own padding)
+  byDateSection: {
     marginBottom: SPACING.xl,
   },
-  dateLabel: {
-    fontSize: 14,
-    color: COLORS.gold,
+  byDateHeader: {
+    paddingHorizontal: SPACING.xl,
+    marginBottom: SPACING.md,
+  },
+  byDateTitle: {
+    fontSize: 20,
+    color: COLORS.white,
     ...FONTS.bold,
-    marginBottom: SPACING.sm,
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
+    letterSpacing: -0.3,
+  },
+  byDateSubtitle: {
+    fontSize: 13,
+    color: COLORS.muted,
+    ...FONTS.medium,
+    marginTop: 2,
   },
 
   searchHeader: {

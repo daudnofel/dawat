@@ -233,15 +233,15 @@ export default function DiscoverScreen() {
     <View style={styles.container}>
       {/* Golden atmospheric glow */}
       <View style={styles.atmosphereLayer} pointerEvents="none">
-        <Svg width={SCREEN_WIDTH} height={350} style={styles.glowSvg}>
+        <Svg width={SCREEN_WIDTH} height={420} style={styles.glowSvg}>
           <Defs>
-            <RadialGradient id="discoverGlow" cx="50%" cy="0%" rx="70%" ry="80%">
-              <Stop offset="0" stopColor="#FFDFA1" stopOpacity="0.14" />
-              <Stop offset="0.4" stopColor="#E6C27A" stopOpacity="0.06" />
+            <RadialGradient id="discoverGlow" cx="50%" cy="0%" rx="80%" ry="90%">
+              <Stop offset="0" stopColor="#FFDFA1" stopOpacity="0.18" />
+              <Stop offset="0.35" stopColor="#E6C27A" stopOpacity="0.08" />
               <Stop offset="1" stopColor={COLORS.dark} stopOpacity="0" />
             </RadialGradient>
           </Defs>
-          <Rect x="0" y="0" width={SCREEN_WIDTH} height={350} fill="url(#discoverGlow)" />
+          <Rect x="0" y="0" width={SCREEN_WIDTH} height={420} fill="url(#discoverGlow)" />
         </Svg>
       </View>
 
@@ -348,10 +348,15 @@ const styles = StyleSheet.create({
 
   header: {
     paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.sm,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.md,
   },
-  title: { fontSize: 22, color: COLORS.white, ...FONTS.bold },
+  title: {
+    fontSize: 32,
+    color: COLORS.white,
+    ...FONTS.bold,
+    letterSpacing: -0.8,
+  },
 
   // Search — glass input
   searchContainer: {
@@ -393,14 +398,15 @@ const styles = StyleSheet.create({
 
   // byDate section custom header (DateGroupedSection manages its own padding)
   byDateSection: {
+    marginTop: SPACING.xxl,
     marginBottom: SPACING.xl,
   },
   byDateHeader: {
     paddingHorizontal: SPACING.xl,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.lg,
   },
   byDateTitle: {
-    fontSize: 20,
+    fontSize: 22,
     color: COLORS.white,
     ...FONTS.bold,
     letterSpacing: -0.3,
@@ -408,7 +414,7 @@ const styles = StyleSheet.create({
   byDateSubtitle: {
     fontSize: 13,
     color: COLORS.muted,
-    ...FONTS.medium,
+    ...FONTS.regular,
     marginTop: 2,
   },
 
@@ -426,14 +432,15 @@ const styles = StyleSheet.create({
 
   // Tonight section — custom header (grid manages its own padding)
   tonightSection: {
-    marginBottom: SPACING.xl,
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.xxl,
   },
   tonightHeader: {
     paddingHorizontal: SPACING.xl,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.lg,
   },
   tonightTitle: {
-    fontSize: 20,
+    fontSize: 22,
     color: COLORS.white,
     ...FONTS.bold,
     letterSpacing: -0.3,
@@ -441,7 +448,7 @@ const styles = StyleSheet.create({
   tonightSubtitle: {
     fontSize: 13,
     color: COLORS.muted,
-    ...FONTS.medium,
+    ...FONTS.regular,
     marginTop: 2,
   },
 

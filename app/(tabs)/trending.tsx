@@ -18,6 +18,7 @@ import HomeSection from '../../components/HomeSection';
 import SkeletonCard from '../../components/SkeletonCard';
 import EmptyState from '../../components/EmptyState';
 import DiscoverFilterBar from '../../components/DiscoverFilterBar';
+import TonightFeaturedGrid from '../../components/TonightFeaturedGrid';
 import {
   useDiscoverFeed,
   DiscoverEvent,
@@ -134,9 +135,13 @@ export default function DiscoverScreen() {
     switch (item.type) {
       case 'tonight':
         return (
-          <HomeSection title="Tonight ✨" subtitle="Happening today">
-            {item.data.map(renderEventCard)}
-          </HomeSection>
+          <View style={styles.tonightSection}>
+            <View style={styles.tonightHeader}>
+              <Text style={styles.tonightTitle}>Tonight ✨</Text>
+              <Text style={styles.tonightSubtitle}>Happening today</Text>
+            </View>
+            <TonightFeaturedGrid events={item.data} />
+          </View>
         );
       case 'thisWeek':
         return (
@@ -407,6 +412,27 @@ const styles = StyleSheet.create({
 
   filterBarWrap: {
     paddingBottom: SPACING.sm,
+  },
+
+  // Tonight section — custom header (grid manages its own padding)
+  tonightSection: {
+    marginBottom: SPACING.xl,
+  },
+  tonightHeader: {
+    paddingHorizontal: SPACING.xl,
+    marginBottom: SPACING.md,
+  },
+  tonightTitle: {
+    fontSize: 20,
+    color: COLORS.white,
+    ...FONTS.bold,
+    letterSpacing: -0.3,
+  },
+  tonightSubtitle: {
+    fontSize: 13,
+    color: COLORS.muted,
+    ...FONTS.medium,
+    marginTop: 2,
   },
 
   clearFiltersBtn: {

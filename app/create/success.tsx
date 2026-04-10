@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Share, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Share, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import ConfettiCannon from 'react-native-confetti-cannon';
@@ -62,8 +62,23 @@ export default function SuccessScreen({ onDone }: { onDone?: () => void }) {
     router.replace('/(tabs)');
   };
 
+  const handleClose = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    reset();
+    onDone?.();
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      {/* Close / X button — resets and goes back to step 1 */}
+      <Pressable
+        style={({ pressed }) => [styles.closeButton, pressed && { opacity: 0.6 }]}
+        onPress={handleClose}
+        hitSlop={16}
+      >
+        <Text style={styles.closeIcon}>✕</Text>
+      </Pressable>
+
       <ConfettiCannon
         ref={confettiRef}
         count={80}
@@ -110,6 +125,26 @@ export default function SuccessScreen({ onDone }: { onDone?: () => void }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.dark },
+  closeButton: {
+    position: 'absolute',
+    top: SPACING.xxl + SPACING.xl,
+    right: SPACING.xl,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(30, 30, 30, 0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    zIndex: 10,
+  },
+  closeIcon: {
+    color: COLORS.white,
+    fontSize: 16,
+    ...FONTS.bold,
+    lineHeight: 18,
+  },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SPACING.xl },
   confettiEmoji: { fontSize: 64, marginBottom: SPACING.lg },
   title: { fontSize: 28, color: COLORS.white, ...FONTS.bold, textAlign: 'center', marginBottom: SPACING.sm },

@@ -9,6 +9,8 @@ import Step1Theme from '../create/step1-theme';
 import Step2Basics from '../create/step2-basics';
 import Step3Details from '../create/step3-details';
 import Step4Settings from '../create/step4-settings';
+import StepPoster from '../create/step-poster';
+import StepEffect from '../create/step-effect';
 import SuccessScreen from '../create/success';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -69,10 +71,13 @@ export default function CreateTab() {
         </Svg>
       </View>
       <Animated.View style={[styles.content, animStyle]}>
-        {currentStep === 1 && <Step1Theme />}
-        {currentStep === 2 && <Step2Basics />}
-        {currentStep === 3 && <Step3Details />}
-        {currentStep === 4 && <Step4Settings onPublish={() => setPublished(true)} />}
+        {/* DAW-22 new order: Basics → Poster → Theme → Details → Effects → Settings */}
+        {currentStep === 1 && <Step2Basics />}
+        {currentStep === 2 && <StepPoster />}
+        {currentStep === 3 && <Step1Theme />}
+        {currentStep === 4 && <Step3Details />}
+        {currentStep === 5 && <StepEffect />}
+        {currentStep === 6 && <Step4Settings onPublish={() => setPublished(true)} />}
       </Animated.View>
     </View>
   );

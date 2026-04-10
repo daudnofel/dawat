@@ -23,6 +23,7 @@ interface FeedEvent {
   id: string;
   title: string;
   theme_id: string;
+  poster_url: string | null;
   gender_mode: GenderMode;
   is_halal_venue: boolean;
   price: number;
@@ -61,7 +62,7 @@ export default function HomeScreen() {
   const fetchDiscover = useCallback(async () => {
     const { data } = await supabase
       .from('events')
-      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
+      .select('id, title, theme_id, poster_url, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
       .eq('is_published', true)
       .eq('is_cancelled', false)
       .order('created_at', { ascending: false })
@@ -102,7 +103,7 @@ export default function HomeScreen() {
 
     const { data } = await supabase
       .from('events')
-      .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
+      .select('id, title, theme_id, poster_url, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
       .in('id', distinctIds)
       .eq('is_cancelled', false);
 
@@ -128,7 +129,7 @@ export default function HomeScreen() {
     if (rsvps && rsvps.length > 0) {
       const { data: ev } = await supabase
         .from('events')
-        .select('id, title, theme_id, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
+        .select('id, title, theme_id, poster_url, gender_mode, is_halal_venue, price, capacity, date_time, location_name, host_id, slug, rsvps(status, children_count, plus_one_names)')
         .eq('id', rsvps[0].event_id)
         .eq('is_cancelled', false)
         .single();
@@ -192,6 +193,7 @@ export default function HomeScreen() {
         id={event.id}
         title={event.title}
         theme_id={event.theme_id}
+        poster_url={event.poster_url}
         org_name="Personal Event"
         date_label={event.date_time ? new Date(event.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Date TBD'}
         location_name={event.location_name ?? 'Location TBD'}

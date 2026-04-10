@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, ActivityIndicator, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
@@ -19,12 +19,17 @@ import ShareSheet from '../../components/ShareSheet';
 import { getThemeById } from '../../lib/themes';
 import { getCurrentUserId } from '../../lib/auth-cache';
 import { triggerPush } from '../../lib/push';
+import EventEffect from '../../components/EventEffect';
+import { EffectId } from '../../types';
 
 interface EventDetail {
   id: string;
   title: string;
   description: string | null;
   theme_id: string;
+  poster_url: string | null;
+  poster_type: string | null;
+  effect_id: string | null;
   gender_mode: GenderMode;
   date_time: string | null;
   date_tbd: boolean;
@@ -381,9 +386,19 @@ export default function EventDetailScreen() {
     [GenderMode.Family]: '👨‍👩‍👧 Family',
   }[event.gender_mode];
 
+  // DAW-22 Phase 2 — tint the whole page with the theme's pageBg,
+  // falling back to COLORS.dark if the event has no theme or the theme
+  // didn't provide an enriched surface.
+  const pageBg = theme?.surface?.pageBg ?? COLORS.dark;
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={[styles.container, { backgroundColor: pageBg }]} edges={['top']}>
+      {/* DAW-22 Phase 4 — ambient effect overlay (pointerEvents="none" so it
+          doesn't block scroll or taps) */}
+      {event.effect_id && (
+        <EventEffect effectId={event.effect_id as EffectId} />
+      )}
+      <ScrollView showsVerticalScrollIndicator={false} style={{ backgroundColor: 'transparent' }}>
         <View style={styles.topBar}>
           <Pressable onPress={() => router.back()}>
             <Text style={styles.backText}>← Back</Text>
@@ -393,28 +408,68 @@ export default function EventDetailScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.banner}>
-          <Svg style={StyleSheet.absoluteFill} preserveAspectRatio="none">
-            <Defs>
-              <LinearGradient id="detailGrad" x1="0" y1="0" x2="1" y2="1">
-                <Stop offset="0" stopColor={theme?.bannerBg ?? COLORS.card2} />
-                <Stop offset="1" stopColor={COLORS.card} />
-              </LinearGradient>
-            </Defs>
-            <Rect x="0" y="0" width="100%" height="100%" fill="url(#detailGrad)" />
-          </Svg>
-          <Text style={styles.bannerEmoji}>{theme?.defaultEmoji ?? '🌙'}</Text>
-          <View style={styles.badgeRow}>
-            <View style={styles.genderBadge}>
-              <Text style={styles.genderBadgeText}>{genderLabel}</Text>
-            </View>
-            {event.is_halal_venue && (
-              <View style={styles.halalBadge}>
-                <Text style={styles.halalBadgeText}>✅ Halal</Text>
+        {/* DAW-22 — when a poster exists, render it full-width 1:1 as the hero.
+            Otherwise fall back to the original theme gradient + emoji banner. */}
+        {event.poster_url ? (
+          <View style={styles.posterHero}>
+            <Image
+              source={{ uri: event.poster_url }}
+              style={styles.posterHeroImage}
+              resizeMode="cover"
+            />
+            {/* Bottom fade blends the poster into the page background below */}
+            <Svg style={styles.posterFadeOverlay} pointerEvents="none">
+              <Defs>
+                <LinearGradient id="posterFade" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor={COLORS.dark} stopOpacity="0" />
+                  <Stop offset="1" stopColor={COLORS.dark} stopOpacity="0.95" />
+                </LinearGradient>
+              </Defs>
+              <Rect x="0" y="0" width="100%" height="100%" fill="url(#posterFade)" />
+            </Svg>
+            <View style={styles.badgeRow}>
+              <View style={styles.genderBadge}>
+                <Text style={styles.genderBadgeText}>{genderLabel}</Text>
               </View>
-            )}
+              {event.is_halal_venue && (
+                <View style={styles.halalBadge}>
+                  <Text style={styles.halalBadgeText}>✅ Halal</Text>
+                </View>
+              )}
+            </View>
           </View>
-        </View>
+        ) : (
+          <View style={styles.banner}>
+            {/* DAW-22 Phase 2 — use the theme's full multi-stop gradient
+                instead of the old 2-stop fade. Falls back to the base
+                dark if we can't resolve a theme. */}
+            <Svg style={StyleSheet.absoluteFill} preserveAspectRatio="none">
+              <Defs>
+                <LinearGradient id="detailGrad" x1="0" y1="0" x2="1" y2="1">
+                  {(theme?.background?.stops ?? [theme?.bannerBg ?? COLORS.card2, COLORS.card]).map((stop, i, arr) => (
+                    <Stop
+                      key={`detail-${i}`}
+                      offset={arr.length === 1 ? '0' : (i / (arr.length - 1)).toString()}
+                      stopColor={stop}
+                    />
+                  ))}
+                </LinearGradient>
+              </Defs>
+              <Rect x="0" y="0" width="100%" height="100%" fill="url(#detailGrad)" />
+            </Svg>
+            <Text style={styles.bannerEmoji}>{theme?.defaultEmoji ?? '🌙'}</Text>
+            <View style={styles.badgeRow}>
+              <View style={styles.genderBadge}>
+                <Text style={styles.genderBadgeText}>{genderLabel}</Text>
+              </View>
+              {event.is_halal_venue && (
+                <View style={styles.halalBadge}>
+                  <Text style={styles.halalBadgeText}>✅ Halal</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         <View style={styles.body}>
           <Text style={styles.title}>{event.title}</Text>
@@ -428,7 +483,7 @@ export default function EventDetailScreen() {
             </View>
           )}
 
-          <View style={styles.infoCard}>
+          <View style={[styles.infoCard, { borderColor: theme?.surface?.border ?? COLORS.border }]}>
             <InfoRow icon="📅" text={event.date_tbd ? 'Date TBD' : (event.date_time ? new Date(event.date_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'Date TBD')} />
             {event.date_time && <InfoRow icon="⏰" text={new Date(event.date_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} />}
             <InfoRow icon="📍" text={event.is_location_hidden && !isHost && rsvpStatus !== RsvpStatus.Yes ? 'Address revealed after RSVP' : (event.location_name ?? 'Location TBD')} />
@@ -526,6 +581,30 @@ const styles = StyleSheet.create({
   banner: { height: 160, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   bannerEmoji: { fontSize: 56 },
   badgeRow: { position: 'absolute', bottom: SPACING.md, left: SPACING.lg, flexDirection: 'row', gap: SPACING.sm },
+
+  // DAW-22 — poster hero with breathing room on both sides
+  posterHero: {
+    alignSelf: 'center',
+    width: '88%',
+    aspectRatio: 1,
+    borderRadius: RADIUS.xl,
+    overflow: 'hidden',
+    backgroundColor: COLORS.card,
+    position: 'relative',
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  posterHeroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  posterFadeOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 120,
+  },
   genderBadge: { backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: RADIUS.full },
   genderBadgeText: { color: COLORS.white, fontSize: 12, ...FONTS.medium },
   halalBadge: { backgroundColor: 'rgba(76,175,80,0.2)', paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: RADIUS.full },

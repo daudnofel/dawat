@@ -6,21 +6,23 @@ import { useEventStore } from '../../store/useEventStore';
 import ThemePicker from '../../components/ThemePicker';
 
 export default function Step1Theme() {
-  const { draft, updateDraft, nextStep, reset } = useEventStore();
+  const { draft, updateDraft, nextStep, prevStep } = useEventStore();
 
   const canContinue = draft.theme_id !== '';
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <View style={{ width: 50 }} />
-        <Text style={styles.stepLabel}>Step 1 of 4</Text>
+        <Pressable onPress={() => prevStep()} hitSlop={10}>
+          <Text style={styles.backText}>Back</Text>
+        </Pressable>
+        <Text style={styles.stepLabel}>Step 3 of 6</Text>
         <View style={{ width: 50 }} />
       </View>
 
       <View style={styles.progressRow}>
-        {[1, 2, 3, 4].map((s) => (
-          <View key={s} style={[styles.dot, s === 1 && styles.dotActive]} />
+        {[1, 2, 3, 4, 5, 6].map((s) => (
+          <View key={s} style={[styles.dot, s <= 3 && styles.dotActive, s === 3 && styles.dotCurrent]} />
         ))}
       </View>
 
@@ -71,7 +73,9 @@ const styles = StyleSheet.create({
   stepLabel: { color: COLORS.muted, fontSize: 13, ...FONTS.medium },
   progressRow: { flexDirection: 'row', justifyContent: 'center', gap: SPACING.sm, marginBottom: SPACING.lg },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.border },
-  dotActive: { backgroundColor: COLORS.gold, width: 24 },
+  dotActive: { backgroundColor: COLORS.gold },
+  dotCurrent: { width: 24 },
+  backText: { color: COLORS.gold, fontSize: 16, ...FONTS.medium },
   title: { fontSize: 22, color: COLORS.white, ...FONTS.bold, paddingHorizontal: SPACING.xl, marginBottom: SPACING.lg },
   scroll: { flex: 1 },
   buttonWrap: { paddingHorizontal: SPACING.xl, paddingTop: SPACING.xl },

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, ScrollView, Image, Pressable, ActivityIndicator, Dimensions, Share } from 'react-native';
+import { View, Text, StyleSheet, Alert, ScrollView, Image, Pressable, ActivityIndicator, Dimensions, Share, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Svg, { Defs, LinearGradient, RadialGradient, Stop, Circle, Rect } from 'react-native-svg';
@@ -114,10 +114,27 @@ export default function ProfileScreen() {
   const handlePickAvatar = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    // Check existing status first — requesting again once denied does nothing on iOS
+    const existing = await ImagePicker.getMediaLibraryPermissionsAsync();
+    let status = existing.status;
+
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow access to your photo library.');
-      return;
+      if (existing.canAskAgain) {
+        const req = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        status = req.status;
+      }
+
+      if (status !== 'granted') {
+        Alert.alert(
+          'Photo access needed',
+          'Dawat needs access to your photo library to update your profile photo. Open Settings to enable it.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ],
+        );
+        return;
+      }
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({

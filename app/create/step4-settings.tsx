@@ -8,7 +8,7 @@ import { supabase } from '../../lib/supabase';
 import { getCurrentUserId } from '../../lib/auth-cache';
 import { generateSlug } from '../../lib/slugify';
 import { triggerEmail } from '../../lib/email';
-import { GenderMode } from '../../types';
+import { GenderMode, PosterType } from '../../types';
 
 const GENDER_OPTIONS = [
   { label: 'Mixed', subtitle: 'Open to all', emoji: '🌟', value: GenderMode.Mixed },
@@ -34,6 +34,46 @@ export default function Step4Settings({ onPublish }: { onPublish?: () => void })
     const slug = generateSlug(draft.title);
     const serviceKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_KEY!;
 
+    // DAW-22: upload the poster to event-posters bucket if the user picked
+    // a local image. poster_url will be swapped from the local URI to the
+    // public URL before inserting the event row.
+    let finalPosterUrl: string | null = null;
+
+    if (draft.poster_url && draft.poster_type === PosterType.Upload) {
+      try {
+        const ext = draft.poster_url.split('.').pop()?.split('?')[0]?.toLowerCase() ?? 'jpg';
+        const safeExt = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic'].includes(ext) ? ext : 'jpg';
+        const filePath = `${userId}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${safeExt}`;
+
+        const response = await fetch(draft.poster_url);
+        const blob = await response.blob();
+        const arrayBuffer = await new Response(blob).arrayBuffer();
+
+        const { error: uploadErr } = await supabase.storage
+          .from('event-posters')
+          .upload(filePath, arrayBuffer, {
+            contentType: `image/${safeExt === 'jpg' ? 'jpeg' : safeExt}`,
+            upsert: false,
+          });
+
+        if (uploadErr) {
+          Alert.alert('Poster upload failed', uploadErr.message);
+          setPublishing(false);
+          return;
+        }
+
+        const { data: urlData } = supabase.storage.from('event-posters').getPublicUrl(filePath);
+        finalPosterUrl = urlData.publicUrl;
+      } catch (e: any) {
+        Alert.alert('Poster upload failed', e?.message ?? 'Unknown error');
+        setPublishing(false);
+        return;
+      }
+    } else if (draft.poster_url && draft.poster_type === PosterType.Library) {
+      // Library posters already have a public URL — pass through unchanged.
+      finalPosterUrl = draft.poster_url;
+    }
+
     const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/events`, {
       method: 'POST',
       headers: {
@@ -46,6 +86,11 @@ export default function Step4Settings({ onPublish }: { onPublish?: () => void })
       description: draft.description || null,
       host_id: userId,
       theme_id: draft.theme_id,
+      // DAW-22 identity layers
+      poster_url: finalPosterUrl,
+      poster_type: draft.poster_type,
+      poster_library_id: draft.poster_library_id,
+      effect_id: draft.effect_id,
       gender_mode: draft.gender_mode,
       is_id_required: draft.is_id_required,
       date_time: draft.date_time?.toISOString() ?? null,
@@ -107,13 +152,13 @@ export default function Step4Settings({ onPublish }: { onPublish?: () => void })
         <Pressable onPress={() => prevStep()}>
           <Text style={styles.backText}>Back</Text>
         </Pressable>
-        <Text style={styles.stepLabel}>Step 4 of 4</Text>
+        <Text style={styles.stepLabel}>Step 6 of 6</Text>
         <View style={{ width: 50 }} />
       </View>
 
       <View style={styles.progressRow}>
-        {[1, 2, 3, 4].map((s) => (
-          <View key={s} style={[styles.dot, styles.dotActive, s === 4 && styles.dotCurrent]} />
+        {[1, 2, 3, 4, 5, 6].map((s) => (
+          <View key={s} style={[styles.dot, styles.dotActive, s === 6 && styles.dotCurrent]} />
         ))}
       </View>
 

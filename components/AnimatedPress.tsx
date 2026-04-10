@@ -4,6 +4,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
@@ -36,7 +37,7 @@ export default function AnimatedPress({
         scale.value = withSpring(scaleValue, { damping: 15, stiffness: 400 });
       }}
       onPressOut={() => {
-        scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+        scale.value = withTiming(1, { duration: 120 });
       }}
       onPress={(e) => {
         if (haptic !== 'none') {

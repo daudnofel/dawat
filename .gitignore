@@ -40,3 +40,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Poster library assets — hosted in Supabase Storage, not in the repo
+assets/poster-library/

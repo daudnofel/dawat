@@ -77,6 +77,43 @@ export enum Gender {
   PreferNotSay = 'prefer_not_say',
 }
 
+// ─── Event Identity System (DAW-22) ──────────────────────────
+
+export enum PosterType {
+  Upload = 'upload',    // user uploaded from camera roll
+  Library = 'library',  // picked from our curated library
+  Builder = 'builder',  // made in-app via poster builder (v5)
+}
+
+export enum PosterCategory {
+  Nikkah = 'nikkah',
+  Walima = 'walima',
+  Aqiqah = 'aqiqah',
+  Mehndi = 'mehndi',
+  Iftar = 'iftar',
+  Eid = 'eid',
+  Ramadan = 'ramadan',
+  Halaqa = 'halaqa',
+  Jummah = 'jummah',
+  Fundraiser = 'fundraiser',
+  Community = 'community',
+  Umrah = 'umrah',
+}
+
+/**
+ * Ambient Lottie effects for the event detail page.
+ * Stored as string on events.effect_id. null means no effect.
+ */
+export type EffectId =
+  | 'rose-petals'
+  | 'lanterns'
+  | 'gold-sparkles'
+  | 'crescents'
+  | 'geometric-rays'
+  | 'date-palms'
+  | 'bubbles'
+  | 'floating-dua';
+
 // ─── Database Row Types ──────────────────────────────────────
 
 export interface User {
@@ -105,6 +142,11 @@ export interface Event {
   host_id: string;
   theme_id: string;
   theme_custom_url: string | null;
+  // DAW-22 — 3-layer identity system
+  poster_url: string | null;
+  poster_type: PosterType | null;
+  poster_library_id: string | null;
+  effect_id: EffectId | null;
   gender_mode: GenderMode;
   is_id_required: boolean;
   date_time: string | null;
@@ -336,14 +378,40 @@ export interface EventDraft {
   virtual_link: string;
   allow_plus_ones: boolean;
   max_plus_ones: number;
+  // DAW-22 — 3-layer identity system
+  poster_url: string | null;
+  poster_type: PosterType | null;
+  poster_library_id: string | null;
+  effect_id: EffectId | null;
+}
+
+// ─── Poster Library (DAW-22) ─────────────────────────────────
+
+export interface PosterLibraryItem {
+  id: string;
+  category: PosterCategory | string;
+  storage_path: string;
+  thumbnail_path: string;
+  name: string | null;
+  tags: string[];
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
 }
 
 // ─── Theme ───────────────────────────────────────────────────
 
+/**
+ * Legacy fields are required so existing theme data keeps compiling
+ * during the Phase 2 migration. New design-token fields are optional
+ * until every theme has been upgraded.
+ */
 export interface DawatTheme {
   id: string;
   name: string;
   categories: string[];
+
+  // Legacy (Phase 0 — still in use)
   bannerBg: string;
   bannerBgImage: string;
   bannerBgSize?: string;
@@ -352,4 +420,42 @@ export interface DawatTheme {
   tagBg: string;
   tagColor: string;
   defaultEmoji: string;
+
+  // ─── DAW-22 enriched tokens (Phase 2 — optional during migration) ───
+  background?: {
+    type: 'gradient' | 'pattern' | 'mesh';
+    stops: string[];              // 2-4 color stops for gradient/mesh
+    angle?: number;               // gradient angle in degrees, default 135
+    pattern?: 'geometric-stars' | 'arabesque' | 'zellige' | 'none';
+    overlayOpacity?: number;      // 0–0.7 dark overlay on top of the background
+  };
+  typography?: {
+    titleFont: 'ManropeLight' | 'ManropeRegular' | 'ManropeSemiBold' | 'ManropeBold' | 'ManropeExtraBold';
+    titleLetterSpacing?: number;
+    arabicFont?: 'SFArabic' | 'SFArabicRounded';
+  };
+  accents?: {
+    primary: string;              // main accent (RSVP button, links)
+    secondary: string;            // borders, dividers
+    onAccent: string;             // foreground on accent surfaces
+  };
+  surface?: {
+    bg: string;                   // legacy field (keep)
+    border: string;
+    borderRadius?: number;
+
+    // DAW-22 Phase 2 — theme-tinted surfaces
+    /** Solid hex for the event detail page background (dark + accent tint). */
+    pageBg?: string;
+    /** rgba() string for the EventCard background — tinted glass at ~0.55 alpha. */
+    cardBg?: string;
+  };
+  /**
+   * Optional ornate SVG frame rendered around the poster.
+   * If omitted, no frame.
+   */
+  posterFrame?: {
+    svg: 'ornate-gold-corners' | 'zellige-border' | 'geometric-thin' | 'none';
+    color: string;
+  };
 }

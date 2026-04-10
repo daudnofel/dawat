@@ -153,6 +153,7 @@ export default function OrgPage() {
             return (
               <EventCard
                 key={e.id} id={e.id} title={e.title} theme_id={e.theme_id}
+                poster_url={e.poster_url}
                 org_name={org.name}
                 date_label={e.date_time ? new Date(e.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD'}
                 location_name={e.location_name ?? 'TBD'} price={e.price}

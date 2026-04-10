@@ -71,6 +71,9 @@ export async function triggerEmail(params: EmailParams): Promise<void> {
     body: params,
   });
   if (error) {
-    console.error('[email] Failed to send:', params.type, error.message);
+    // Fire-and-forget: log a warning but don't trigger the dev red screen.
+    // Email failures are non-blocking and happen regularly while we're on
+    // Resend's sandbox sender (which can only deliver to the account owner).
+    console.warn('[email] Failed to send:', params.type, error.message);
   }
 }

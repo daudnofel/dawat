@@ -597,6 +597,8 @@ export default function EventDetailScreen() {
               </Pressable>
             </View>
           )}
+          {/* Bottom spacer so content clears the floating RSVP bar */}
+          <View style={{ height: 100 }} />
         </View>
       </ScrollView>
 

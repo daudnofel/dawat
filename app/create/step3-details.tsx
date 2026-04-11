@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Switch, Platform, Modal, Alert } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Switch, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { useEventStore } from '../../store/useEventStore';
+import { Toast } from '../../components/Toast';
 
 const PRICE_OPTIONS = [
   { label: 'Free', value: 0 },
@@ -36,7 +37,7 @@ export default function Step3Details() {
       if (draft.date_time) {
         const oneHourBefore = new Date(draft.date_time.getTime() - 60 * 60 * 1000);
         if (tempDate >= oneHourBefore) {
-          Alert.alert('Invalid Deadline', 'RSVP deadline must be at least 1 hour before the event starts.');
+          Toast.error('RSVP deadline must be at least 1 hour before the event starts.');
           return;
         }
       }
@@ -48,7 +49,7 @@ export default function Step3Details() {
         if (draft.rsvp_deadline >= oneHourBefore) {
           updateDraft({ date_time: tempDate, rsvp_deadline: oneHourBefore });
           setPickerMode(null);
-          Alert.alert('RSVP Deadline Adjusted', 'The RSVP deadline was moved to 1 hour before the new event time.');
+          Toast.info('RSVP deadline was moved to 1 hour before the new event time.');
           return;
         }
       }

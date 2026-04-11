@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet, ScrollView,
-  Switch, Alert, ActivityIndicator, Modal, Platform,
+  Switch, ActivityIndicator, Modal, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -9,6 +9,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../../lib/theme';
+import { Toast } from '../../../components/Toast';
 import { GenderMode } from '../../../types';
 import { supabase } from '../../../lib/supabase';
 import { generateSlug } from '../../../lib/slugify';
@@ -86,7 +87,7 @@ export default function EditEventScreen() {
       .single();
 
     if (error || !data) {
-      Alert.alert('Error', 'Could not load event');
+      Toast.error('Could not load event');
       router.back();
       return;
     }
@@ -94,7 +95,7 @@ export default function EditEventScreen() {
     // Check host ownership
     const { data: { user } } = await supabase.auth.getUser();
     if (!user || data.host_id !== user.id) {
-      Alert.alert('Error', 'You can only edit your own events');
+      Toast.error('You can only edit your own events');
       router.back();
       return;
     }
@@ -142,7 +143,7 @@ export default function EditEventScreen() {
       if (event.date_time) {
         const oneHourBefore = new Date(event.date_time.getTime() - 60 * 60 * 1000);
         if (tempDate >= oneHourBefore) {
-          Alert.alert('Invalid Deadline', 'RSVP deadline must be at least 1 hour before the event starts.');
+          Toast.error('RSVP deadline must be at least 1 hour before the event starts.');
           return;
         }
       }
@@ -153,7 +154,7 @@ export default function EditEventScreen() {
         if (event.rsvp_deadline >= oneHourBefore) {
           update({ date_time: tempDate, rsvp_deadline: oneHourBefore });
           setPickerMode(null);
-          Alert.alert('RSVP Deadline Adjusted', 'The RSVP deadline was moved to 1 hour before the new event time.');
+          Toast.info('RSVP deadline was moved to 1 hour before the new event time.');
           return;
         }
       }
@@ -164,7 +165,7 @@ export default function EditEventScreen() {
 
   const handleSave = async () => {
     if (event.title.trim().length < 2) {
-      Alert.alert('Error', 'Title must be at least 2 characters');
+      Toast.error('Title must be at least 2 characters');
       return;
     }
 
@@ -203,7 +204,7 @@ export default function EditEventScreen() {
     setSaving(false);
 
     if (error) {
-      Alert.alert('Error', error.message);
+      Toast.error(error.message);
       return;
     }
 

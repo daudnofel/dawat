@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { HeroUINativeProvider } from 'heroui-native/provider';
 
 import { COLORS } from '../lib/theme';
+import { ToastProvider } from '../components/Toast';
 
 LogBox.ignoreLogs([
   'Could not access feature flag',
@@ -92,6 +93,7 @@ export default function RootLayout() {
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
           </Stack>
+          <ToastProvider />
         </ThemeProvider>
       </HeroUINativeProvider>
     </GestureHandlerRootView>

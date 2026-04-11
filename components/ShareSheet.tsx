@@ -1,7 +1,8 @@
-import { View, Text, Pressable, StyleSheet, Modal, Share, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Modal, Share } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
+import { Toast } from './Toast';
 
 interface ShareSheetProps {
   visible: boolean;
@@ -19,7 +20,7 @@ export default function ShareSheet({ visible, onClose, eventTitle, eventSlug }: 
   const handleCopyLink = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     await Clipboard.setStringAsync(eventUrl);
-    Alert.alert('Link Copied', 'Event link copied to clipboard');
+    Toast.success('Link copied to clipboard');
     onClose();
   };
 

@@ -18,6 +18,7 @@ import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { useEventStore } from '../../store/useEventStore';
 import { PosterType, PosterLibraryItem } from '../../types';
+import { Toast } from '../../components/Toast';
 import PosterLibraryBrowser from '../../components/PosterLibraryBrowser';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -87,7 +88,7 @@ export default function StepPoster() {
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e: any) {
-      Alert.alert('Error', e?.message ?? 'Could not pick image');
+      Toast.error(e?.message ?? 'Could not pick image');
     } finally {
       setPicking(false);
     }

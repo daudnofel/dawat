@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
+import { Toast } from './Toast';
 import { RsvpStatus } from '../types';
 import { supabase } from '../lib/supabase';
 
@@ -88,7 +89,7 @@ export default function GuestListDashboard({ eventId, visible, refreshKey }: Gue
       .eq('id', rsvpId);
 
     if (error) {
-      Alert.alert('Error', 'Could not admit guest');
+      Toast.error('Could not admit guest');
       return;
     }
 

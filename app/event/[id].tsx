@@ -6,6 +6,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-na
 import * as Haptics from 'expo-haptics';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
+import { Toast } from '../../components/Toast';
 import { RsvpStatus, GenderMode } from '../../types';
 import { supabase } from '../../lib/supabase';
 import RsvpButtons from '../../components/RsvpButtons';
@@ -158,7 +159,7 @@ export default function EventDetailScreen() {
   const handleRsvp = async (status: RsvpStatus) => {
     const userId = (await supabase.auth.getUser()).data.user?.id;
     if (!userId) {
-      Alert.alert('Sign in required', 'Please sign in to RSVP.');
+      Toast.error('Please sign in to RSVP.');
       return;
     }
 
@@ -174,7 +175,7 @@ export default function EventDetailScreen() {
 
       if (error) {
         setRsvpStatus(prevStatus); // Revert
-        Alert.alert('Error', 'Could not remove RSVP');
+        Toast.error('Could not remove RSVP');
         return;
       }
       setGuestRefreshKey((k) => k + 1);
@@ -184,7 +185,7 @@ export default function EventDetailScreen() {
 
     // Check RSVP deadline
     if (event?.rsvp_deadline && new Date(event.rsvp_deadline) < new Date()) {
-      Alert.alert('RSVP Closed', 'The RSVP deadline for this event has passed.');
+      Toast.error('The RSVP deadline for this event has passed.');
       return;
     }
 
@@ -252,7 +253,7 @@ export default function EventDetailScreen() {
       });
 
     if (error) {
-      Alert.alert('Error', 'Could not save RSVP');
+      Toast.error('Could not save RSVP');
       return;
     }
 
@@ -334,7 +335,7 @@ export default function EventDetailScreen() {
               .eq('id', id);
 
             if (error) {
-              Alert.alert('Error', error.message);
+              Toast.error(error.message);
               return;
             }
 
@@ -357,7 +358,7 @@ export default function EventDetailScreen() {
             })();
 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            Alert.alert('Event Cancelled', 'This event has been cancelled.');
+            Toast.info('This event has been cancelled.');
             router.back();
           },
         },

@@ -7,11 +7,11 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
+import { Toast } from '../../components/Toast';
 import { supabase } from '../../lib/supabase';
 import { setCurrentUserId } from '../../lib/auth-cache';
 import { savePushToken } from '../../lib/push';
@@ -51,7 +51,7 @@ export default function OtpScreen() {
     setLoading(false);
 
     if (error) {
-      Alert.alert('Verification failed', error.message);
+      Toast.error(`Verification failed: ${error.message}`);
       setCode('');
       return;
     }
@@ -79,7 +79,7 @@ export default function OtpScreen() {
     if (countdown > 0) return;
     setCountdown(60);
     await supabase.auth.signInWithOtp({ email: email ?? '' });
-    Alert.alert('Code resent', `A new code was sent to ${email}`);
+    Toast.success(`Code resent to ${email}`);
   };
 
   const maskedEmail = email

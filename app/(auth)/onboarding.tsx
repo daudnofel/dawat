@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, StyleSheet, Image, Pressable,
-  KeyboardAvoidingView, Platform, Alert,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -12,6 +12,7 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
+import { Toast } from '../../components/Toast';
 import { Gender, GenderPref } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { setCurrentUserId, getCurrentUserId } from '../../lib/auth-cache';
@@ -68,7 +69,7 @@ export default function OnboardingScreen() {
   const handlePickPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow access to your photo library.');
+      Toast.error('Please allow access to your photo library.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -125,7 +126,7 @@ export default function OnboardingScreen() {
     }
 
     if (!userId) {
-      Alert.alert('Session expired', 'Please sign in again.');
+      Toast.error('Session expired. Please sign in again.');
       setSaving(false);
       router.replace('/(auth)/login');
       return;
@@ -162,16 +163,16 @@ export default function OnboardingScreen() {
         const err = await res.json();
         setSaving(false);
         if (err.code === '23505') {
-          Alert.alert('Username taken', 'Try another username.');
+          Toast.error('Username taken. Try another username.');
           animateTransition(false, () => setStep(2));
         } else {
-          Alert.alert('Error', err.message ?? 'Failed to save profile');
+          Toast.error(err.message ?? 'Failed to save profile');
         }
         return;
       }
     } catch (e: any) {
       setSaving(false);
-      Alert.alert('Network error', e.message ?? 'Check your connection');
+      Toast.error(e.message ?? 'Network error. Check your connection');
       return;
     }
 

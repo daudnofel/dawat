@@ -14,6 +14,7 @@ import { getCurrentUserId } from '../../lib/auth-cache';
 import { triggerPush } from '../../lib/push';
 import { generateSlug } from '../../lib/slugify';
 import AnimatedPress from '../../components/AnimatedPress';
+import { Toast } from '../../components/Toast';
 
 export default function SuccessScreen({ onDone, publishedSlug }: { onDone?: () => void; publishedSlug?: string | null }) {
   const { draft, reset } = useEventStore();
@@ -58,13 +59,13 @@ export default function SuccessScreen({ onDone, publishedSlug }: { onDone?: () =
   const handleCopyLink = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     await Clipboard.setStringAsync(link);
-    Alert.alert('Link Copied', 'Event link copied to clipboard');
+    Toast.success('Link copied to clipboard');
   };
 
   const handleWhatsApp = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Linking.openURL(`whatsapp://send?text=${encodeURIComponent(shareMessage)}`).catch(() => {
-      Alert.alert('WhatsApp not found', 'WhatsApp is not installed on this device');
+      Toast.error('WhatsApp is not installed on this device');
     });
   };
 
@@ -117,7 +118,7 @@ export default function SuccessScreen({ onDone, publishedSlug }: { onDone?: () =
       .single();
 
     if (!newEvent) {
-      Alert.alert('Error', 'Could not find the new event');
+      Toast.error('Could not find the new event');
       setImporting(false);
       return;
     }
@@ -134,7 +135,7 @@ export default function SuccessScreen({ onDone, publishedSlug }: { onDone?: () =
       .filter((id: string | null) => id && id !== userId) as string[];
 
     if (guestIds.length === 0) {
-      Alert.alert('No guests', `${pastEventTitle} had no confirmed guests to import`);
+      Toast.info(`${pastEventTitle} had no confirmed guests to import`);
       setImporting(false);
       return;
     }
@@ -161,7 +162,7 @@ export default function SuccessScreen({ onDone, publishedSlug }: { onDone?: () =
 
     setImporting(false);
     setImported(true);
-    Alert.alert('Guests imported', `${guestIds.length} guest${guestIds.length === 1 ? '' : 's'} invited from ${pastEventTitle}`);
+    Toast.success(`${guestIds.length} guest${guestIds.length === 1 ? '' : 's'} invited from ${pastEventTitle}`);
   };
 
   return (

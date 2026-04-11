@@ -7,6 +7,7 @@ import Svg, { Circle, Path, Line } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
 import { supabase } from '../lib/supabase';
+import { Toast } from './Toast';
 import { REACTION_EMOJIS, ReactionEmoji, CommentReaction } from '../types';
 
 // ─── SVG icon: smiley outline + plus ─────────────────────────
@@ -228,7 +229,7 @@ export default function EventComments({ eventId, hostId }: EventCommentsProps) {
   // ─── Reactions ────────────────────────────────────────────
   const toggleReaction = async (commentId: string, emoji: ReactionEmoji) => {
     if (!currentUserId) {
-      Alert.alert('Sign in required', 'Please sign in to react.');
+      Toast.error('Please sign in to react.');
       return;
     }
 
@@ -299,7 +300,7 @@ export default function EventComments({ eventId, hostId }: EventCommentsProps) {
     if (!trimmed || sending) return;
 
     if (!currentUserId) {
-      Alert.alert('Sign in required', 'Please sign in to comment.');
+      Toast.error('Please sign in to comment.');
       return;
     }
 
@@ -331,7 +332,7 @@ export default function EventComments({ eventId, hostId }: EventCommentsProps) {
     if (error || !inserted) {
       setAllComments((prev) => prev.filter((c) => c.id !== tempId));
       setNewComment(trimmed);
-      Alert.alert('Error', 'Could not post comment. Please try again.');
+      Toast.error('Could not post comment. Please try again.');
       return;
     }
 
@@ -382,7 +383,7 @@ export default function EventComments({ eventId, hostId }: EventCommentsProps) {
     if (error || !inserted) {
       setAllComments((prev) => prev.filter((c) => c.id !== tempId));
       setReplyText(trimmed);
-      Alert.alert('Error', 'Could not post reply. Please try again.');
+      Toast.error('Could not post reply. Please try again.');
       return;
     }
 

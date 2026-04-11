@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Switch, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Switch, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
@@ -9,6 +9,7 @@ import { getCurrentUserId } from '../../lib/auth-cache';
 import { generateSlug } from '../../lib/slugify';
 import { triggerEmail } from '../../lib/email';
 import { GenderMode, PosterType } from '../../types';
+import { Toast } from '../../components/Toast';
 
 const GENDER_OPTIONS = [
   { label: 'Mixed', subtitle: 'Open to all', emoji: '🌟', value: GenderMode.Mixed },
@@ -26,7 +27,7 @@ export default function Step4Settings({ onPublish }: { onPublish?: (slug?: strin
 
     const userId = await getCurrentUserId();
     if (!userId) {
-      Alert.alert('Error', 'You must be signed in to publish an event.');
+      Toast.error('You must be signed in to publish an event.');
       setPublishing(false);
       return;
     }
@@ -57,7 +58,7 @@ export default function Step4Settings({ onPublish }: { onPublish?: (slug?: strin
           });
 
         if (uploadErr) {
-          Alert.alert('Poster upload failed', uploadErr.message);
+          Toast.error(`Poster upload failed: ${uploadErr.message}`);
           setPublishing(false);
           return;
         }
@@ -65,7 +66,7 @@ export default function Step4Settings({ onPublish }: { onPublish?: (slug?: strin
         const { data: urlData } = supabase.storage.from('event-posters').getPublicUrl(filePath);
         finalPosterUrl = urlData.publicUrl;
       } catch (e: any) {
-        Alert.alert('Poster upload failed', e?.message ?? 'Unknown error');
+        Toast.error(`Poster upload failed: ${e?.message ?? 'Unknown error'}`);
         setPublishing(false);
         return;
       }
@@ -116,7 +117,7 @@ export default function Step4Settings({ onPublish }: { onPublish?: (slug?: strin
 
     if (!res.ok) {
       const err = await res.json();
-      Alert.alert('Error publishing', err.message ?? 'Unknown error');
+      Toast.error(err.message ?? 'Error publishing event');
       return;
     }
 

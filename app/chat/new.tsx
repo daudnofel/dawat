@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet, ScrollView,
-  ActivityIndicator, Image, Dimensions, Alert,
+  ActivityIndicator, Image, Dimensions,
 } from 'react-native';
 import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
+import { Toast } from '../../components/Toast';
 import { supabase } from '../../lib/supabase';
 import { getCurrentUserId } from '../../lib/auth-cache';
 import { createOrFindConversation } from '../../lib/messaging';
@@ -62,7 +63,7 @@ export default function NewMessageScreen() {
 
   const handleSelectUser = async (user: UserResult) => {
     if (!currentUserId) {
-      Alert.alert('Not signed in', 'Please sign in to send messages.');
+      Toast.error('Please sign in to send messages.');
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -70,7 +71,7 @@ export default function NewMessageScreen() {
     if (convId) {
       router.replace(`/chat/${convId}`);
     } else {
-      Alert.alert('Could not start chat', 'Something went wrong. Please try again.');
+      Toast.error('Could not start chat. Please try again.');
     }
   };
 

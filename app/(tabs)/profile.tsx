@@ -8,6 +8,7 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { BlurView } from 'expo-blur';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
+import { Toast } from '../../components/Toast';
 import { supabase } from '../../lib/supabase';
 import { getCurrentUserId, clearCurrentUserId } from '../../lib/auth-cache';
 import { User } from '../../types';
@@ -168,7 +169,7 @@ export default function ProfileScreen() {
         });
 
       if (uploadError) {
-        Alert.alert('Upload failed', uploadError.message);
+        Toast.error(`Upload failed: ${uploadError.message}`);
         setUploading(false);
         return;
       }
@@ -193,7 +194,7 @@ export default function ProfileScreen() {
       setProfile((prev) => prev ? { ...prev, avatar_url: publicUrl } : prev);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) {
-      Alert.alert('Error', 'Could not upload photo');
+      Toast.error('Could not upload photo');
     }
 
     setUploading(false);
@@ -206,7 +207,7 @@ export default function ProfileScreen() {
     try {
       await Share.share({ message: url });
     } catch {
-      Alert.alert('Share', `dawat.app/@${username}`);
+      Toast.info(`dawat.app/@${username}`);
     }
   };
 
@@ -284,7 +285,7 @@ export default function ProfileScreen() {
                   scaleValue={0.97}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    Alert.alert('Edit Profile', 'Coming soon');
+                    Toast.info('Edit profile coming soon');
                   }}
                 >
                   <BlurView intensity={30} tint="dark" style={styles.actionBlur}>

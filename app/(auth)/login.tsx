@@ -7,12 +7,12 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import { Toast } from '../../components/Toast';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import Svg, { Defs, RadialGradient, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../lib/theme';
@@ -38,7 +38,7 @@ export default function LoginScreen() {
     setLoading(false);
 
     if (error) {
-      Alert.alert('Error', error.message);
+      Toast.error(error.message);
       return;
     }
 
@@ -54,7 +54,7 @@ export default function LoginScreen() {
     if (!result.ok) {
       setLoading(false);
       if (result.reason === 'cancelled') return;
-      Alert.alert('Apple Sign-In', result.message ?? 'Could not sign in with Apple');
+      Toast.error(result.message ?? 'Could not sign in with Apple');
       return;
     }
 
@@ -90,7 +90,7 @@ export default function LoginScreen() {
       });
 
       if (error || !data.url) {
-        Alert.alert('Error', error?.message ?? 'Could not start Google sign-in');
+        Toast.error(error?.message ?? 'Could not start Google sign-in');
         setLoading(false);
         return;
       }
@@ -122,7 +122,7 @@ export default function LoginScreen() {
 
       setLoading(false);
     } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'Google sign-in failed');
+      Toast.error(e.message ?? 'Google sign-in failed');
       setLoading(false);
     }
   };

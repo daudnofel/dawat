@@ -11,6 +11,11 @@
 //          the agenda panel so empty states stay coherent across modes.
 // DAW-32 — QA + polish: calendar-shaped skeleton on first load, retry button
 //          on error, and fade-in animation when the month changes.
+// DAW-53 — Shell chrome + rhythm pass. Chev buttons go from 36×36 filled-dark
+//          circles to 32×32 transparent hairline-gold outlines — lighter, less
+//          competitive with the month label. Month subtitle drops to
+//          COLORS.hint at 11px. Spacing between month header → pills → grid →
+//          agenda trimmed so the calendar breathes as one cohesive surface.
 
 import { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl } from 'react-native';
@@ -225,7 +230,9 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.lg,
+    // DAW-53: trimmed top padding so the month header sits closer to
+    // the DiscoverFilterBar above it. Bottom stays at 120 for the tab bar.
+    paddingTop: SPACING.md,
     paddingBottom: 120,
   },
   errorWrap: {
@@ -248,25 +255,28 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 
-  // Month header
+  // DAW-53 — Month header: tighter rhythm, lighter chev chrome.
   monthHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
   },
   chev: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(30, 30, 30, 0.55)',
+    // DAW-53: transparent bg, hairline gold-tinted border. Lighter
+    // visual weight so the eye lands on the month label, not the
+    // navigation affordance.
+    backgroundColor: 'transparent',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 223, 161, 0.12)',
+    borderColor: 'rgba(255, 223, 161, 0.22)',
   },
   chevText: {
-    fontSize: 22,
+    fontSize: 20,
     color: COLORS.gold2,
     ...FONTS.bold,
     marginTop: -2,
@@ -282,18 +292,20 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   monthSubtitle: {
-    fontSize: 12,
-    color: COLORS.muted,
+    // DAW-53: quieter secondary line — hint color, 11px.
+    fontSize: 11,
+    color: COLORS.hint,
     ...FONTS.regular,
     marginTop: 2,
+    letterSpacing: 0.1,
   },
 
-  // Pills row (filter summary + jump-to-today)
+  // DAW-53 — Pills row rhythm: tighter margin above the grid.
   pillsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     flexWrap: 'wrap',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
     gap: SPACING.sm,
   },
   todayPill: {

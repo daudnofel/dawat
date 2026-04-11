@@ -1,17 +1,21 @@
 /**
- * Editor — the preview-led event editor (DAW-37).
+ * Editor — the preview-led event editor (DAW-37 + DAW-54).
  *
  * Full-bleed live preview of the in-progress draft rendered via
  * `EventPreview`, with `EditorChrome` as the top slot and `EditorDock`
  * floating over the bottom. Tapping any canvas zone (poster / title /
- * details / audience) OR any dock button calls `openTool(...)`, which in
- * DAW-37 just surfaces a Toast — DAW-54 replaces the toast with real tool
- * bottom sheets.
+ * details / audience) OR any dock button calls `handleToolPress(...)`,
+ * which routes to the matching tool sheet at `/create/tools/<id>`. The
+ * tool routes are `transparentModal`s so the canvas stays visible and
+ * re-renders live as `updateDraft` fires from inside each sheet.
  *
  * The screen is guarded: if a user lands here with an empty draft (e.g.
  * a deep link or a hot reload while the store is clean), we bounce them
  * back to /create/essentials. There is no valid state where the editor
  * has no title + no host.
+ *
+ * Publish still surfaces a Toast — DAW-55 replaces it with a publish
+ * bottom sheet and the real submit-to-Supabase flow.
  */
 
 import { useEffect } from 'react';
@@ -80,9 +84,14 @@ export default function EditorScreen() {
   const textColor = theme?.textColor ?? COLORS.white;
 
   const handleToolPress = (tool: EditorToolId) => {
+    // Publish still toasts until DAW-55 wires the publish sheet.
+    if (tool === 'publish') {
+      openTool('publish');
+      Toast.info('Publish sheet coming soon');
+      return;
+    }
     openTool(tool);
-    // DAW-54 replaces this with real bottom-sheet navigation.
-    Toast.info(`${capitalize(tool)} tool coming soon`);
+    router.push(`/create/tools/${tool}`);
   };
 
   const handleZoneTap = (zone: PreviewZone) => {
@@ -142,10 +151,6 @@ export default function EditorScreen() {
       />
     </SafeAreaView>
   );
-}
-
-function capitalize(s: string): string {
-  return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1);
 }
 
 const styles = StyleSheet.create({

@@ -39,8 +39,16 @@ export default function DiscoverScreen() {
   const [searching, setSearching] = useState(false);
   const [filter, setFilter] = useState<DiscoverFilter>({});
 
-  const { tonight, thisWeek, popular, byDate, loading, error, refresh } =
-    useDiscoverFeed(filter);
+  const {
+    tonight,
+    thisWeek,
+    popular,
+    byDate,
+    eventsByDate,
+    loading,
+    error,
+    refresh,
+  } = useDiscoverFeed(filter);
 
   // Cross-fade + small translate-Y on mode change
   const fade = useSharedValue(1);
@@ -168,7 +176,7 @@ export default function DiscoverScreen() {
               />
             ) : (
               <DiscoverCalendarView
-                byDate={byDate}
+                eventsByDate={eventsByDate}
                 loading={loading}
                 error={error}
                 refresh={refresh}

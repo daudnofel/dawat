@@ -46,6 +46,13 @@ export interface DiscoverFeed {
   thisWeek: DiscoverEvent[];
   popular: DiscoverEvent[];
   byDate: DateGroup[];
+  /**
+   * DAW-28 — Map of YYYY-MM-DD → events on that day, sorted by start time.
+   * Powers calendar mode (dot markers + selected-date agenda). Derived from
+   * the same master event set as the other slices, so all views share one
+   * Supabase query.
+   */
+  eventsByDate: Map<string, DiscoverEvent[]>;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -206,14 +213,23 @@ export function useDiscoverFeed(filter?: DiscoverFilter): DiscoverFeed {
       .sort((a, b) => b.going - a.going)
       .slice(0, 10);
 
-    const groups = new Map<string, DiscoverEvent[]>();
+    // Build a Map keyed by YYYY-MM-DD. Events within a day are sorted
+    // ascending by start time so calendar agenda + list view agree on order.
+    const eventsByDate = new Map<string, DiscoverEvent[]>();
     for (const e of withDate) {
       const d = new Date(e.date_time!);
       const key = dateKey(d);
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(e);
+      if (!eventsByDate.has(key)) eventsByDate.set(key, []);
+      eventsByDate.get(key)!.push(e);
     }
-    const byDate: DateGroup[] = Array.from(groups.entries())
+    for (const bucket of eventsByDate.values()) {
+      bucket.sort(
+        (a, b) =>
+          new Date(a.date_time!).getTime() - new Date(b.date_time!).getTime()
+      );
+    }
+
+    const byDate: DateGroup[] = Array.from(eventsByDate.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, evs]) => ({
         date: key,
@@ -221,7 +237,7 @@ export function useDiscoverFeed(filter?: DiscoverFilter): DiscoverFeed {
         events: evs,
       }));
 
-    return { tonight, thisWeek, popular, byDate };
+    return { tonight, thisWeek, popular, byDate, eventsByDate };
   }, [events, timeFilter]);
 
   return {

@@ -1,12 +1,17 @@
 // components/DiscoverCalendarView.tsx
 // DAW-27 — Initial shell (stub placeholder)
 // DAW-28 — Wired real calendar state (useDiscoverCalendar)
-// DAW-29 — Drops in MonthGrid with themed dot markers. AgendaPanel arrives in DAW-30.
+// DAW-29 — Drops in MonthGrid with themed dot markers.
+// DAW-30 — Mounts DiscoverAgendaPanel beneath the grid for the selected day,
+//          with a warm empty state + Create CTA. Wraps contents in ScrollView
+//          so agenda cards can extend below the fold.
 
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
 import EmptyState from './EmptyState';
 import MonthGrid from './MonthGrid';
+import DiscoverAgendaPanel from './DiscoverAgendaPanel';
 import { DiscoverEvent, DiscoverFilter } from '../lib/hooks/useDiscoverFeed';
 import { useDiscoverCalendar } from '../lib/hooks/useDiscoverCalendar';
 
@@ -26,7 +31,9 @@ function monthLabel(d: Date): string {
 
 export default function DiscoverCalendarView({
   eventsByDate,
+  loading,
   error,
+  refresh,
 }: Props) {
   const {
     currentMonth,
@@ -39,7 +46,7 @@ export default function DiscoverCalendarView({
 
   if (error) {
     return (
-      <View style={styles.container}>
+      <View style={styles.errorWrap}>
         <EmptyState
           emoji="⚠️"
           title="Couldn't load calendar"
@@ -56,8 +63,26 @@ export default function DiscoverCalendarView({
     .filter(([k]) => k.startsWith(monthKey))
     .reduce((sum, [, evs]) => sum + evs.length, 0);
 
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  };
+
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing || loading}
+          onRefresh={onRefresh}
+          tintColor={COLORS.gold2}
+        />
+      }
+    >
       {/* Month header — prev/next + month label + event count */}
       <View style={styles.monthHeader}>
         <Pressable
@@ -102,13 +127,25 @@ export default function DiscoverCalendarView({
         onSelectDate={selectDate}
       />
 
-      {/* Agenda panel ships in DAW-30 */}
-    </View>
+      {/* Selected-day agenda (DAW-30) */}
+      <DiscoverAgendaPanel
+        selectedDate={selectedDate}
+        eventsByDate={eventsByDate}
+      />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.lg,
+    paddingBottom: 120,
+  },
+  errorWrap: {
     flex: 1,
     paddingHorizontal: SPACING.xl,
     paddingTop: SPACING.lg,

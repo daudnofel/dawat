@@ -1,10 +1,13 @@
 // lib/islamicMoments.ts
 // DAW-33 — Muslim cultural / religious moment metadata.
+// DAW-51 — Adds `kicker` (editorial label above the banner title) and
+//          tightens every subtitle to a single, warm sentence so the
+//          new MomentBanner reads as editorial, not chatty.
 //
 // Pure data module. No UI, no network, no side effects. Consumers import
 // `getMomentForDate(date)` to decide whether a given day is culturally
 // significant and, if so, which warm copy to show in the agenda panel
-// (MomentBanner, DAW-36).
+// (MomentBanner, DAW-36 / DAW-51).
 //
 // V1.5 uses a hardcoded 2026 Hijri→Gregorian map plus a weekly Jumu'ah
 // fallback. V2 will replace this with a Supabase-backed `cultural_moments`
@@ -22,6 +25,8 @@ export type MomentTone = 'blessed' | 'celebration' | 'reflection';
 export interface IslamicMoment {
   id: string;
   emoji: string;
+  /** Small uppercase editorial label shown above the title in MomentBanner. */
+  kicker: string;
   title: string;
   subtitle: string;
   tone: MomentTone;
@@ -38,9 +43,9 @@ const WEEKLY_MOMENTS: Record<number, IslamicMoment | null> = {
   5: {
     id: 'jumuah',
     emoji: '🕌',
+    kicker: "JUMU'AH",
     title: "Jumu'ah Mubarak",
-    subtitle:
-      'May your Friday be filled with barakah, peace, and a full masjid.',
+    subtitle: 'May your Friday be filled with barakah.',
     tone: 'blessed',
   },
   6: null,
@@ -58,71 +63,75 @@ const SPECIFIC_MOMENTS: Record<string, IslamicMoment> = {
   '2026-02-17': {
     id: 'ramadan-start',
     emoji: '🌙',
+    kicker: 'RAMADAN',
     title: 'Ramadan Kareem',
     subtitle:
-      'The first day of Ramadan. May this month bring you closeness, patience, and light.',
+      'The first day of Ramadan — a month of closeness, patience, and light.',
     tone: 'reflection',
   },
   // Laylatul Qadr — odd nights of the last 10, most commonly the 27th.
   '2026-03-14': {
     id: 'laylatul-qadr',
     emoji: '✨',
-    title: 'Laylatul Qadr',
-    subtitle:
-      'The Night of Power — better than a thousand months. Every duʿaʾ is heard tonight.',
+    kicker: 'LAYLATUL QADR',
+    title: 'The Night of Power',
+    subtitle: 'Better than a thousand months — every duʿaʾ is heard tonight.',
     tone: 'reflection',
   },
   // Eid al-Fitr 1447 AH — approx. March 20, 2026.
   '2026-03-20': {
     id: 'eid-al-fitr',
     emoji: '🌟',
+    kicker: 'EID AL-FITR',
     title: 'Eid Mubarak',
-    subtitle:
-      'Eid al-Fitr — may your celebration be full of family, sweetness, and gratitude.',
+    subtitle: 'May your celebration be full of family and gratitude.',
     tone: 'celebration',
   },
   // Day of Arafah — approx. May 26, 2026.
   '2026-05-26': {
     id: 'arafah',
     emoji: '⛰️',
-    title: 'Day of Arafah',
+    kicker: 'ARAFAH',
+    title: 'The Day of Arafah',
     subtitle:
-      'The greatest day of the year. Fast, make duʿaʾ, and remember those standing on the plain.',
+      'The greatest day of the year — fast, make duʿaʾ, and remember.',
     tone: 'reflection',
   },
   // Eid al-Adha 1447 AH — approx. May 27, 2026.
   '2026-05-27': {
     id: 'eid-al-adha',
     emoji: '🕋',
-    title: 'Eid al-Adha Mubarak',
+    kicker: 'EID AL-ADHA',
+    title: 'Eid Mubarak',
     subtitle:
-      'Eid al-Adha — honoring the sacrifice of Ibrahim (AS). May your qurbani be accepted.',
+      'Honoring the sacrifice of Ibrahim (AS) — may your qurbani be accepted.',
     tone: 'celebration',
   },
   // Islamic New Year — 1 Muharram 1448 AH, approx. June 17, 2026.
   '2026-06-17': {
     id: 'muharram-1',
     emoji: '🌙',
-    title: 'Happy Islamic New Year',
-    subtitle: 'Muharram 1 — a new Hijri year, a fresh page. May it be blessed.',
+    kicker: 'MUHARRAM 1',
+    title: 'A new Hijri year',
+    subtitle: 'A fresh page in the Islamic calendar — may it be blessed.',
     tone: 'reflection',
   },
   // Day of Ashura — 10 Muharram, approx. June 26, 2026.
   '2026-06-26': {
     id: 'ashura',
     emoji: '🤲',
+    kicker: 'ASHURA',
     title: 'Day of Ashura',
-    subtitle:
-      'A day of remembrance and fasting. The day Musa (AS) and his people were saved.',
+    subtitle: 'A day of remembrance and fasting — Musa (AS) was saved.',
     tone: 'reflection',
   },
   // Mawlid an-Nabi — 12 Rabi al-Awwal, approx. August 26, 2026.
   '2026-08-26': {
     id: 'mawlid',
     emoji: '💚',
-    title: 'Mawlid an-Nabi',
-    subtitle:
-      'Remembering the mercy sent to the worlds ﷺ. Send salawat upon him today and every day.',
+    kicker: 'MAWLID AN-NABI',
+    title: 'Mercy to the worlds ﷺ',
+    subtitle: 'Send salawat upon him today, and every day.',
     tone: 'blessed',
   },
 };

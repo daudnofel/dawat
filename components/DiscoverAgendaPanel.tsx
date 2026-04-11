@@ -3,6 +3,15 @@
 // DAW-36 — Mounts MomentBanner at the top of the panel and swaps in
 //          moment-aware empty state copy on Jumu'ah so a quiet Friday
 //          feels like an invitation, not a void.
+// DAW-52 — Editorial hierarchy pass. The old bold-date + gold-count-chip
+//          row duplicated the visual weight of the MomentBanner above
+//          it. Replaced with an editorial stack:
+//            • Small uppercase kicker (TODAY'S AGENDA / UPCOMING /
+//              JUMU'AH / FILTERED)
+//            • 22px bold date title with inline secondary "· N events"
+//          Empty state flattened (no card bg/border), emoji dropped
+//          from 38 → 32, and the gap between banner → header → list
+//          tightened by a grade so the panel reads as a single flow.
 //
 // Sits beneath MonthGrid. When the user taps a day, this panel shows a
 // friendly day label ("Today" / "Tomorrow" / "Friday Apr 18") and all
@@ -56,6 +65,22 @@ function weekdayOnly(d: Date): string {
   return d.toLocaleDateString('en-US', { weekday: 'long' });
 }
 
+/**
+ * Picks the small uppercase kicker shown above the date title.
+ * Order of precedence: filter → moment → today → default.
+ */
+function kickerFor(
+  selectedDate: Date,
+  today: Date,
+  isFiltered: boolean,
+  momentKicker: string | null
+): string {
+  if (isFiltered) return 'FILTERED';
+  if (momentKicker) return momentKicker;
+  if (isSameDay(selectedDate, today)) return "TODAY'S AGENDA";
+  return 'UPCOMING';
+}
+
 // ─── Types ────────────────────────────────────────────────────────────
 interface Props {
   selectedDate: Date | null;
@@ -88,6 +113,12 @@ export default function DiscoverAgendaPanel({
   // The weekly Jumu'ah moment from islamicMoments.ts carries id "jumuah".
   const isJumuah = moment?.id === 'jumuah';
 
+  // DAW-52 — kicker copy for the editorial header. Same `today` the
+  // rest of the calendar uses; computed locally because the panel
+  // owns no other date state.
+  const today = new Date();
+  const kicker = kickerFor(selectedDate, today, isFiltered, moment?.kicker ?? null);
+
   const handleCreate = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push('/(tabs)/create');
@@ -104,16 +135,18 @@ export default function DiscoverAgendaPanel({
           significant days; silent otherwise). */}
       <MomentBanner moment={moment} />
 
-      {/* Day label header */}
+      {/* DAW-52 — Editorial header: kicker → date title with inline count */}
       <View style={styles.header}>
-        <Text style={styles.headerLabel}>{label}</Text>
-        {events.length > 0 && (
-          <View style={styles.countChip}>
-            <Text style={styles.countText}>
+        <Text style={styles.kicker}>{kicker}</Text>
+        <Text style={styles.headerLabel}>
+          {label}
+          {events.length > 0 && (
+            <Text style={styles.headerCount}>
+              {'  ·  '}
               {events.length} {events.length === 1 ? 'event' : 'events'}
             </Text>
-          </View>
-        )}
+          )}
+        </Text>
       </View>
 
       {events.length === 0 ? (
@@ -184,35 +217,33 @@ export default function DiscoverAgendaPanel({
 // ─── Styles ───────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   wrap: {
-    marginTop: SPACING.lg,
+    marginTop: SPACING.md,
     paddingBottom: SPACING.xxl,
   },
 
+  // DAW-52 — Editorial header. Kicker + large date title with inline
+  // secondary count. No standalone gold chip.
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
   },
-  headerLabel: {
-    fontSize: 18,
-    color: COLORS.white,
-    ...FONTS.bold,
-    letterSpacing: -0.3,
-  },
-  countChip: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 4,
-    borderRadius: RADIUS.full,
-    backgroundColor: 'rgba(201, 168, 76, 0.18)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 223, 161, 0.35)',
-  },
-  countText: {
-    fontSize: 11,
+  kicker: {
+    fontSize: 10,
     color: COLORS.gold2,
     ...FONTS.bold,
-    letterSpacing: 0.3,
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  headerLabel: {
+    fontSize: 22,
+    color: COLORS.white,
+    ...FONTS.bold,
+    letterSpacing: -0.4,
+  },
+  headerCount: {
+    fontSize: 14,
+    color: COLORS.muted,
+    ...FONTS.regular,
+    letterSpacing: 0,
   },
 
   list: {
@@ -222,17 +253,16 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
 
-  // Empty state card
+  // DAW-52 — Empty state flattened. No rgba background, no hairline
+  // border — the panel's own container now carries the visual weight.
+  // Relies on padding + centered text + looser subtitle line-height.
   emptyCard: {
-    padding: SPACING.xl,
-    borderRadius: RADIUS.xl,
-    backgroundColor: 'rgba(30, 30, 30, 0.55)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 223, 161, 0.14)',
+    paddingVertical: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
     alignItems: 'center',
   },
   emptyEmoji: {
-    fontSize: 38,
+    fontSize: 32,
     marginBottom: SPACING.md,
   },
   emptyTitle: {
@@ -250,7 +280,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: SPACING.lg,
     paddingHorizontal: SPACING.md,
-    lineHeight: 19,
+    lineHeight: 20,
   },
   ctaButton: {
     paddingHorizontal: SPACING.xl,

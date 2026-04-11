@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, Share, Alert } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Share, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import ConfettiCannon from 'react-native-confetti-cannon';
@@ -9,6 +9,9 @@ import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { useEventStore } from '../../store/useEventStore';
+import { supabase } from '../../lib/supabase';
+import { getCurrentUserId } from '../../lib/auth-cache';
+import { triggerPush } from '../../lib/push';
 import { generateSlug } from '../../lib/slugify';
 import AnimatedPress from '../../components/AnimatedPress';
 
@@ -16,6 +19,13 @@ export default function SuccessScreen({ onDone }: { onDone?: () => void }) {
   const { draft, reset } = useEventStore();
   const confettiRef = useRef<any>(null);
   const router = useRouter();
+
+  // DAW-47: Import guests from past event
+  const [showPastEvents, setShowPastEvents] = useState(false);
+  const [pastEvents, setPastEvents] = useState<any[]>([]);
+  const [loadingPast, setLoadingPast] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [imported, setImported] = useState(false);
 
   const slug = generateSlug(draft.title || 'event');
   const link = `https://dawat.app/e/${slug}`;
@@ -68,6 +78,91 @@ export default function SuccessScreen({ onDone }: { onDone?: () => void }) {
     onDone?.();
   };
 
+  // DAW-47: Fetch host's past events for guest import
+  const handleShowPastEvents = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowPastEvents(true);
+    setLoadingPast(true);
+
+    const userId = await getCurrentUserId();
+    if (!userId) { setLoadingPast(false); return; }
+
+    const { data } = await supabase
+      .from('events')
+      .select('id, title, date_time, slug')
+      .eq('host_id', userId)
+      .eq('is_published', true)
+      .neq('slug', slug) // exclude the event we just created
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    setPastEvents(data ?? []);
+    setLoadingPast(false);
+  };
+
+  // DAW-47: Import guests from selected past event
+  const handleImportGuests = async (pastEventId: string, pastEventTitle: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setImporting(true);
+
+    const userId = await getCurrentUserId();
+    if (!userId) { setImporting(false); return; }
+
+    // Find the new event's ID by slug
+    const { data: newEvent } = await supabase
+      .from('events')
+      .select('id')
+      .eq('slug', slug)
+      .single();
+
+    if (!newEvent) {
+      Alert.alert('Error', 'Could not find the new event');
+      setImporting(false);
+      return;
+    }
+
+    // Fetch yes + inshallah RSVPs from the past event
+    const { data: rsvps } = await supabase
+      .from('rsvps')
+      .select('user_id')
+      .eq('event_id', pastEventId)
+      .in('status', ['yes', 'inshallah']);
+
+    const guestIds = (rsvps ?? [])
+      .map((r: any) => r.user_id)
+      .filter((id: string | null) => id && id !== userId) as string[];
+
+    if (guestIds.length === 0) {
+      Alert.alert('No guests', `${pastEventTitle} had no confirmed guests to import`);
+      setImporting(false);
+      return;
+    }
+
+    // Insert invites (ignore duplicates)
+    const invites = guestIds.map((guestId) => ({
+      event_id: newEvent.id,
+      invited_user_id: guestId,
+      invited_by: userId,
+    }));
+
+    await supabase
+      .from('event_invites')
+      .upsert(invites, { onConflict: 'event_id,invited_user_id' })
+      .select();
+
+    // Send push to each invited guest (fire-and-forget)
+    for (const guestId of guestIds) {
+      void triggerPush(guestId, 'You\'re invited!', `${draft.title} — tap to check it out`, {
+        type: 'event_invite',
+        event_id: newEvent.id,
+      });
+    }
+
+    setImporting(false);
+    setImported(true);
+    Alert.alert('Guests imported', `${guestIds.length} guest${guestIds.length === 1 ? '' : 's'} invited from ${pastEventTitle}`);
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Close / X button — resets and goes back to step 1 */}
@@ -111,6 +206,47 @@ export default function SuccessScreen({ onDone }: { onDone?: () => void }) {
           <AnimatedPress style={styles.whatsappButton} haptic="medium" onPress={handleWhatsApp}>
             <Text style={styles.whatsappText}>Share to WhatsApp</Text>
           </AnimatedPress>
+
+          {/* DAW-47: Import guests from past event */}
+          {!imported && !showPastEvents && (
+            <AnimatedPress style={styles.importButton} haptic="light" onPress={handleShowPastEvents}>
+              <Text style={styles.importText}>📋 Import guests from a past event</Text>
+            </AnimatedPress>
+          )}
+
+          {showPastEvents && !imported && (
+            <View style={styles.pastEventsBox}>
+              <Text style={styles.pastEventsTitle}>Select a past event</Text>
+              {loadingPast ? (
+                <ActivityIndicator color={COLORS.gold} style={{ paddingVertical: SPACING.lg }} />
+              ) : pastEvents.length === 0 ? (
+                <Text style={styles.pastEventsEmpty}>No past events found</Text>
+              ) : (
+                <ScrollView style={styles.pastEventsList} nestedScrollEnabled>
+                  {pastEvents.map((ev: any) => (
+                    <Pressable
+                      key={ev.id}
+                      style={({ pressed }) => [styles.pastEventRow, pressed && { opacity: 0.7 }]}
+                      onPress={() => handleImportGuests(ev.id, ev.title)}
+                      disabled={importing}
+                    >
+                      <Text style={styles.pastEventTitle} numberOfLines={1}>{ev.title}</Text>
+                      <Text style={styles.pastEventDate}>
+                        {ev.date_time ? new Date(ev.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No date'}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              )}
+              {importing && <ActivityIndicator color={COLORS.gold} style={{ paddingVertical: SPACING.sm }} />}
+            </View>
+          )}
+
+          {imported && (
+            <View style={styles.importedBadge}>
+              <Text style={styles.importedText}>✓ Guests imported & notified</Text>
+            </View>
+          )}
 
           <AnimatedPress style={styles.viewButton} onPress={handleViewEvent}>
             <Text style={styles.viewText}>Go to Home</Text>
@@ -176,5 +312,53 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.lg, width: '100%', alignItems: 'center', marginBottom: SPACING.xxl,
   },
   viewText: { color: COLORS.white, fontSize: 16, ...FONTS.medium },
+  // DAW-47: Import guests
+  importButton: {
+    borderRadius: RADIUS.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 223, 161, 0.15)',
+    paddingVertical: SPACING.md,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  importText: { color: COLORS.gold, fontSize: 14, ...FONTS.medium },
+  pastEventsBox: {
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 223, 161, 0.10)',
+    width: '100%',
+    marginBottom: SPACING.md,
+    padding: SPACING.md,
+    maxHeight: 200,
+  },
+  pastEventsTitle: {
+    color: COLORS.white,
+    fontSize: 14,
+    ...FONTS.semibold,
+    marginBottom: SPACING.sm,
+  },
+  pastEventsEmpty: { color: COLORS.hint, fontSize: 13, ...FONTS.regular, textAlign: 'center' },
+  pastEventsList: { maxHeight: 160 },
+  pastEventRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm + 2,
+    paddingHorizontal: SPACING.sm,
+  },
+  pastEventTitle: { color: COLORS.white, fontSize: 14, ...FONTS.medium, flex: 1, marginRight: SPACING.md },
+  pastEventDate: { color: COLORS.muted, fontSize: 12, ...FONTS.regular },
+  importedBadge: {
+    backgroundColor: `${COLORS.green}20`,
+    borderRadius: RADIUS.md,
+    paddingVertical: SPACING.md,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  importedText: { color: COLORS.green, fontSize: 14, ...FONTS.semibold },
+
   footer: { color: COLORS.hint, fontSize: 13, ...FONTS.regular },
 });

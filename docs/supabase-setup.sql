@@ -313,3 +313,35 @@ CREATE POLICY "Users delete own event posters" ON storage.objects
 DROP POLICY IF EXISTS "Anyone reads poster library objects" ON storage.objects;
 CREATE POLICY "Anyone reads poster library objects" ON storage.objects
   FOR SELECT USING (bucket_id = 'poster-library');
+
+-- =============================================
+-- 11. EVENT REMINDERS (DAW-46)
+-- =============================================
+
+-- Tracks which reminders have been sent to prevent duplicates
+CREATE TABLE IF NOT EXISTS event_reminders_sent (
+  id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id      uuid        NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  user_id       uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reminder_type text        NOT NULL,  -- '24h' | '2h' | 'inshallah_nudge'
+  sent_at       timestamptz DEFAULT now(),
+  UNIQUE(event_id, user_id, reminder_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reminders_event ON event_reminders_sent(event_id);
+CREATE INDEX IF NOT EXISTS idx_reminders_lookup ON event_reminders_sent(event_id, reminder_type);
+
+ALTER TABLE event_reminders_sent ENABLE ROW LEVEL SECURITY;
+
+-- Only service role writes (Edge Function), no user access
+CREATE POLICY "Service role manages reminders" ON event_reminders_sent
+  FOR ALL USING (false) WITH CHECK (false);
+
+-- ─── pg_cron: event-reminders runs every 15 minutes ──────────
+-- SELECT cron.schedule('event-reminders-cron', '*/15 * * * *', $$
+--   SELECT net.http_post(
+--     url := 'https://gwjhsbadranzzculpitm.supabase.co/functions/v1/event-reminders',
+--     headers := '{"Authorization": "Bearer <SERVICE_ROLE_KEY>", "Content-Type": "application/json"}'::jsonb,
+--     body := '{}'::jsonb
+--   ) AS request_id;
+-- $$);

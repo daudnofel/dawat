@@ -65,6 +65,7 @@ export default function DiscoverCalendarView({
     selectDate,
   } = useDiscoverCalendar();
   const filterSummary = useDiscoverFilterSummary(filter);
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleClearFilter = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -110,7 +111,6 @@ export default function DiscoverCalendarView({
     .filter(([k]) => k.startsWith(monthKey))
     .reduce((sum, [, evs]) => sum + evs.length, 0);
 
-  const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => {
     setRefreshing(true);
     await refresh();

@@ -1,5 +1,8 @@
 // components/DiscoverAgendaPanel.tsx
 // DAW-30 — The selected-date agenda for Discover's calendar mode.
+// DAW-36 — Mounts MomentBanner at the top of the panel and swaps in
+//          moment-aware empty state copy on Jumu'ah so a quiet Friday
+//          feels like an invitation, not a void.
 //
 // Sits beneath MonthGrid. When the user taps a day, this panel shows a
 // friendly day label ("Today" / "Tomorrow" / "Friday Apr 18") and all
@@ -16,6 +19,8 @@ import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
 import { DiscoverEvent } from '../lib/hooks/useDiscoverFeed';
 import { renderEventCard } from './DiscoverListView';
+import MomentBanner from './MomentBanner';
+import { getMomentForDate } from '../lib/islamicMoments';
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 function isSameDay(a: Date, b: Date): boolean {
@@ -77,6 +82,11 @@ export default function DiscoverAgendaPanel({
   const events = eventsByDate.get(dateKey(selectedDate)) ?? [];
   const label = friendlyLabel(selectedDate);
   const weekday = weekdayOnly(selectedDate);
+  const moment = getMomentForDate(selectedDate);
+
+  // DAW-36 — Jumu'ah gets a softer, more inviting empty-state copy.
+  // The weekly Jumu'ah moment from islamicMoments.ts carries id "jumuah".
+  const isJumuah = moment?.id === 'jumuah';
 
   const handleCreate = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -90,6 +100,10 @@ export default function DiscoverAgendaPanel({
 
   return (
     <View style={styles.wrap}>
+      {/* DAW-36 — Muslim-moment banner (only renders on culturally
+          significant days; silent otherwise). */}
+      <MomentBanner moment={moment} />
+
       {/* Day label header */}
       <View style={styles.header}>
         <Text style={styles.headerLabel}>{label}</Text>
@@ -105,17 +119,25 @@ export default function DiscoverAgendaPanel({
       {events.length === 0 ? (
         // ─── Warm empty state with CTA ──────────────────────────────
         // DAW-31: when a filter is hiding events, swap copy + CTA to
-        // "Clear filter" instead of pushing the user to create.
+        //   "Clear filter" instead of pushing the user to create.
+        // DAW-36: on Jumu'ah, lean into the moment with softer copy so
+        //   a quiet Friday feels like an invitation, not a void.
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyEmoji}>{isFiltered ? '🔍' : '✨'}</Text>
+          <Text style={styles.emptyEmoji}>
+            {isFiltered ? '🔍' : isJumuah ? '🕌' : '✨'}
+          </Text>
           <Text style={styles.emptyTitle}>
             {isFiltered
               ? `No matching events on ${weekday}`
+              : isJumuah
+              ? `A quiet Jumu'ah`
               : `Nothing yet on ${weekday}`}
           </Text>
           <Text style={styles.emptySubtitle}>
             {isFiltered
               ? 'Try clearing your filter to see everything on this day.'
+              : isJumuah
+              ? 'A good day to start something. Invite the brothers, invite the sisters — the barakah follows the gathering.'
               : 'Be the first to host something the community will remember.'}
           </Text>
           {isFiltered ? (

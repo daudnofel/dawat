@@ -75,49 +75,59 @@ export default function Step4Settings({ onPublish }: { onPublish?: (slug?: strin
       finalPosterUrl = draft.poster_url;
     }
 
-    const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/events`, {
-      method: 'POST',
-      headers: {
-        'apikey': serviceKey,
-        'Authorization': `Bearer ${serviceKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-      title: draft.title,
-      description: draft.description || null,
-      host_id: userId,
-      theme_id: draft.theme_id,
-      // DAW-22 identity layers
-      poster_url: finalPosterUrl,
-      poster_type: draft.poster_type,
-      poster_library_id: draft.poster_library_id,
-      effect_id: draft.effect_id,
-      gender_mode: draft.gender_mode,
-      is_id_required: draft.is_id_required,
-      date_time: draft.date_time?.toISOString() ?? null,
-      date_tbd: draft.date_tbd,
-      location_name: draft.location_name || null,
-      location_address: draft.location_address || null,
-      location_lat: draft.location_lat,
-      location_lng: draft.location_lng,
-      is_location_hidden: draft.is_location_hidden,
-      is_halal_venue: draft.is_halal_venue,
-      price: draft.price,
-      capacity: draft.capacity,
-      rsvp_deadline: draft.rsvp_deadline?.toISOString() ?? null,
-      virtual_link: draft.virtual_link || null,
-      allow_plus_ones: draft.allow_plus_ones,
-      max_plus_ones: draft.max_plus_ones,
-      slug,
-      is_published: true,
-    }),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/events`, {
+        method: 'POST',
+        headers: {
+          'apikey': serviceKey,
+          'Authorization': `Bearer ${serviceKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: draft.title,
+          description: draft.description || null,
+          host_id: userId,
+          theme_id: draft.theme_id,
+          poster_url: finalPosterUrl,
+          poster_type: draft.poster_type,
+          poster_library_id: draft.poster_library_id,
+          effect_id: draft.effect_id,
+          gender_mode: draft.gender_mode,
+          is_id_required: draft.is_id_required,
+          date_time: draft.date_time?.toISOString() ?? null,
+          date_tbd: draft.date_tbd,
+          location_name: draft.location_name || null,
+          location_address: draft.location_address || null,
+          location_lat: draft.location_lat,
+          location_lng: draft.location_lng,
+          is_location_hidden: draft.is_location_hidden,
+          is_halal_venue: draft.is_halal_venue,
+          price: draft.price,
+          capacity: draft.capacity,
+          rsvp_deadline: draft.rsvp_deadline?.toISOString() ?? null,
+          virtual_link: draft.virtual_link || null,
+          allow_plus_ones: draft.allow_plus_ones,
+          max_plus_ones: draft.max_plus_ones,
+          slug,
+          is_published: true,
+        }),
+      });
+    } catch (e: any) {
+      Toast.error(e?.message ?? 'Network error — check your connection');
+      setPublishing(false);
+      return;
+    }
 
     setPublishing(false);
 
     if (!res.ok) {
-      const err = await res.json();
-      Toast.error(err.message ?? 'Error publishing event');
+      try {
+        const err = await res.json();
+        Toast.error(err.message ?? 'Error publishing event');
+      } catch {
+        Toast.error('Error publishing event');
+      }
       return;
     }
 

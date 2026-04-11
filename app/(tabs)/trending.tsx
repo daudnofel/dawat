@@ -181,6 +181,7 @@ export default function DiscoverScreen() {
                 error={error}
                 refresh={refresh}
                 filter={filter}
+                onClearFilter={clearFilter}
               />
             )}
           </Animated.View>

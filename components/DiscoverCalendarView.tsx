@@ -5,24 +5,29 @@
 // DAW-30 — Mounts DiscoverAgendaPanel beneath the grid for the selected day,
 //          with a warm empty state + Create CTA. Wraps contents in ScrollView
 //          so agenda cards can extend below the fold.
+// DAW-31 — Respects the DiscoverFilter passed down from the shell: shows a
+//          "Filtered by X" pill with a dismiss tap, updates the month subtitle
+//          to reflect filtered event counts, and forwards filter context into
+//          the agenda panel so empty states stay coherent across modes.
 
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
 import EmptyState from './EmptyState';
 import MonthGrid from './MonthGrid';
 import DiscoverAgendaPanel from './DiscoverAgendaPanel';
 import { DiscoverEvent, DiscoverFilter } from '../lib/hooks/useDiscoverFeed';
 import { useDiscoverCalendar } from '../lib/hooks/useDiscoverCalendar';
+import { useDiscoverFilterSummary } from '../lib/hooks/useDiscoverFilterSummary';
 
 interface Props {
   eventsByDate: Map<string, DiscoverEvent[]>;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  /** Passed through for filter-aware calendar UI in DAW-31. */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   filter: DiscoverFilter;
+  onClearFilter: () => void;
 }
 
 function monthLabel(d: Date): string {
@@ -34,6 +39,8 @@ export default function DiscoverCalendarView({
   loading,
   error,
   refresh,
+  filter,
+  onClearFilter,
 }: Props) {
   const {
     currentMonth,
@@ -43,6 +50,12 @@ export default function DiscoverCalendarView({
     goToToday,
     selectDate,
   } = useDiscoverCalendar();
+  const filterSummary = useDiscoverFilterSummary(filter);
+
+  const handleClearFilter = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onClearFilter();
+  };
 
   if (error) {
     return (
@@ -95,7 +108,9 @@ export default function DiscoverCalendarView({
         <View style={styles.monthLabelWrap}>
           <Text style={styles.monthText}>{monthLabel(currentMonth)}</Text>
           <Text style={styles.monthSubtitle}>
-            {monthEventCount} {monthEventCount === 1 ? 'event' : 'events'} this month
+            {monthEventCount}{' '}
+            {filterSummary.isActive ? 'matching ' : ''}
+            {monthEventCount === 1 ? 'event' : 'events'} this month
           </Text>
         </View>
         <Pressable
@@ -107,16 +122,37 @@ export default function DiscoverCalendarView({
         </Pressable>
       </View>
 
-      {!isCurrentMonth && (
-        <Pressable
-          onPress={goToToday}
-          style={({ pressed }) => [
-            styles.todayPill,
-            pressed && { opacity: 0.75 },
-          ]}
-        >
-          <Text style={styles.todayText}>Jump to today</Text>
-        </Pressable>
+      {/* Pills row — filter summary (if active) + Jump to today (if off-month) */}
+      {(filterSummary.isActive || !isCurrentMonth) && (
+        <View style={styles.pillsRow}>
+          {filterSummary.isActive && (
+            <Pressable
+              onPress={handleClearFilter}
+              style={({ pressed }) => [
+                styles.filterPill,
+                pressed && { opacity: 0.75 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={`Clear filter: ${filterSummary.combined}`}
+            >
+              <Text style={styles.filterPillText}>
+                Filtered · {filterSummary.combined}
+              </Text>
+              <Text style={styles.filterPillX}>  ✕</Text>
+            </Pressable>
+          )}
+          {!isCurrentMonth && (
+            <Pressable
+              onPress={goToToday}
+              style={({ pressed }) => [
+                styles.todayPill,
+                pressed && { opacity: 0.75 },
+              ]}
+            >
+              <Text style={styles.todayText}>Jump to today</Text>
+            </Pressable>
+          )}
+        </View>
       )}
 
       {/* Month grid (DAW-29) */}
@@ -127,10 +163,12 @@ export default function DiscoverCalendarView({
         onSelectDate={selectDate}
       />
 
-      {/* Selected-day agenda (DAW-30) */}
+      {/* Selected-day agenda (DAW-30 / DAW-31 filter context) */}
       <DiscoverAgendaPanel
         selectedDate={selectedDate}
         eventsByDate={eventsByDate}
+        isFiltered={filterSummary.isActive}
+        onClearFilter={onClearFilter}
       />
     </ScrollView>
   );
@@ -191,9 +229,15 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  // Pills row (filter summary + jump-to-today)
+  pillsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    marginBottom: SPACING.md,
+    gap: SPACING.sm,
+  },
   todayPill: {
-    alignSelf: 'center',
-    marginBottom: SPACING.lg,
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.sm,
     borderRadius: RADIUS.full,
@@ -206,5 +250,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     ...FONTS.bold,
     letterSpacing: 0.3,
+  },
+  filterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 223, 161, 0.35)',
+    backgroundColor: 'rgba(30, 30, 30, 0.75)',
+  },
+  filterPillText: {
+    color: COLORS.white,
+    fontSize: 12,
+    ...FONTS.bold,
+    letterSpacing: 0.2,
+  },
+  filterPillX: {
+    color: COLORS.gold2,
+    fontSize: 13,
+    ...FONTS.bold,
   },
 });

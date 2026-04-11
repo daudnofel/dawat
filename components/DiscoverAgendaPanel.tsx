@@ -55,12 +55,18 @@ function weekdayOnly(d: Date): string {
 interface Props {
   selectedDate: Date | null;
   eventsByDate: Map<string, DiscoverEvent[]>;
+  /** DAW-31 — true when a DiscoverFilter is actively narrowing results. */
+  isFiltered?: boolean;
+  /** DAW-31 — called when user taps the in-panel "Clear filter" button. */
+  onClearFilter?: () => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────
 export default function DiscoverAgendaPanel({
   selectedDate,
   eventsByDate,
+  isFiltered = false,
+  onClearFilter,
 }: Props) {
   const router = useRouter();
 
@@ -75,6 +81,11 @@ export default function DiscoverAgendaPanel({
   const handleCreate = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push('/(tabs)/create');
+  };
+
+  const handleClearFilter = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onClearFilter?.();
   };
 
   return (
@@ -93,25 +104,46 @@ export default function DiscoverAgendaPanel({
 
       {events.length === 0 ? (
         // ─── Warm empty state with CTA ──────────────────────────────
+        // DAW-31: when a filter is hiding events, swap copy + CTA to
+        // "Clear filter" instead of pushing the user to create.
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyEmoji}>✨</Text>
+          <Text style={styles.emptyEmoji}>{isFiltered ? '🔍' : '✨'}</Text>
           <Text style={styles.emptyTitle}>
-            Nothing yet on {weekday}
+            {isFiltered
+              ? `No matching events on ${weekday}`
+              : `Nothing yet on ${weekday}`}
           </Text>
           <Text style={styles.emptySubtitle}>
-            Be the first to host something the community will remember.
+            {isFiltered
+              ? 'Try clearing your filter to see everything on this day.'
+              : 'Be the first to host something the community will remember.'}
           </Text>
-          <Pressable
-            onPress={handleCreate}
-            style={({ pressed }) => [
-              styles.ctaButton,
-              pressed && { transform: [{ scale: 0.97 }] },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Start something — create a new event"
-          >
-            <Text style={styles.ctaText}>Start something</Text>
-          </Pressable>
+          {isFiltered ? (
+            <Pressable
+              onPress={handleClearFilter}
+              style={({ pressed }) => [
+                styles.ctaButton,
+                styles.ctaButtonSecondary,
+                pressed && { transform: [{ scale: 0.97 }] },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Clear filter"
+            >
+              <Text style={styles.ctaTextSecondary}>Clear filter</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={handleCreate}
+              style={({ pressed }) => [
+                styles.ctaButton,
+                pressed && { transform: [{ scale: 0.97 }] },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Start something — create a new event"
+            >
+              <Text style={styles.ctaText}>Start something</Text>
+            </Pressable>
+          )}
         </View>
       ) : (
         // ─── Event list for the day ────────────────────────────────
@@ -204,9 +236,20 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
     backgroundColor: COLORS.gold2,
   },
+  ctaButtonSecondary: {
+    backgroundColor: 'transparent',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 223, 161, 0.55)',
+  },
   ctaText: {
     fontSize: 14,
     color: COLORS.dark,
+    ...FONTS.bold,
+    letterSpacing: 0.2,
+  },
+  ctaTextSecondary: {
+    fontSize: 14,
+    color: COLORS.gold2,
     ...FONTS.bold,
     letterSpacing: 0.2,
   },

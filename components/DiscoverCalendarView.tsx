@@ -9,14 +9,23 @@
 //          "Filtered by X" pill with a dismiss tap, updates the month subtitle
 //          to reflect filtered event counts, and forwards filter context into
 //          the agenda panel so empty states stay coherent across modes.
+// DAW-32 — QA + polish: calendar-shaped skeleton on first load, retry button
+//          on error, and fade-in animation when the month changes.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
 import EmptyState from './EmptyState';
 import MonthGrid from './MonthGrid';
 import DiscoverAgendaPanel from './DiscoverAgendaPanel';
+import DiscoverCalendarSkeleton from './DiscoverCalendarSkeleton';
 import { DiscoverEvent, DiscoverFilter } from '../lib/hooks/useDiscoverFeed';
 import { useDiscoverCalendar } from '../lib/hooks/useDiscoverCalendar';
 import { useDiscoverFilterSummary } from '../lib/hooks/useDiscoverFilterSummary';
@@ -57,6 +66,12 @@ export default function DiscoverCalendarView({
     onClearFilter();
   };
 
+  // DAW-32 — first-load skeleton. Once we have any data, let loading fall
+  // through to the inline RefreshControl so the grid stays visible.
+  if (loading && eventsByDate.size === 0) {
+    return <DiscoverCalendarSkeleton />;
+  }
+
   if (error) {
     return (
       <View style={styles.errorWrap}>
@@ -65,6 +80,20 @@ export default function DiscoverCalendarView({
           title="Couldn't load calendar"
           subtitle={error}
         />
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            refresh();
+          }}
+          style={({ pressed }) => [
+            styles.retryButton,
+            pressed && { transform: [{ scale: 0.97 }] },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Retry loading calendar"
+        >
+          <Text style={styles.retryText}>Try again</Text>
+        </Pressable>
       </View>
     );
   }
@@ -82,6 +111,21 @@ export default function DiscoverCalendarView({
     await refresh();
     setRefreshing(false);
   };
+
+  // DAW-32 — gentle fade when the month changes, mirroring the shell's
+  // list/calendar cross-fade so the grid doesn't pop.
+  const monthFade = useSharedValue(1);
+  useEffect(() => {
+    monthFade.value = 0;
+    monthFade.value = withTiming(1, {
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [currentMonth, monthFade]);
+  const monthFadeStyle = useAnimatedStyle(() => ({
+    opacity: monthFade.value,
+    transform: [{ translateY: (1 - monthFade.value) * 6 }],
+  }));
 
   return (
     <ScrollView
@@ -155,21 +199,22 @@ export default function DiscoverCalendarView({
         </View>
       )}
 
-      {/* Month grid (DAW-29) */}
-      <MonthGrid
-        currentMonth={currentMonth}
-        selectedDate={selectedDate}
-        eventsByDate={eventsByDate}
-        onSelectDate={selectDate}
-      />
+      {/* Month grid (DAW-29) + agenda panel — fade on month change (DAW-32) */}
+      <Animated.View style={monthFadeStyle}>
+        <MonthGrid
+          currentMonth={currentMonth}
+          selectedDate={selectedDate}
+          eventsByDate={eventsByDate}
+          onSelectDate={selectDate}
+        />
 
-      {/* Selected-day agenda (DAW-30 / DAW-31 filter context) */}
-      <DiscoverAgendaPanel
-        selectedDate={selectedDate}
-        eventsByDate={eventsByDate}
-        isFiltered={filterSummary.isActive}
-        onClearFilter={onClearFilter}
-      />
+        <DiscoverAgendaPanel
+          selectedDate={selectedDate}
+          eventsByDate={eventsByDate}
+          isFiltered={filterSummary.isActive}
+          onClearFilter={onClearFilter}
+        />
+      </Animated.View>
     </ScrollView>
   );
 }
@@ -187,6 +232,20 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: SPACING.xl,
     paddingTop: SPACING.lg,
+    alignItems: 'center',
+  },
+  retryButton: {
+    marginTop: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.gold2,
+  },
+  retryText: {
+    fontSize: 14,
+    color: COLORS.dark,
+    ...FONTS.bold,
+    letterSpacing: 0.2,
   },
 
   // Month header

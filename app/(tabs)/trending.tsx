@@ -7,6 +7,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -31,9 +32,30 @@ import {
   DiscoverFilter,
 } from '../../lib/hooks/useDiscoverFeed';
 
+// ─── Constants ────────────────────────────────────────────────────────
+const VIEW_MODE_STORAGE_KEY = 'dawat.discover.viewMode';
+
 // ─── Screen ───────────────────────────────────────────────────────────
 export default function DiscoverScreen() {
-  const [viewMode, setViewMode] = useState<DiscoverViewMode>('list');
+  const [viewMode, setViewModeRaw] = useState<DiscoverViewMode>('list');
+
+  // DAW-32 — persist last-chosen view mode across sessions so returning
+  // users land on the same mode they left in.
+  useEffect(() => {
+    AsyncStorage.getItem(VIEW_MODE_STORAGE_KEY).then((saved) => {
+      if (saved === 'list' || saved === 'calendar') {
+        setViewModeRaw(saved);
+      }
+    });
+  }, []);
+
+  const setViewMode = useCallback((mode: DiscoverViewMode) => {
+    setViewModeRaw(mode);
+    AsyncStorage.setItem(VIEW_MODE_STORAGE_KEY, mode).catch(() => {
+      // Non-fatal: persistence failure just means next session resets to list.
+    });
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<DiscoverEvent[] | null>(null);
   const [searching, setSearching] = useState(false);

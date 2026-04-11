@@ -4,8 +4,8 @@
  * Everything about the *logistics* of the event lives here: date/time
  * (plus TBD toggle), location name + hide-address toggle, halal venue
  * toggle, virtual link, price, capacity, RSVP deadline. Controls are
- * ported directly from the legacy `step3-details.tsx` (DAW-55 removes
- * that file) so wiring and validation rules stay identical — only the
+ * ported directly from the legacy `step3-details.tsx` (deleted in
+ * DAW-55) so wiring and validation rules stay identical — only the
  * chrome is replaced by `ToolSheet`.
  *
  * Title + host + audience are deliberately NOT here — those live in the

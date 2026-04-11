@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Share, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withDelay } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -20,6 +20,10 @@ export default function SuccessScreen({ onDone, publishedSlug }: { onDone?: () =
   const { draft, reset } = useEventStore();
   const confettiRef = useRef<any>(null);
   const router = useRouter();
+  // DAW-55: the publish sheet passes the real inserted slug via route
+  // params so we never regenerate a divergent one. Prop + legacy
+  // generateSlug fallbacks stay for any residual callers.
+  const params = useLocalSearchParams<{ slug?: string }>();
 
   // DAW-47: Import guests from past event
   const [showPastEvents, setShowPastEvents] = useState(false);
@@ -28,8 +32,13 @@ export default function SuccessScreen({ onDone, publishedSlug }: { onDone?: () =
   const [importing, setImporting] = useState(false);
   const [imported, setImported] = useState(false);
 
-  // Use the actual slug from publish (passed via props), not a regenerated one
-  const slug = publishedSlug || generateSlug(draft.title || 'event');
+  // Prefer the route param (publish sheet), then the legacy prop, then the
+  // last-ditch regenerated fallback (unreliable — slugs have a random
+  // suffix, so this only exists so deep links to /create/success don't hard-crash).
+  const slug =
+    (typeof params.slug === 'string' && params.slug) ||
+    publishedSlug ||
+    generateSlug(draft.title || 'event');
   const link = `https://dawat.app/e/${slug}`;
   const shareMessage = `You're invited to ${draft.title} on Dawat!\n${link}`;
 

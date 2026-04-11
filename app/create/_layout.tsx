@@ -13,9 +13,7 @@ import { COLORS } from '../../lib/theme';
  *                  `app/create/tools/_layout.tsx`.
  *   - success    — post-publish celebration (unchanged from V1)
  *
- * Legacy step routes (step1-theme, step2-basics, step-poster, step-effect,
- * step3-details, step4-settings) still resolve because their files exist
- * on disk; DAW-55 deletes them for real once publish lands.
+ * The 6 legacy wizard step routes were deleted in DAW-55.
  */
 export default function CreateLayout() {
   return (

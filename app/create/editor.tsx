@@ -14,8 +14,9 @@
  * back to /create/essentials. There is no valid state where the editor
  * has no title + no host.
  *
- * Publish still surfaces a Toast — DAW-55 replaces it with a publish
- * bottom sheet and the real submit-to-Supabase flow.
+ * Publish opens the publish tool sheet (DAW-55) which runs the final
+ * readiness checklist and calls `publishEvent(...)` to insert into
+ * Supabase, then replaces to the success screen.
  */
 
 import { useEffect } from 'react';
@@ -30,7 +31,6 @@ import { getThemeById } from '../../lib/themes';
 import EventPreview, { PreviewZone } from '../../components/EventPreview';
 import EditorChrome from '../../components/EditorChrome';
 import EditorDock from '../../components/EditorDock';
-import { Toast } from '../../components/Toast';
 
 // Map a preview-zone tap to the tool it should open. The editor canvas
 // and the editor dock funnel through the same openTool call so the store
@@ -84,12 +84,6 @@ export default function EditorScreen() {
   const textColor = theme?.textColor ?? COLORS.white;
 
   const handleToolPress = (tool: EditorToolId) => {
-    // Publish still toasts until DAW-55 wires the publish sheet.
-    if (tool === 'publish') {
-      openTool('publish');
-      Toast.info('Publish sheet coming soon');
-      return;
-    }
     openTool(tool);
     router.push(`/create/tools/${tool}`);
   };
@@ -103,8 +97,9 @@ export default function EditorScreen() {
   };
 
   const handlePublish = () => {
+    if (!essentialsReady) return;
     openTool('publish');
-    Toast.info('Publish sheet coming soon');
+    router.push('/create/tools/publish');
   };
 
   return (

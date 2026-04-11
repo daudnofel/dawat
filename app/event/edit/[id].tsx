@@ -1,3 +1,19 @@
+/**
+ * TODO (post-DAW-55, V1.5): unify edit with the Creation V2 editor.
+ *
+ * This screen is the last standalone form-based flow in the app. It
+ * still renders its own scroll-based "fields" layout instead of the
+ * preview-led editor + tool sheets that creation now uses. The plan:
+ *
+ *   1. On mount, hydrate `useEventStore.draft` from the Supabase row.
+ *   2. Push `/create/editor` (guarded so it treats the existing event
+ *      as "already essentials-complete").
+ *   3. Replace the publish sheet's `publishEvent` call with an UPDATE
+ *      path when the store is in edit mode.
+ *
+ * Until that lands, this file continues to work standalone — it does
+ * not import from any step*.tsx file so the DAW-55 deletion is safe.
+ */
 import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet, ScrollView,

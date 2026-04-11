@@ -14,10 +14,9 @@
  *      home via step 3's replace.
  *
  * We guard with a ref so the focus callback doesn't trigger a loop when
- * returning from the modal. Legacy wizard step files (step1-theme,
- * step2-basics, step-poster, step-effect, step3-details, step4-settings)
- * are still on disk so we keep `useEventStore.currentStep` as a stub — but
- * nothing in the tab tree references them any more. DAW-55 deletes them.
+ * returning from the modal. The 6 legacy wizard step files were removed
+ * in DAW-55 — the only entry point into creation is now the essentials
+ * modal this redirector pushes.
  */
 
 import { useCallback, useRef } from 'react';

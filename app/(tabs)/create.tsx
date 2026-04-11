@@ -18,6 +18,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 export default function CreateTab() {
   const { currentStep } = useEventStore();
   const [published, setPublished] = useState(false);
+  const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
 
   const opacity = useSharedValue(1);
   const translateX = useSharedValue(0);
@@ -50,7 +51,7 @@ export default function CreateTab() {
           </Svg>
         </View>
         <Animated.View style={[styles.content, animStyle]}>
-          <SuccessScreen onDone={() => setPublished(false)} />
+          <SuccessScreen onDone={() => { setPublished(false); setPublishedSlug(null); }} publishedSlug={publishedSlug} />
         </Animated.View>
       </View>
     );
@@ -77,7 +78,7 @@ export default function CreateTab() {
         {currentStep === 3 && <Step1Theme />}
         {currentStep === 4 && <Step3Details />}
         {currentStep === 5 && <StepEffect />}
-        {currentStep === 6 && <Step4Settings onPublish={() => setPublished(true)} />}
+        {currentStep === 6 && <Step4Settings onPublish={(slug?: string) => { setPublishedSlug(slug ?? null); setPublished(true); }} />}
       </Animated.View>
     </View>
   );

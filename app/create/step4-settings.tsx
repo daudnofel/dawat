@@ -17,7 +17,7 @@ const GENDER_OPTIONS = [
   { label: 'Family', subtitle: 'Parents + kids', emoji: '👨‍👩‍👧', value: GenderMode.Family },
 ];
 
-export default function Step4Settings({ onPublish }: { onPublish?: () => void }) {
+export default function Step4Settings({ onPublish }: { onPublish?: (slug?: string) => void }) {
   const { draft, updateDraft, prevStep } = useEventStore();
   const [publishing, setPublishing] = useState(false);
 
@@ -141,7 +141,7 @@ export default function Step4Settings({ onPublish }: { onPublish?: () => void })
       // Never block publish for email
     }
 
-    onPublish?.();
+    onPublish?.(slug);
   };
 
   const needsIdNote = draft.gender_mode === GenderMode.SistersOnly || draft.gender_mode === GenderMode.BrothersOnly;

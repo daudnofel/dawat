@@ -15,7 +15,7 @@ import { triggerPush } from '../../lib/push';
 import { generateSlug } from '../../lib/slugify';
 import AnimatedPress from '../../components/AnimatedPress';
 
-export default function SuccessScreen({ onDone }: { onDone?: () => void }) {
+export default function SuccessScreen({ onDone, publishedSlug }: { onDone?: () => void; publishedSlug?: string | null }) {
   const { draft, reset } = useEventStore();
   const confettiRef = useRef<any>(null);
   const router = useRouter();
@@ -27,7 +27,8 @@ export default function SuccessScreen({ onDone }: { onDone?: () => void }) {
   const [importing, setImporting] = useState(false);
   const [imported, setImported] = useState(false);
 
-  const slug = generateSlug(draft.title || 'event');
+  // Use the actual slug from publish (passed via props), not a regenerated one
+  const slug = publishedSlug || generateSlug(draft.title || 'event');
   const link = `https://dawat.app/e/${slug}`;
   const shareMessage = `You're invited to ${draft.title} on Dawat!\n${link}`;
 

@@ -1,9 +1,13 @@
 // components/MonthGrid.tsx
 // DAW-29 — Month grid for Discover's calendar mode.
 // DAW-34 — Day cells upgraded to themed tinted circles + corner count
-//          badge. Replaces the old 3-dot marker pattern with a richer,
-//          more scalable visual language that leans on event theme
-//          identity (event.theme.accents.primary) without thumbnails.
+//          badge, replacing the old 3-dot marker pattern.
+// DAW-50 — Polish pass: corner count badge retired in favor of a
+//          four-tier tint intensity scale driven by
+//          `tintAlphaForCount`. CELL_HEIGHT and DAY_CIRCLE tightened
+//          now that the cell no longer carries any sub-circle chrome.
+//          Out-of-month days stop applying a full-cell opacity fade
+//          and skip tint entirely — their muted day number is enough.
 //
 // Pure, presentational 6x7 day grid. Parent supplies currentMonth,
 // selectedDate, eventsByDate, and onSelectDate. This file owns:
@@ -12,12 +16,11 @@
 //   • "In-month" vs "adjacent month" styling
 //   • Today ring, selected filled circle
 //   • Theme-tinted day-circle background via getDayVisuals()
-//   • Corner count badge for days with 2+ events
 //   • Haptic feedback on cell press
 //
 // No data fetching or date arithmetic beyond what the grid needs.
 // Month/selected state lives in useDiscoverCalendar (DAW-28).
-// Day visual logic lives in lib/dayVisuals.ts (DAW-33).
+// Day visual logic lives in lib/dayVisuals.ts (DAW-33 / DAW-50).
 
 import { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
@@ -29,7 +32,6 @@ import { getDayVisuals, tintBackground } from '../lib/dayVisuals';
 // ─── Constants ────────────────────────────────────────────────────────
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const;
 const CELLS = 42; // 6 rows × 7 cols — stable layout across every month
-const OUT_OF_MONTH_OPACITY = 0.35;
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 function startOfDay(d: Date): Date {
@@ -123,10 +125,13 @@ export default function MonthGrid({
           const isToday = isSameDay(date, today);
           const isSelected = selectedDate ? isSameDay(date, selectedDate) : false;
 
-          // Tint is only applied when the cell is NOT in the selected state —
-          // the selected fill is a solid gold disc and should win visually.
+          // Tint only applies to in-month days that aren't selected.
+          // • Out-of-month: skip entirely — the muted day number is
+          //   enough; tinting adjacent-month days would stack two mute
+          //   treatments and wash the cell out.
+          // • Selected: the solid gold fill owns the cell visually.
           const tintStyle =
-            !isSelected && visuals.tintColor
+            inMonth && !isSelected && visuals.tintColor
               ? {
                   backgroundColor: tintBackground(
                     visuals.tintColor,
@@ -134,8 +139,6 @@ export default function MonthGrid({
                   ),
                 }
               : null;
-
-          const showCountBadge = visuals.eventCount >= 2;
 
           return (
             <Pressable
@@ -152,50 +155,27 @@ export default function MonthGrid({
               accessibilityState={{ selected: isSelected }}
               style={({ pressed }) => [
                 styles.cell,
-                !inMonth && { opacity: OUT_OF_MONTH_OPACITY },
                 pressed && !isSelected && { opacity: 0.7 },
               ]}
             >
-              <View style={styles.dayCircleWrap}>
-                <View
+              <View
+                style={[
+                  styles.dayCircle,
+                  tintStyle,
+                  isToday && !isSelected && styles.todayRing,
+                  isSelected && styles.selectedFill,
+                ]}
+              >
+                <Text
                   style={[
-                    styles.dayCircle,
-                    tintStyle,
-                    isToday && !isSelected && styles.todayRing,
-                    isSelected && styles.selectedFill,
+                    styles.dayText,
+                    !inMonth && styles.dayTextMuted,
+                    isToday && !isSelected && styles.todayText,
+                    isSelected && styles.selectedText,
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.dayText,
-                      !inMonth && styles.dayTextMuted,
-                      isToday && !isSelected && styles.todayText,
-                      isSelected && styles.selectedText,
-                    ]}
-                  >
-                    {date.getDate()}
-                  </Text>
-                </View>
-
-                {showCountBadge && (
-                  <View
-                    style={[
-                      styles.countBadge,
-                      isSelected && styles.countBadgeOnSelected,
-                    ]}
-                    accessibilityElementsHidden
-                    importantForAccessibility="no"
-                  >
-                    <Text
-                      style={[
-                        styles.countBadgeText,
-                        isSelected && styles.countBadgeTextOnSelected,
-                      ]}
-                    >
-                      {visuals.eventCount > 9 ? '9+' : visuals.eventCount}
-                    </Text>
-                  </View>
-                )}
+                  {date.getDate()}
+                </Text>
               </View>
             </Pressable>
           );
@@ -206,8 +186,12 @@ export default function MonthGrid({
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────
-const CELL_HEIGHT = 48;
-const DAY_CIRCLE = 32;
+// DAW-50: tightened rhythm. The old 48px cell accommodated a dot row
+// under the day circle; without that, 42px feels right and the grid
+// breathes as a single surface. DAY_CIRCLE bumped to 34px so the tint
+// has a touch more surface area to read on.
+const CELL_HEIGHT = 42;
+const DAY_CIRCLE = 34;
 
 const styles = StyleSheet.create({
   wrap: {
@@ -244,12 +228,6 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
 
-  dayCircleWrap: {
-    width: DAY_CIRCLE,
-    height: DAY_CIRCLE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   dayCircle: {
     width: DAY_CIRCLE,
     height: DAY_CIRCLE,
@@ -282,32 +260,4 @@ const styles = StyleSheet.create({
     ...FONTS.bold,
   },
 
-  // Corner count badge — shown on days with 2+ events.
-  countBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    minWidth: 14,
-    height: 14,
-    paddingHorizontal: 3,
-    borderRadius: 7,
-    backgroundColor: COLORS.gold2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: COLORS.dark,
-  },
-  countBadgeOnSelected: {
-    backgroundColor: COLORS.dark,
-    borderColor: COLORS.gold2,
-  },
-  countBadgeText: {
-    fontSize: 9,
-    color: COLORS.dark,
-    ...FONTS.bold,
-    lineHeight: 10,
-  },
-  countBadgeTextOnSelected: {
-    color: COLORS.gold2,
-  },
 });

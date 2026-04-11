@@ -285,6 +285,7 @@ export default function ProfileScreen() {
                   scaleValue={0.97}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    console.log('[TOAST TEST] Edit profile tapped');
                     Toast.info('Edit profile coming soon');
                   }}
                 >

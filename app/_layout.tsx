@@ -89,11 +89,13 @@ export default function RootLayout() {
       >
         <ThemeProvider value={DawatDarkTheme}>
           <StatusBar barStyle="light-content" />
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.dark } }}>
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
-          </Stack>
-          <ToastProvider />
+          <View style={{ flex: 1 }}>
+            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.dark } }}>
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
+            </Stack>
+            <ToastProvider />
+          </View>
         </ThemeProvider>
       </HeroUINativeProvider>
     </GestureHandlerRootView>

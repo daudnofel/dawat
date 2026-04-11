@@ -417,11 +417,26 @@ export default function EventDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false} style={{ backgroundColor: 'transparent' }}>
         <View style={styles.topBar}>
           <Pressable onPress={() => router.back()}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={[styles.backText, { color: theme?.textColor ?? COLORS.white }]}>← Back</Text>
           </Pressable>
-          <Pressable onPress={handleShare}>
-            <Text style={styles.shareText}>Share</Text>
-          </Pressable>
+          <View style={styles.topBarRight}>
+            <Pressable onPress={handleShare}>
+              <Text style={[styles.shareText, { color: theme?.textColor ?? COLORS.white }]}>Share</Text>
+            </Pressable>
+            {isHost && (
+              <Pressable
+                onPress={() => {
+                  Alert.alert('Manage Event', '', [
+                    { text: 'Edit Event', onPress: handleEdit },
+                    { text: 'Cancel Event', style: 'destructive', onPress: handleCancelEvent },
+                    { text: 'Close', style: 'cancel' },
+                  ]);
+                }}
+              >
+                <Text style={[styles.moreButton, { color: theme?.textColor ?? COLORS.white }]}>⋯</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
 
         {/* DAW-22 — when a poster exists, render it full-width 1:1 as the hero.
@@ -582,22 +597,6 @@ export default function EventDetailScreen() {
 
           <EventComments eventId={id!} hostId={event.host_id} />
 
-          {isHost && (
-            <View style={styles.hostActions}>
-              <Pressable
-                style={({ pressed }) => [styles.editButton, pressed && { transform: [{ scale: 0.97 }] }]}
-                onPress={handleEdit}
-              >
-                <Text style={styles.editButtonText}>Edit Event</Text>
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [styles.cancelEventButton, pressed && { transform: [{ scale: 0.97 }] }]}
-                onPress={handleCancelEvent}
-              >
-                <Text style={styles.cancelEventText}>Cancel Event</Text>
-              </Pressable>
-            </View>
-          )}
           {/* Bottom spacer so content clears the floating RSVP bar */}
           <View style={{ height: 100 }} />
         </View>
@@ -642,8 +641,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md,
   },
-  backText: { color: COLORS.gold, fontSize: 16, ...FONTS.medium },
-  shareText: { color: COLORS.gold, fontSize: 16, ...FONTS.medium },
+  backText: { fontSize: 16, ...FONTS.medium },
+  topBarRight: { flexDirection: 'row', alignItems: 'center', gap: SPACING.lg },
+  shareText: { fontSize: 16, ...FONTS.medium },
+  moreButton: { fontSize: 22, ...FONTS.bold, letterSpacing: 2 },
   banner: { height: 160, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   bannerEmoji: { fontSize: 56 },
   badgeRow: { position: 'absolute', bottom: SPACING.md, left: SPACING.lg, flexDirection: 'row', gap: SPACING.sm },
@@ -740,16 +741,4 @@ const styles = StyleSheet.create({
     ...FONTS.regular,
     marginBottom: SPACING.md,
   },
-  hostActions: {
-    marginTop: SPACING.xl, paddingTop: SPACING.lg,
-    gap: SPACING.sm, marginBottom: 120,
-  },
-  editButton: {
-    paddingVertical: SPACING.md, alignItems: 'center',
-  },
-  editButtonText: { color: COLORS.gold, fontSize: 15, ...FONTS.semibold },
-  cancelEventButton: {
-    paddingVertical: SPACING.sm, alignItems: 'center',
-  },
-  cancelEventText: { color: COLORS.hint, fontSize: 13, ...FONTS.medium },
 });

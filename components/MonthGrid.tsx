@@ -1,5 +1,9 @@
 // components/MonthGrid.tsx
 // DAW-29 — Month grid for Discover's calendar mode.
+// DAW-34 — Day cells upgraded to themed tinted circles + corner count
+//          badge. Replaces the old 3-dot marker pattern with a richer,
+//          more scalable visual language that leans on event theme
+//          identity (event.theme.accents.primary) without thumbnails.
 //
 // Pure, presentational 6x7 day grid. Parent supplies currentMonth,
 // selectedDate, eventsByDate, and onSelectDate. This file owns:
@@ -7,23 +11,25 @@
 //   • 42 day cells (6 rows × 7 cols, stable layout)
 //   • "In-month" vs "adjacent month" styling
 //   • Today ring, selected filled circle
-//   • Up to 3 themed dot markers per day tinted by event theme
+//   • Theme-tinted day-circle background via getDayVisuals()
+//   • Corner count badge for days with 2+ events
 //   • Haptic feedback on cell press
 //
 // No data fetching or date arithmetic beyond what the grid needs.
 // Month/selected state lives in useDiscoverCalendar (DAW-28).
+// Day visual logic lives in lib/dayVisuals.ts (DAW-33).
 
 import { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, SPACING } from '../lib/theme';
-import { getThemeById } from '../lib/themes';
 import { DiscoverEvent } from '../lib/hooks/useDiscoverFeed';
+import { getDayVisuals, tintBackground } from '../lib/dayVisuals';
 
 // ─── Constants ────────────────────────────────────────────────────────
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const;
 const CELLS = 42; // 6 rows × 7 cols — stable layout across every month
-const MAX_DOTS = 3;
+const OUT_OF_MONTH_OPACITY = 0.35;
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 function startOfDay(d: Date): Date {
@@ -70,23 +76,6 @@ function buildGridDays(monthStart: Date): {
   return days;
 }
 
-/** Up to MAX_DOTS distinct theme accent colours for a day's events. */
-function themeDotsForDay(events: DiscoverEvent[] | undefined): string[] {
-  if (!events || events.length === 0) return [];
-  const seen = new Set<string>();
-  const colors: string[] = [];
-  for (const e of events) {
-    const theme = getThemeById(e.theme_id);
-    const color = theme?.accents?.primary ?? COLORS.gold2;
-    if (!seen.has(color)) {
-      seen.add(color);
-      colors.push(color);
-      if (colors.length >= MAX_DOTS) break;
-    }
-  }
-  return colors;
-}
-
 // ─── Types ────────────────────────────────────────────────────────────
 interface Props {
   /** First-of-month (local tz). */
@@ -130,9 +119,23 @@ export default function MonthGrid({
         {days.map(({ date, inMonth }) => {
           const key = dateKey(date);
           const events = eventsByDate.get(key);
-          const dots = themeDotsForDay(events);
+          const visuals = getDayVisuals(events);
           const isToday = isSameDay(date, today);
           const isSelected = selectedDate ? isSameDay(date, selectedDate) : false;
+
+          // Tint is only applied when the cell is NOT in the selected state —
+          // the selected fill is a solid gold disc and should win visually.
+          const tintStyle =
+            !isSelected && visuals.tintColor
+              ? {
+                  backgroundColor: tintBackground(
+                    visuals.tintColor,
+                    visuals.tintAlpha
+                  ),
+                }
+              : null;
+
+          const showCountBadge = visuals.eventCount >= 2;
 
           return (
             <Pressable
@@ -140,47 +143,59 @@ export default function MonthGrid({
               onPress={() => handlePress(date)}
               accessibilityRole="button"
               accessibilityLabel={`${date.toDateString()}${
-                events ? `, ${events.length} events` : ''
+                visuals.eventCount > 0
+                  ? `, ${visuals.eventCount} ${
+                      visuals.eventCount === 1 ? 'event' : 'events'
+                    }`
+                  : ''
               }`}
               accessibilityState={{ selected: isSelected }}
               style={({ pressed }) => [
                 styles.cell,
+                !inMonth && { opacity: OUT_OF_MONTH_OPACITY },
                 pressed && !isSelected && { opacity: 0.7 },
               ]}
             >
-              <View
-                style={[
-                  styles.dayCircle,
-                  isToday && !isSelected && styles.todayRing,
-                  isSelected && styles.selectedFill,
-                ]}
-              >
-                <Text
+              <View style={styles.dayCircleWrap}>
+                <View
                   style={[
-                    styles.dayText,
-                    !inMonth && styles.dayTextMuted,
-                    isToday && !isSelected && styles.todayText,
-                    isSelected && styles.selectedText,
+                    styles.dayCircle,
+                    tintStyle,
+                    isToday && !isSelected && styles.todayRing,
+                    isSelected && styles.selectedFill,
                   ]}
                 >
-                  {date.getDate()}
-                </Text>
-              </View>
-
-              {/* Themed dot markers (up to 3) */}
-              <View style={styles.dotRow}>
-                {dots.map((color, idx) => (
-                  <View
-                    key={`${key}-dot-${idx}`}
+                  <Text
                     style={[
-                      styles.dot,
-                      {
-                        backgroundColor: color,
-                        opacity: inMonth ? 1 : 0.35,
-                      },
+                      styles.dayText,
+                      !inMonth && styles.dayTextMuted,
+                      isToday && !isSelected && styles.todayText,
+                      isSelected && styles.selectedText,
                     ]}
-                  />
-                ))}
+                  >
+                    {date.getDate()}
+                  </Text>
+                </View>
+
+                {showCountBadge && (
+                  <View
+                    style={[
+                      styles.countBadge,
+                      isSelected && styles.countBadgeOnSelected,
+                    ]}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
+                  >
+                    <Text
+                      style={[
+                        styles.countBadgeText,
+                        isSelected && styles.countBadgeTextOnSelected,
+                      ]}
+                    >
+                      {visuals.eventCount > 9 ? '9+' : visuals.eventCount}
+                    </Text>
+                  </View>
+                )}
               </View>
             </Pressable>
           );
@@ -229,6 +244,12 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
 
+  dayCircleWrap: {
+    width: DAY_CIRCLE,
+    height: DAY_CIRCLE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   dayCircle: {
     width: DAY_CIRCLE,
     height: DAY_CIRCLE,
@@ -261,17 +282,32 @@ const styles = StyleSheet.create({
     ...FONTS.bold,
   },
 
-  dotRow: {
-    flexDirection: 'row',
+  // Corner count badge — shown on days with 2+ events.
+  countBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    minWidth: 14,
+    height: 14,
+    paddingHorizontal: 3,
+    borderRadius: 7,
+    backgroundColor: COLORS.gold2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 3,
-    height: 6,
+    borderWidth: 1.5,
+    borderColor: COLORS.dark,
   },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    marginHorizontal: 1.5,
+  countBadgeOnSelected: {
+    backgroundColor: COLORS.dark,
+    borderColor: COLORS.gold2,
+  },
+  countBadgeText: {
+    fontSize: 9,
+    color: COLORS.dark,
+    ...FONTS.bold,
+    lineHeight: 10,
+  },
+  countBadgeTextOnSelected: {
+    color: COLORS.gold2,
   },
 });

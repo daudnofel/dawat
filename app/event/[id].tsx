@@ -1,27 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
-import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
+import { COLORS, FONTS, SPACING } from '../../lib/theme';
 import { Toast } from '../../components/Toast';
 import { RsvpStatus, GenderMode } from '../../types';
 import { supabase } from '../../lib/supabase';
 import RsvpButtons from '../../components/RsvpButtons';
 import FamilyRegistration from '../../components/FamilyRegistration';
 import GuestListDashboard from '../../components/GuestListDashboard';
-import AddToCalendar from '../../components/AddToCalendar';
 import GuestAvatars from '../../components/GuestAvatars';
 import MapPreview from '../../components/MapPreview';
 import EventComments from '../../components/EventComments';
 import ShareSheet from '../../components/ShareSheet';
+import EventPreview from '../../components/EventPreview';
 import { getThemeById } from '../../lib/themes';
 import { getCurrentUserId } from '../../lib/auth-cache';
 import { triggerPush } from '../../lib/push';
-import EventEffect from '../../components/EventEffect';
-import { EffectId } from '../../types';
 
 interface EventDetail {
   id: string;
@@ -63,6 +59,10 @@ export default function EventDetailScreen() {
   const [guestRefreshKey, setGuestRefreshKey] = useState(0);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
+
+  // Silence unused-var warning: waitlistCount is fetched for parity with the
+  // original implementation; future work can surface it in the guest section.
+  void waitlistCount;
 
   useEffect(() => {
     fetchEvent();
@@ -225,7 +225,6 @@ export default function EventDetailScreen() {
     }
 
     // For Inshallah / No, save directly with optimistic update
-    const prevStatus = rsvpStatus;
     setRsvpStatus(status); // Optimistic
     await saveRsvp(userId, status, 0, []);
   };
@@ -380,227 +379,108 @@ export default function EventDetailScreen() {
   }
 
   const theme = getThemeById(event.theme_id);
-  const genderLabel = {
-    [GenderMode.Mixed]: '🌟 Mixed',
-    [GenderMode.SistersOnly]: '🌸 Sisters Only',
-    [GenderMode.BrothersOnly]: '💪 Brothers',
-    [GenderMode.Family]: '👨‍👩‍👧 Family',
-  }[event.gender_mode];
-
-  // Use the theme's actual first gradient stop as the page background.
-  // For light themes (Cream Elegance, Sky Blue, etc.) this makes the whole
-  // page LIGHT with dark text — exactly like Partiful.
-  // For dark themes it's the theme's dark base.
   const pageBg = theme?.background?.stops?.[0] ?? theme?.bannerBg ?? COLORS.dark;
+  const barTextColor = theme?.textColor ?? COLORS.white;
+  const guestHeadingColor = theme?.textColor ?? COLORS.white;
+  const attendanceColor = theme?.textColor ? `${theme.textColor}88` : COLORS.muted;
+
+  // DAW-37 — the old inline render body (topBar + hero + body + guest list +
+  // comments) is now assembled via EventPreview + slots. EventPreview owns the
+  // background gradient, effect overlay, hero, and info rows; this screen
+  // injects the live-data pieces (top bar, guest avatars, map, guest list,
+  // comments) as slots so the public page stays visually identical while the
+  // new editor can reuse the exact same canvas.
+  const topBarJsx = (
+    <View style={styles.topBar}>
+      <Pressable onPress={() => router.back()}>
+        <Text style={[styles.backText, { color: barTextColor }]}>← Back</Text>
+      </Pressable>
+      <View style={styles.topBarRight}>
+        <Pressable onPress={handleShare}>
+          <Text style={[styles.shareText, { color: barTextColor }]}>Share</Text>
+        </Pressable>
+        {isHost && (
+          <Pressable
+            onPress={() => {
+              Alert.alert('Manage Event', '', [
+                { text: 'Edit Event', onPress: handleEdit },
+                { text: 'Cancel Event', style: 'destructive', onPress: handleCancelEvent },
+                { text: 'Close', style: 'cancel' },
+              ]);
+            }}
+          >
+            <Text style={[styles.moreButton, { color: barTextColor }]}>⋯</Text>
+          </Pressable>
+        )}
+      </View>
+    </View>
+  );
+
+  const hostedBySlotJsx = (
+    <GuestAvatars eventId={id!} refreshKey={guestRefreshKey} />
+  );
+
+  const mapSlotJsx = (
+    <MapPreview
+      locationName={event.location_name}
+      locationAddress={event.location_address}
+      isHidden={event.is_location_hidden && !isHost && rsvpStatus !== RsvpStatus.Yes}
+    />
+  );
+
+  const attendanceText =
+    yesCount === 0 && inshallahCount === 0
+      ? 'No guests yet'
+      : [
+          yesCount > 0 ? `${yesCount} Going` : null,
+          inshallahCount > 0 ? `${inshallahCount} Inshallah` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ');
+
+  const afterBodySlotJsx = (
+    <>
+      <View style={styles.guestSection}>
+        <Text style={[styles.guestHeading, { color: guestHeadingColor }]}>Guest List</Text>
+        <Text style={[styles.attendance, { color: attendanceColor }]}>{attendanceText}</Text>
+      </View>
+
+      <GuestListDashboard eventId={id!} visible={isHost} refreshKey={guestRefreshKey} />
+
+      <EventComments eventId={id!} hostId={event.host_id} />
+
+      {/* Bottom spacer so content clears the floating RSVP bar */}
+      <View style={{ height: 100 }} />
+    </>
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: pageBg }]} edges={['top']}>
-      {/* Render the full theme gradient behind the scroll content */}
-      <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
-        <Defs>
-          <LinearGradient id="pageGrad" x1="0" y1="0" x2="0" y2="1">
-            {(theme?.background?.stops ?? [pageBg, pageBg]).map((stop, i, arr) => (
-              <Stop
-                key={`pg-${i}`}
-                offset={arr.length === 1 ? '0' : (i / (arr.length - 1)).toString()}
-                stopColor={stop}
-              />
-            ))}
-          </LinearGradient>
-        </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" fill="url(#pageGrad)" />
-      </Svg>
-
-      {event.effect_id && (
-        <EventEffect effectId={event.effect_id as EffectId} />
-      )}
-      <ScrollView showsVerticalScrollIndicator={false} style={{ backgroundColor: 'transparent' }}>
-        <View style={styles.topBar}>
-          <Pressable onPress={() => router.back()}>
-            <Text style={[styles.backText, { color: theme?.textColor ?? COLORS.white }]}>← Back</Text>
-          </Pressable>
-          <View style={styles.topBarRight}>
-            <Pressable onPress={handleShare}>
-              <Text style={[styles.shareText, { color: theme?.textColor ?? COLORS.white }]}>Share</Text>
-            </Pressable>
-            {isHost && (
-              <Pressable
-                onPress={() => {
-                  Alert.alert('Manage Event', '', [
-                    { text: 'Edit Event', onPress: handleEdit },
-                    { text: 'Cancel Event', style: 'destructive', onPress: handleCancelEvent },
-                    { text: 'Close', style: 'cancel' },
-                  ]);
-                }}
-              >
-                <Text style={[styles.moreButton, { color: theme?.textColor ?? COLORS.white }]}>⋯</Text>
-              </Pressable>
-            )}
-          </View>
-        </View>
-
-        {/* DAW-22 — when a poster exists, render it full-width 1:1 as the hero.
-            Otherwise fall back to the original theme gradient + emoji banner. */}
-        {event.poster_url ? (
-          <View style={styles.posterHero}>
-            <Image
-              source={{ uri: event.poster_url }}
-              style={styles.posterHeroImage}
-              resizeMode="cover"
-            />
-            {/* Bottom fade blends the poster into the page background below */}
-            <Svg style={styles.posterFadeOverlay} pointerEvents="none">
-              <Defs>
-                <LinearGradient id="posterFade" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor={COLORS.dark} stopOpacity="0" />
-                  <Stop offset="1" stopColor={COLORS.dark} stopOpacity="0.95" />
-                </LinearGradient>
-              </Defs>
-              <Rect x="0" y="0" width="100%" height="100%" fill="url(#posterFade)" />
-            </Svg>
-            <View style={styles.badgeRow}>
-              <View style={styles.genderBadge}>
-                <Text style={styles.genderBadgeText}>{genderLabel}</Text>
-              </View>
-              {event.is_halal_venue && (
-                <View style={styles.halalBadge}>
-                  <Text style={styles.halalBadgeText}>✅ Halal</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        ) : (
-          <View style={styles.banner}>
-            {/* DAW-22 Phase 2 — use the theme's full multi-stop gradient
-                instead of the old 2-stop fade. Falls back to the base
-                dark if we can't resolve a theme. */}
-            <Svg style={StyleSheet.absoluteFill} preserveAspectRatio="none">
-              <Defs>
-                <LinearGradient id="detailGrad" x1="0" y1="0" x2="1" y2="1">
-                  {(theme?.background?.stops ?? [theme?.bannerBg ?? COLORS.card2, COLORS.card]).map((stop, i, arr) => (
-                    <Stop
-                      key={`detail-${i}`}
-                      offset={arr.length === 1 ? '0' : (i / (arr.length - 1)).toString()}
-                      stopColor={stop}
-                    />
-                  ))}
-                </LinearGradient>
-              </Defs>
-              <Rect x="0" y="0" width="100%" height="100%" fill="url(#detailGrad)" />
-            </Svg>
-            <Text style={styles.bannerEmoji}>{theme?.defaultEmoji ?? '🌙'}</Text>
-            <View style={styles.badgeRow}>
-              <View style={styles.genderBadge}>
-                <Text style={styles.genderBadgeText}>{genderLabel}</Text>
-              </View>
-              {event.is_halal_venue && (
-                <View style={styles.halalBadge}>
-                  <Text style={styles.halalBadgeText}>✅ Halal</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
-        <View style={styles.body}>
-          {/* ── Partiful-style clean layout: icon+text rows, no pills, no cards ── */}
-
-          {/* Date — big bold, like Partiful's "Thursday, Apr 9" */}
-          <Text style={[styles.dateMain, { color: theme?.textColor ?? COLORS.white }]}>
-            {event.date_tbd
-              ? 'Date TBD'
-              : event.date_time
-                ? new Date(event.date_time).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
-                : 'Date TBD'}
-          </Text>
-          {event.date_time && (
-            <Text style={[styles.dateTime, { color: theme?.textColor ?? COLORS.white }]}>
-              {new Date(event.date_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-            </Text>
-          )}
-
-          {/* Hosted by — icon + text row */}
-          <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>🎯</Text>
-            <Text style={[styles.infoLabel, { color: theme?.textColor ? `${theme.textColor}AA` : COLORS.muted }]}>
-              Hosted by
-            </Text>
-          </View>
-          <GuestAvatars eventId={id!} refreshKey={guestRefreshKey} />
-
-          {/* Location — icon + text, Partiful style */}
-          <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📍</Text>
-            <Text style={[styles.infoValue, { color: theme?.textColor ?? COLORS.white }]}>
-              {event.is_location_hidden && !isHost && rsvpStatus !== RsvpStatus.Yes
-                ? 'Address revealed after RSVP'
-                : event.location_name ?? 'Location TBD'}
-            </Text>
-          </View>
-          {event.location_address && !event.is_location_hidden && (
-            <Text style={[styles.locationAddress, { color: theme?.textColor ? `${theme.textColor}88` : COLORS.muted }]}>
-              {event.location_address}
-            </Text>
-          )}
-
-          <MapPreview
-            locationName={event.location_name}
-            locationAddress={event.location_address}
-            isHidden={event.is_location_hidden && !isHost && rsvpStatus !== RsvpStatus.Yes}
-          />
-
-          {/* Capacity — icon + "X/Y spots left" like Partiful */}
-          {event.capacity && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>👥</Text>
-              <Text style={[styles.infoValue, { color: theme?.textColor ?? COLORS.white }]}>
-                {Math.max(event.capacity - yesCount, 0)}/{event.capacity} spots left
-              </Text>
-            </View>
-          )}
-
-          {/* Price — only show if not free */}
-          {event.price > 0 && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>🎟</Text>
-              <Text style={[styles.infoValue, { color: theme?.textColor ?? COLORS.white }]}>
-                ${(event.price / 100).toFixed(0)}
-              </Text>
-            </View>
-          )}
-
-          {event.rsvp_deadline && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>⏳</Text>
-              <Text style={[styles.infoValue, { color: theme?.textColor ?? COLORS.white }]}>
-                RSVP by {new Date(event.rsvp_deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </Text>
-            </View>
-          )}
-
-          {/* Description — large flowing text, like Partiful */}
-          {event.description && (
-            <Text style={[styles.description, { color: theme?.textColor ?? COLORS.white }]}>
-              {event.description}
-            </Text>
-          )}
-
-          {/* Guest list — heading + count + avatars, clean */}
-          <View style={styles.guestSection}>
-            <Text style={[styles.guestHeading, { color: theme?.textColor ?? COLORS.white }]}>Guest List</Text>
-            <Text style={[styles.attendance, { color: theme?.textColor ? `${theme.textColor}88` : COLORS.muted }]}>
-              {yesCount > 0 ? `${yesCount} Going` : ''}{yesCount > 0 && inshallahCount > 0 ? ' · ' : ''}{inshallahCount > 0 ? `${inshallahCount} Inshallah` : ''}{yesCount === 0 && inshallahCount === 0 ? 'No guests yet' : ''}
-            </Text>
-          </View>
-
-          <GuestListDashboard eventId={id!} visible={isHost} refreshKey={guestRefreshKey} />
-
-          <EventComments eventId={id!} hostId={event.host_id} />
-
-          {/* Bottom spacer so content clears the floating RSVP bar */}
-          <View style={{ height: 100 }} />
-        </View>
-      </ScrollView>
+      <EventPreview
+        data={{
+          title: event.title,
+          description: event.description,
+          theme_id: event.theme_id,
+          poster_url: event.poster_url,
+          effect_id: event.effect_id,
+          gender_mode: event.gender_mode,
+          date_time: event.date_time,
+          date_tbd: event.date_tbd,
+          location_name: event.location_name,
+          location_address: event.location_address,
+          is_location_hidden: event.is_location_hidden,
+          is_halal_venue: event.is_halal_venue,
+          price: event.price,
+          capacity: event.capacity,
+          rsvp_deadline: event.rsvp_deadline,
+        }}
+        topBar={topBarJsx}
+        hostedBySlot={hostedBySlotJsx}
+        mapSlot={mapSlotJsx}
+        afterBodySlot={afterBodySlotJsx}
+        revealLocation={isHost || rsvpStatus === RsvpStatus.Yes}
+        yesCount={yesCount}
+      />
 
       <FamilyRegistration
         visible={showFamilyModal}
@@ -638,95 +518,18 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.md,
   },
   topBar: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
   },
   backText: { fontSize: 16, ...FONTS.medium },
   topBarRight: { flexDirection: 'row', alignItems: 'center', gap: SPACING.lg },
   shareText: { fontSize: 16, ...FONTS.medium },
   moreButton: { fontSize: 22, ...FONTS.bold, letterSpacing: 2 },
-  banner: { height: 160, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  bannerEmoji: { fontSize: 56 },
-  badgeRow: { position: 'absolute', bottom: SPACING.md, left: SPACING.lg, flexDirection: 'row', gap: SPACING.sm },
 
-  // DAW-22 — poster hero with breathing room on both sides
-  posterHero: {
-    alignSelf: 'center',
-    width: '88%',
-    aspectRatio: 1,
-    borderRadius: RADIUS.xl,
-    overflow: 'hidden',
-    backgroundColor: COLORS.card,
-    position: 'relative',
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.md,
-  },
-  posterHeroImage: {
-    width: '100%',
-    height: '100%',
-  },
-  posterFadeOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 120,
-  },
-  genderBadge: { backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: RADIUS.full },
-  genderBadgeText: { color: COLORS.white, fontSize: 12, ...FONTS.medium },
-  halalBadge: { backgroundColor: 'rgba(76,175,80,0.2)', paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: RADIUS.full },
-  halalBadgeText: { color: COLORS.green, fontSize: 12, ...FONTS.medium },
-  body: { paddingHorizontal: SPACING.xl, paddingTop: SPACING.lg },
-
-  // Date — large bold like Partiful's "Thursday, Apr 9"
-  dateMain: {
-    fontSize: 28,
-    ...FONTS.bold,
-    letterSpacing: -0.3,
-  },
-  dateTime: {
-    fontSize: 18,
-    ...FONTS.regular,
-    marginBottom: SPACING.xl,
-  },
-
-  // Icon + text info rows — clean Partiful style
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    marginBottom: SPACING.sm,
-    marginTop: SPACING.lg,
-  },
-  infoIcon: {
-    fontSize: 18,
-    width: 28,
-  },
-  infoLabel: {
-    fontSize: 16,
-    ...FONTS.medium,
-  },
-  infoValue: {
-    fontSize: 18,
-    ...FONTS.bold,
-  },
-  locationAddress: {
-    fontSize: 15,
-    ...FONTS.regular,
-    marginLeft: 28 + SPACING.md,
-    marginBottom: SPACING.sm,
-  },
-
-  // Description — large flowing text like Partiful
-  description: {
-    fontSize: 17,
-    ...FONTS.regular,
-    lineHeight: 28,
-    marginTop: SPACING.xxl,
-    marginBottom: SPACING.xl,
-  },
-
-  // Guest section
+  // Guest section (rendered via afterBodySlot inside EventPreview)
   guestSection: {
     marginTop: SPACING.xxl,
     marginBottom: SPACING.lg,

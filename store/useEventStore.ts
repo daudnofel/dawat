@@ -1,15 +1,41 @@
 import { create } from 'zustand';
 import { EventDraft, GenderMode } from '../types';
 
+/**
+ * DAW-37 — creation V2 tool identifiers.
+ *
+ * Matches the preview zones in `components/EventPreview.tsx` plus an
+ * explicit `publish` slot for the final review sheet. The old wizard's
+ * `currentStep / nextStep / prevStep / setStep` are deprecated but kept as
+ * no-op stubs so the legacy step files don't crash while they're still on
+ * disk — DAW-55 removes them for real.
+ */
+export type EditorToolId =
+  | 'poster'
+  | 'theme'
+  | 'effect'
+  | 'details'
+  | 'audience'
+  | 'publish';
+
 interface EventStoreState {
   draft: EventDraft;
-  currentStep: number;
+
+  // DAW-37 — editor tool state
+  activeTool: EditorToolId | null;
+  openTool: (tool: EditorToolId) => void;
+  closeTool: () => void;
 
   updateDraft: (updates: Partial<EventDraft>) => void;
+  reset: () => void;
+
+  // ── Deprecated (DAW-55 will delete) ────────────────────────────────
+  // Kept as stubs so the legacy step*.tsx files still compile until the
+  // removal ticket lands. New code must not read or call these.
+  currentStep: number;
   setStep: (step: number) => void;
   nextStep: () => void;
   prevStep: () => void;
-  reset: () => void;
 }
 
 const INITIAL_DRAFT: EventDraft = {
@@ -44,18 +70,23 @@ const INITIAL_DRAFT: EventDraft = {
 
 export const useEventStore = create<EventStoreState>((set) => ({
   draft: { ...INITIAL_DRAFT },
-  currentStep: 1,
+
+  // DAW-37 — editor tool state
+  activeTool: null,
+  openTool: (tool) => set({ activeTool: tool }),
+  closeTool: () => set({ activeTool: null }),
 
   updateDraft: (updates) =>
     set((state) => ({ draft: { ...state.draft, ...updates } })),
 
-  setStep: (step) => set({ currentStep: step }),
+  reset: () =>
+    set({ draft: { ...INITIAL_DRAFT }, currentStep: 1, activeTool: null }),
 
+  // ── Deprecated stubs (DAW-55) ──────────────────────────────────────
+  currentStep: 1,
+  setStep: (step) => set({ currentStep: step }),
   nextStep: () =>
     set((state) => ({ currentStep: Math.min(state.currentStep + 1, 6) })),
-
   prevStep: () =>
     set((state) => ({ currentStep: Math.max(state.currentStep - 1, 1) })),
-
-  reset: () => set({ draft: { ...INITIAL_DRAFT }, currentStep: 1 }),
 }));

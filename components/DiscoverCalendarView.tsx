@@ -67,13 +67,26 @@ export default function DiscoverCalendarView({
   const filterSummary = useDiscoverFilterSummary(filter);
   const [refreshing, setRefreshing] = useState(false);
 
+  // ALL hooks must be above any conditional returns (React Rules of Hooks)
+  const monthFade = useSharedValue(1);
+  useEffect(() => {
+    monthFade.value = 0;
+    monthFade.value = withTiming(1, {
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [currentMonth, monthFade]);
+  const monthFadeStyle = useAnimatedStyle(() => ({
+    opacity: monthFade.value,
+    transform: [{ translateY: (1 - monthFade.value) * 6 }],
+  }));
+
   const handleClearFilter = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClearFilter();
   };
 
-  // DAW-32 — first-load skeleton. Once we have any data, let loading fall
-  // through to the inline RefreshControl so the grid stays visible.
+  // Early returns AFTER all hooks
   if (loading && eventsByDate.size === 0) {
     return <DiscoverCalendarSkeleton />;
   }
@@ -116,21 +129,6 @@ export default function DiscoverCalendarView({
     await refresh();
     setRefreshing(false);
   };
-
-  // DAW-32 — gentle fade when the month changes, mirroring the shell's
-  // list/calendar cross-fade so the grid doesn't pop.
-  const monthFade = useSharedValue(1);
-  useEffect(() => {
-    monthFade.value = 0;
-    monthFade.value = withTiming(1, {
-      duration: 220,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [currentMonth, monthFade]);
-  const monthFadeStyle = useAnimatedStyle(() => ({
-    opacity: monthFade.value,
-    transform: [{ translateY: (1 - monthFade.value) * 6 }],
-  }));
 
   return (
     <ScrollView

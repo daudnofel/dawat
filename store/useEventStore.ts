@@ -16,6 +16,7 @@ import { EventDraft, GenderMode } from '../types';
 export type EditorToolId =
   | 'poster'
   | 'theme'
+  | 'title-style'
   | 'effect'
   | 'details'
   | 'audience'
@@ -61,6 +62,8 @@ const INITIAL_DRAFT: EventDraft = {
   poster_type: null,
   poster_library_id: null,
   effect_id: null,
+  // DAW-56 — title typography
+  title_style: 'classic',
 };
 
 export const useEventStore = create<EventStoreState>((set) => ({

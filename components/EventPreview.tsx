@@ -50,6 +50,7 @@ import * as Haptics from 'expo-haptics';
 
 import { COLORS, FONTS, SPACING, RADIUS } from '../lib/theme';
 import { getThemeById } from '../lib/themes';
+import { getTitleTextStyle } from '../lib/title-styles';
 import { GenderMode, EffectId } from '../types';
 import EventEffect from './EventEffect';
 
@@ -67,6 +68,7 @@ export interface EventPreviewData {
   theme_id: string;
   poster_url: string | null;
   effect_id: EffectId | string | null;
+  title_style?: string | null;
   gender_mode: GenderMode;
   date_time: Date | string | null;
   date_tbd: boolean;
@@ -321,7 +323,7 @@ export default function EventPreview({
           {/* Title — editor-only render (see showTitle prop) */}
           {showTitle && data.title.trim().length > 0 && (
             <Zone zone="title">
-              <Text style={[styles.title, { color: textColor }]}>
+              <Text style={[styles.title, getTitleTextStyle(data.title_style), { color: textColor }]}>
                 {data.title}
               </Text>
             </Zone>
@@ -479,9 +481,8 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: SPACING.xl, paddingTop: SPACING.lg },
 
   title: {
-    fontSize: 32,
-    ...FONTS.bold,
-    letterSpacing: -0.5,
+    // fontSize, fontFamily, fontWeight, letterSpacing come from
+    // getTitleTextStyle(data.title_style) applied inline (DAW-56).
     marginBottom: SPACING.md,
   },
 

@@ -34,6 +34,7 @@ interface ToolDef {
 const TOOLS: ToolDef[] = [
   { id: 'poster', glyph: '🖼', label: 'Poster' },
   { id: 'theme', glyph: '🎨', label: 'Theme' },
+  { id: 'title-style', glyph: 'Aa', label: 'Title' },
   { id: 'effect', glyph: '✨', label: 'Effect' },
   { id: 'details', glyph: '📍', label: 'Details' },
   { id: 'audience', glyph: '🌟', label: 'Audience' },

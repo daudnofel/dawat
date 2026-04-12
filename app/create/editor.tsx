@@ -40,10 +40,8 @@ function zoneToTool(zone: PreviewZone): EditorToolId {
     case 'poster':
       return 'poster';
     case 'title':
-      // Title and date both live in the "essentials" area — for now we
-      // surface them through the details tool. DAW-54 may introduce a
-      // dedicated title/date tool if the UX calls for it.
-      return 'details';
+      // DAW-56: tapping the title opens the title style picker.
+      return 'title-style';
     case 'details':
       return 'details';
     case 'audience':
@@ -114,6 +112,7 @@ export default function EditorScreen() {
           theme_id: draft.theme_id,
           poster_url: draft.poster_url,
           effect_id: draft.effect_id,
+          title_style: draft.title_style,
           gender_mode: draft.gender_mode,
           date_time: draft.date_time,
           date_tbd: draft.date_tbd,

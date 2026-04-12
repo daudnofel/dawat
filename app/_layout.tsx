@@ -46,6 +46,12 @@ export default function RootLayout() {
     ManropeLight: require('@expo-google-fonts/manrope/300Light/Manrope_300Light.ttf'),
     ManropeRegular: require('@expo-google-fonts/manrope/400Regular/Manrope_400Regular.ttf'),
     ManropeSemiBold: require('@expo-google-fonts/manrope/600SemiBold/Manrope_600SemiBold.ttf'),
+    // DAW-56 — title typography system
+    PlayfairDisplay: require('@expo-google-fonts/playfair-display/700Bold/PlayfairDisplay_700Bold.ttf'),
+    SpaceGrotesk: require('@expo-google-fonts/space-grotesk/500Medium/SpaceGrotesk_500Medium.ttf'),
+    Lora: require('@expo-google-fonts/lora/400Regular/Lora_400Regular.ttf'),
+    JetBrainsMono: require('@expo-google-fonts/jetbrains-mono/700Bold/JetBrainsMono_700Bold.ttf'),
+    DancingScript: require('@expo-google-fonts/dancing-script/700Bold/DancingScript_700Bold.ttf'),
   });
 
   useEffect(() => {

@@ -27,6 +27,7 @@ interface EventDetail {
   poster_url: string | null;
   poster_type: string | null;
   effect_id: string | null;
+  title_style: string | null;
   gender_mode: GenderMode;
   date_time: string | null;
   date_tbd: boolean;
@@ -463,6 +464,7 @@ export default function EventDetailScreen() {
           theme_id: event.theme_id,
           poster_url: event.poster_url,
           effect_id: event.effect_id,
+          title_style: event.title_style ?? null,
           gender_mode: event.gender_mode,
           date_time: event.date_time,
           date_tbd: event.date_tbd,

@@ -142,6 +142,7 @@ export async function publishEvent(
         poster_type: draft.poster_type,
         poster_library_id: draft.poster_library_id,
         effect_id: draft.effect_id,
+        title_style: draft.title_style ?? 'classic',
         gender_mode: draft.gender_mode,
         is_id_required: draft.is_id_required,
         date_time: draft.date_time?.toISOString() ?? null,

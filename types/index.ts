@@ -383,6 +383,8 @@ export interface EventDraft {
   poster_type: PosterType | null;
   poster_library_id: string | null;
   effect_id: EffectId | null;
+  // DAW-56 — title typography
+  title_style: string | null;
 }
 
 // ─── Poster Library (DAW-22) ─────────────────────────────────

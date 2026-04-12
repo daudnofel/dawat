@@ -28,6 +28,8 @@ const RAW_THEMES: DawatTheme[] = [
     tagBg: '#1A2744',
     tagColor: '#C9A84C',
     defaultEmoji: '🌙',
+    // DAW-57 — arabesque + grain for a serene spiritual feel
+    background: { pattern: 'arabesque', overlayOpacity: 0.07, texture: 'grain', textureOpacity: 0.04 },
   },
   {
     id: 'eid_gala',
@@ -40,6 +42,8 @@ const RAW_THEMES: DawatTheme[] = [
     tagBg: '#2A1F0A',
     tagColor: '#F0C040',
     defaultEmoji: '✨',
+    // DAW-57 — geometric stars for a festive celebratory feel
+    background: { pattern: 'geometric-stars', overlayOpacity: 0.06, texture: 'grain', textureOpacity: 0.03 },
   },
   {
     id: 'iftar_party',
@@ -64,6 +68,7 @@ const RAW_THEMES: DawatTheme[] = [
     tagBg: '#2D1233',
     tagColor: '#D4A0D9',
     defaultEmoji: '🌸',
+    background: { pattern: 'arabesque', overlayOpacity: 0.06, texture: 'grain', textureOpacity: 0.04 },
   },
   {
     id: 'nikah',
@@ -76,6 +81,7 @@ const RAW_THEMES: DawatTheme[] = [
     tagBg: '#E8DCCA',
     tagColor: '#8B6914',
     defaultEmoji: '💍',
+    background: { pattern: 'zellige', overlayOpacity: 0.05, texture: 'paper', textureOpacity: 0.06 },
   },
   {
     id: 'masjid_event',
@@ -88,6 +94,7 @@ const RAW_THEMES: DawatTheme[] = [
     tagBg: '#0F3325',
     tagColor: '#4CAF50',
     defaultEmoji: '🕌',
+    background: { pattern: 'geometric-stars', overlayOpacity: 0.07, texture: 'grain', textureOpacity: 0.03 },
   },
   {
     id: 'arabic_nights',
@@ -100,6 +107,7 @@ const RAW_THEMES: DawatTheme[] = [
     tagBg: '#2A1A08',
     tagColor: '#C9A84C',
     defaultEmoji: '🪔',
+    background: { pattern: 'zellige', overlayOpacity: 0.06, texture: 'paper', textureOpacity: 0.05 },
   },
   {
     id: 'desert_sunset',
@@ -136,6 +144,7 @@ const RAW_THEMES: DawatTheme[] = [
     tagBg: '#1A0A3A',
     tagColor: '#D4A0FF',
     defaultEmoji: '⭐',
+    background: { pattern: 'arabesque', overlayOpacity: 0.05 },
   },
   {
     id: 'family_picnic',
@@ -184,6 +193,7 @@ const RAW_THEMES: DawatTheme[] = [
     tagBg: '#1A1A1A',
     tagColor: '#C9A84C',
     defaultEmoji: '⭐',
+    background: { pattern: 'geometric-stars', overlayOpacity: 0.10, texture: 'grain', textureOpacity: 0.04 },
   },
   {
     id: 'walima',
@@ -196,6 +206,7 @@ const RAW_THEMES: DawatTheme[] = [
     tagBg: '#3A1520',
     tagColor: '#E8A0B0',
     defaultEmoji: '🌹',
+    background: { pattern: 'arabesque', overlayOpacity: 0.05, texture: 'paper', textureOpacity: 0.05 },
   },
   {
     id: 'hajj_journey',
@@ -244,6 +255,7 @@ const RAW_THEMES: DawatTheme[] = [
     tagBg: '#150A25',
     tagColor: '#B388FF',
     defaultEmoji: '🌌',
+    background: { pattern: 'arabesque', overlayOpacity: 0.06, texture: 'grain', textureOpacity: 0.04 },
   },
   {
     id: 'ornate_invitation',
@@ -256,6 +268,7 @@ const RAW_THEMES: DawatTheme[] = [
     tagBg: '#E8DDCA',
     tagColor: '#8B6914',
     defaultEmoji: '📜',
+    background: { pattern: 'zellige', overlayOpacity: 0.04, texture: 'paper', textureOpacity: 0.05 },
   },
 
   // ─── Light themes ────────────────────────────────────────────
@@ -419,13 +432,17 @@ function enrichTheme(t: DawatTheme): DawatTheme {
   const angle = parseGradientAngle(t.bannerBgImage);
   const isLight = luminance(t.bannerBg) > 0.5;
 
+  // DAW-57: merge pattern/texture overrides on top of the generated base
+  // rather than using ?? which would skip the merge entirely.
+  const baseBackground = {
+    type: 'gradient' as const,
+    stops: stops.length >= 2 ? stops : [t.bannerBg, t.bannerBg],
+    angle,
+  };
+
   return {
     ...t,
-    background: t.background ?? {
-      type: 'gradient',
-      stops: stops.length >= 2 ? stops : [t.bannerBg, t.bannerBg],
-      angle,
-    },
+    background: { ...baseBackground, ...(t.background ?? {}) },
     typography: t.typography ?? {
       titleFont: 'ManropeExtraBold',
       titleLetterSpacing: -0.5,

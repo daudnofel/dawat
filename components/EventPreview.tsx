@@ -53,6 +53,8 @@ import { getThemeById } from '../lib/themes';
 import { getTitleTextStyle } from '../lib/title-styles';
 import { GenderMode, EffectId } from '../types';
 import EventEffect from './EventEffect';
+import ThemePattern, { PatternId } from './ThemePattern';
+import ThemeTexture, { TextureType } from './ThemeTexture';
 
 // ─── Types ────────────────────────────────────────────────────────────
 
@@ -238,6 +240,24 @@ export default function EventPreview({
         </Defs>
         <Rect x="0" y="0" width="100%" height="100%" fill="url(#pagePreviewGrad)" />
       </Svg>
+
+      {/* DAW-57 — Islamic geometric pattern overlay */}
+      {theme?.background?.pattern && theme.background.pattern !== 'none' && (
+        <ThemePattern
+          pattern={theme.background.pattern as PatternId}
+          color={theme.textColor}
+          opacity={theme.background.overlayOpacity ?? 0.08}
+        />
+      )}
+
+      {/* DAW-57 — Film grain / paper texture overlay */}
+      {theme?.background?.texture && (
+        <ThemeTexture
+          type={theme.background.texture as TextureType}
+          color={theme.textColor}
+          opacity={theme.background.textureOpacity ?? 0.05}
+        />
+      )}
 
       {/* Ambient effect overlay (rose petals, lanterns, etc.) */}
       {data.effect_id && (

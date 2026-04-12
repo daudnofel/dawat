@@ -425,11 +425,13 @@ export interface DawatTheme {
 
   // ─── DAW-22 enriched tokens (Phase 2 — optional during migration) ───
   background?: {
-    type: 'gradient' | 'pattern' | 'mesh';
-    stops: string[];              // 2-4 color stops for gradient/mesh
+    type?: 'gradient' | 'pattern' | 'mesh'; // Filled by enrichTheme if omitted
+    stops?: string[];             // 2-4 color stops, filled by enrichTheme
     angle?: number;               // gradient angle in degrees, default 135
     pattern?: 'geometric-stars' | 'arabesque' | 'zellige' | 'none';
-    overlayOpacity?: number;      // 0–0.7 dark overlay on top of the background
+    overlayOpacity?: number;      // 0–0.7 pattern opacity over the background
+    texture?: 'grain' | 'paper';  // DAW-57 — film grain or paper material feel
+    textureOpacity?: number;      // 0–0.10 texture overlay intensity
   };
   typography?: {
     titleFont: 'ManropeLight' | 'ManropeRegular' | 'ManropeSemiBold' | 'ManropeBold' | 'ManropeExtraBold';

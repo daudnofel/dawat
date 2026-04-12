@@ -455,6 +455,11 @@ export interface DawatTheme {
     cardBg?: string;
   };
   /**
+   * DAW-58 — suggested title style when this theme is selected. The editor
+   * auto-applies it unless the host has manually overridden the style.
+   */
+  defaultTitleStyle?: string;
+  /**
    * Optional ornate SVG frame rendered around the poster.
    * If omitted, no frame.
    */

@@ -427,6 +427,53 @@ const APP_CARD = '#161616';
  * Fill in any missing design-token fields on a theme from its legacy
  * fields. Themes that already define a token keep their override.
  */
+/**
+ * DAW-58 — art-directed title style defaults per theme.
+ * When a host selects a theme, the editor auto-applies the suggested
+ * title style (unless the host already manually chose one).
+ *
+ * Mapping logic:
+ *   Nikah / Walima / Ornate / Blush     → 'script'  (calligraphic, ceremonial)
+ *   Ramadan / Laylatul Qadr / Halaqa    → 'literary' (serene, scholarly)
+ *   Eid / Arabic Nights / Hajj / Adha   → 'editorial' (elegant, magazine)
+ *   Brothers / Geometric / Sky Blue     → 'digital'  (tech, modern)
+ *   Desert / Family / Sage / Lavender   → 'eclectic' (trendy, bold)
+ *   Everything else                     → 'classic'  (clean default)
+ */
+const DEFAULT_TITLE_STYLE_MAP: Record<string, string> = {
+  // Script — ceremonial, calligraphic
+  nikah: 'script',
+  walima: 'script',
+  ornate_invitation: 'script',
+  blush_rose: 'script',
+  // Literary — serene, scholarly
+  ramadan_kareem: 'literary',
+  dark_ramadan: 'literary',
+  laylatul_qadr: 'literary',
+  sisters_halaqa: 'literary',
+  scholar_talk: 'literary',
+  // Editorial — elegant, magazine
+  eid_gala: 'editorial',
+  eid_adha: 'editorial',
+  arabic_nights: 'editorial',
+  hajj_journey: 'editorial',
+  cream_elegance: 'editorial',
+  islamic_stars: 'editorial',
+  // Digital — tech, modern
+  brothers_night: 'digital',
+  geometric_blue: 'digital',
+  sky_blue: 'digital',
+  // Eclectic — trendy, bold
+  desert_sunset: 'eclectic',
+  family_picnic: 'eclectic',
+  sage_garden: 'eclectic',
+  lavender_mist: 'eclectic',
+  // Classic — clean default (everything not listed)
+  iftar_party: 'classic',
+  masjid_event: 'classic',
+  minimal_crescent: 'classic',
+};
+
 function enrichTheme(t: DawatTheme): DawatTheme {
   const stops = parseGradientStops(t.bannerBgImage);
   const angle = parseGradientAngle(t.bannerBgImage);
@@ -442,6 +489,8 @@ function enrichTheme(t: DawatTheme): DawatTheme {
 
   return {
     ...t,
+    // DAW-58: apply art-directed title style default if not set on the raw theme
+    defaultTitleStyle: t.defaultTitleStyle ?? DEFAULT_TITLE_STYLE_MAP[t.id] ?? 'classic',
     background: { ...baseBackground, ...(t.background ?? {}) },
     typography: t.typography ?? {
       titleFont: 'ManropeExtraBold',

@@ -6,7 +6,6 @@ import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
 import { View, ActivityIndicator, StatusBar, LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { HeroUINativeProvider } from 'heroui-native/provider';
 
 import { COLORS } from '../lib/theme';
 import { ToastProvider } from '../components/Toast';
@@ -89,21 +88,16 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <HeroUINativeProvider
-        colorScheme="dark"
-        config={{ devInfo: { stylingPrinciples: false } }}
-      >
-        <ThemeProvider value={DawatDarkTheme}>
-          <StatusBar barStyle="light-content" />
-          <View style={{ flex: 1 }}>
-            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.dark } }}>
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
-            </Stack>
-            <ToastProvider />
-          </View>
-        </ThemeProvider>
-      </HeroUINativeProvider>
+      <ThemeProvider value={DawatDarkTheme}>
+        <StatusBar barStyle="light-content" />
+        <View style={{ flex: 1 }}>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.dark } }}>
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
+          </Stack>
+          <ToastProvider />
+        </View>
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }

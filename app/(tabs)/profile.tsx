@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, ScrollView, Image, Pressable, ActivityIndicator, Dimensions, Share, Linking } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Alert, ScrollView, Image, Pressable, ActivityIndicator, Dimensions, Share, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Svg, { Defs, LinearGradient, RadialGradient, Stop, Circle, Rect } from 'react-native-svg';
@@ -74,8 +74,13 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<User | null>(null);
   const [attendingCount, setAttendingCount] = useState(0);
+  const [hostedCount, setHostedCount] = useState(0);
+  const [recentEvents, setRecentEvents] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [noAuth, setNoAuth] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editBio, setEditBio] = useState('');
 
   const nameOpacity = useSharedValue(0);
 
@@ -102,12 +107,28 @@ export default function ProfileScreen() {
       nameOpacity.value = withSpring(1);
     }
 
-    const { count: attending } = await supabase
-      .from('rsvps')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .in('status', ['yes', 'inshallah']);
+    const [{ count: attending }, { count: hosted }, { data: recent }] = await Promise.all([
+      supabase
+        .from('rsvps')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .in('status', ['yes', 'inshallah']),
+      supabase
+        .from('events')
+        .select('*', { count: 'exact', head: true })
+        .eq('host_id', userId)
+        .eq('is_published', true),
+      supabase
+        .from('events')
+        .select('id, title, poster_url, theme_id, date_time')
+        .eq('host_id', userId)
+        .eq('is_published', true)
+        .order('created_at', { ascending: false })
+        .limit(5),
+    ]);
     setAttendingCount(attending ?? 0);
+    setHostedCount(hosted ?? 0);
+    setRecentEvents(recent ?? []);
   };
 
   const nameStyle = useAnimatedStyle(() => ({ opacity: nameOpacity.value }));
@@ -200,6 +221,37 @@ export default function ProfileScreen() {
     setUploading(false);
   };
 
+  const handleEditProfile = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setEditName(profile?.display_name ?? '');
+    setEditBio((profile as any)?.bio ?? '');
+    setEditing(true);
+  };
+
+  const handleSaveProfile = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const userId = profile?.id;
+    if (!userId) return;
+
+    const serviceKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_KEY!;
+    await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        display_name: editName.trim(),
+        bio: editBio.trim() || null,
+      }),
+    });
+
+    setProfile((prev) => prev ? { ...prev, display_name: editName.trim() } : prev);
+    setEditing(false);
+    Toast.success('Profile updated');
+  };
+
   const handleShareProfile = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const username = profile?.username ?? '';
@@ -283,11 +335,7 @@ export default function ProfileScreen() {
                 <AnimatedPress
                   style={styles.actionButtonOuter}
                   scaleValue={0.97}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    console.log('[TOAST TEST] Edit profile tapped');
-                    Toast.info('Edit profile coming soon');
-                  }}
+                  onPress={handleEditProfile}
                 >
                   <BlurView intensity={30} tint="dark" style={styles.actionBlur}>
                     <View style={styles.actionButtonInner}>
@@ -317,29 +365,81 @@ export default function ProfileScreen() {
                 </View>
               )}
 
-              {/* Badges section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Badges</Text>
-                <View style={styles.badgeCardOuter}>
-                  <BlurView intensity={30} tint="dark" style={styles.badgeBlur}>
-                    <View style={styles.badgeCardInner}>
-                      <View style={styles.glassHighlight} />
-                      {/* Diamond badge — rotated square with layered gold borders */}
-                      <View style={styles.diamondWrapper}>
-                        <View style={styles.diamondGlow} />
-                        <View style={styles.diamondOuter}>
-                          <View style={styles.diamondMiddle}>
-                            <View style={styles.diamondInner}>
-                              <Text style={styles.badgeNumber}>{attendingCount}</Text>
-                              <Text style={styles.badgeSublabel}>EVENTS{'\n'}ATTENDED</Text>
-                            </View>
-                          </View>
-                        </View>
-                      </View>
-                    </View>
-                  </BlurView>
+              {/* Stats row */}
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>{hostedCount}</Text>
+                  <Text style={styles.statLabel}>Hosted</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>{attendingCount}</Text>
+                  <Text style={styles.statLabel}>Attended</Text>
                 </View>
               </View>
+
+              {/* Edit profile form (inline) */}
+              {editing && (
+                <View style={styles.editSection}>
+                  <TextInput
+                    style={styles.editInput}
+                    value={editName}
+                    onChangeText={setEditName}
+                    placeholder="Display name"
+                    placeholderTextColor={COLORS.hint}
+                    autoFocus
+                  />
+                  <TextInput
+                    style={[styles.editInput, { minHeight: 80 }]}
+                    value={editBio}
+                    onChangeText={setEditBio}
+                    placeholder="Add a bio..."
+                    placeholderTextColor={COLORS.hint}
+                    multiline
+                    maxLength={160}
+                  />
+                  <View style={styles.editActions}>
+                    <Pressable onPress={() => setEditing(false)} style={styles.editCancel}>
+                      <Text style={styles.editCancelText}>Cancel</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={handleSaveProfile}
+                      style={[styles.editSave, !editName.trim() && { opacity: 0.4 }]}
+                      disabled={!editName.trim()}
+                    >
+                      <Text style={styles.editSaveText}>Save</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
+
+              {/* Recent events */}
+              {recentEvents.length > 0 && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Your Events</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.recentScroll}>
+                    {recentEvents.map((ev: any) => (
+                      <Pressable
+                        key={ev.id}
+                        style={styles.recentCard}
+                        onPress={() => router.push(`/event/${ev.id}`)}
+                      >
+                        {ev.poster_url ? (
+                          <Image source={{ uri: ev.poster_url }} style={styles.recentPoster} />
+                        ) : (
+                          <View style={[styles.recentPoster, { backgroundColor: COLORS.card2, alignItems: 'center', justifyContent: 'center' }]}>
+                            <Text style={{ fontSize: 28 }}>🌙</Text>
+                          </View>
+                        )}
+                        <Text style={styles.recentTitle} numberOfLines={1}>{ev.title}</Text>
+                        <Text style={styles.recentDate}>
+                          {ev.date_time ? new Date(ev.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No date'}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
 
               {/* Sign out — glass button matching other buttons */}
               <View style={styles.signOutRow}>
@@ -641,5 +741,102 @@ const styles = StyleSheet.create({
     color: COLORS.red,
     fontSize: 14,
     ...FONTS.medium,
+  },
+
+  // Stats row
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.xl,
+    marginBottom: SPACING.xl,
+    gap: SPACING.xl,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 24,
+    color: COLORS.white,
+    ...FONTS.bold,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: COLORS.muted,
+    ...FONTS.medium,
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: COLORS.border,
+  },
+
+  // Edit profile form
+  editSection: {
+    paddingHorizontal: SPACING.xl,
+    marginBottom: SPACING.xl,
+    gap: SPACING.md,
+  },
+  editInput: {
+    backgroundColor: COLORS.input,
+    borderRadius: RADIUS.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 223, 161, 0.10)',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    color: COLORS.white,
+    fontSize: 16,
+    ...FONTS.medium,
+  },
+  editActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: SPACING.md,
+  },
+  editCancel: {
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+  },
+  editCancelText: {
+    color: COLORS.muted,
+    fontSize: 15,
+    ...FONTS.medium,
+  },
+  editSave: {
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.xl,
+    backgroundColor: COLORS.gold,
+    borderRadius: RADIUS.md,
+  },
+  editSaveText: {
+    color: COLORS.dark,
+    fontSize: 15,
+    ...FONTS.bold,
+  },
+
+  // Recent events
+  recentScroll: {
+    gap: SPACING.md,
+  },
+  recentCard: {
+    width: 120,
+  },
+  recentPoster: {
+    width: 120,
+    height: 120,
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+    marginBottom: SPACING.xs,
+  },
+  recentTitle: {
+    fontSize: 13,
+    color: COLORS.white,
+    ...FONTS.medium,
+  },
+  recentDate: {
+    fontSize: 11,
+    color: COLORS.muted,
+    ...FONTS.regular,
   },
 });

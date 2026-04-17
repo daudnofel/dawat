@@ -12,6 +12,7 @@
 
 import { StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   SharedValue,
   useAnimatedStyle,
@@ -27,22 +28,34 @@ interface ProgressiveBlurHeaderProps {
   scrollY: SharedValue<number>;
   /** Content rendered inside the header (title, buttons, etc.) */
   headerContent: React.ReactNode;
-  /** Header height in px. Default 100. */
-  height?: number;
+  /** Header content height in px (excludes safe area inset). Default 52. */
+  contentHeight?: number;
   /** Tint color that fades in as user scrolls. Defaults to COLORS.dark. */
   tintColor?: string;
   /** Scroll distance over which blur ramps from 0 to max. Default 80. */
   scrollRange?: number;
 }
 
+/**
+ * Returns the total header height (safe area top + content) so the parent
+ * can set paddingTop on its ScrollView content.
+ */
+export function useBlurHeaderHeight(contentHeight = 52): number {
+  const { top } = useSafeAreaInsets();
+  return top + contentHeight;
+}
+
 export default function ProgressiveBlurHeader({
   scrollY,
   headerContent,
-  height = 100,
+  contentHeight = 52,
   tintColor = COLORS.dark,
   scrollRange = 80,
 }: ProgressiveBlurHeaderProps) {
-  // Blur intensity: 0 at top → 50 after scrollRange px
+  const { top: safeTop } = useSafeAreaInsets();
+  const totalHeight = safeTop + contentHeight;
+
+  // Blur: invisible at top → fully opaque after scrollRange px
   const blurStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       scrollY.value,
@@ -52,7 +65,7 @@ export default function ProgressiveBlurHeader({
     ),
   }));
 
-  // Tint overlay: transparent at top → semi-opaque after scroll
+  // Tint: transparent at top → 85% opaque after scroll
   const tintStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       scrollY.value,
@@ -62,7 +75,7 @@ export default function ProgressiveBlurHeader({
     ),
   }));
 
-  // Bottom border: invisible at top → visible after scroll
+  // Border: invisible at top → visible halfway through scroll
   const borderStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       scrollY.value,
@@ -73,15 +86,18 @@ export default function ProgressiveBlurHeader({
   }));
 
   return (
-    <Animated.View style={[styles.container, { height }]} pointerEvents="box-none">
+    <Animated.View
+      style={[styles.container, { height: totalHeight }]}
+      pointerEvents="box-none"
+    >
       {/* Layer 1: Blur (fades in on scroll) */}
       <AnimatedBlurView
-        intensity={50}
+        intensity={60}
         tint="dark"
         style={[StyleSheet.absoluteFill, blurStyle]}
       />
 
-      {/* Layer 2: Tint overlay (matches page bg so blur isn't grey) */}
+      {/* Layer 2: Tint (matches page bg so blur reads as the right color) */}
       <Animated.View
         style={[
           StyleSheet.absoluteFill,
@@ -92,16 +108,13 @@ export default function ProgressiveBlurHeader({
       />
 
       {/* Layer 3: Bottom border */}
-      <Animated.View
-        style={[
-          styles.border,
-          borderStyle,
-        ]}
-        pointerEvents="none"
-      />
+      <Animated.View style={[styles.border, borderStyle]} pointerEvents="none" />
 
-      {/* Layer 4: Header content (always visible) */}
-      <Animated.View style={styles.content} pointerEvents="box-none">
+      {/* Layer 4: Header content — pushed below the safe area inset */}
+      <Animated.View
+        style={[styles.content, { marginTop: safeTop }]}
+        pointerEvents="box-none"
+      >
         {headerContent}
       </Animated.View>
     </Animated.View>
@@ -118,9 +131,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'flex-end',
-    paddingHorizontal: SPACING.xl,
-    paddingBottom: SPACING.sm,
+    justifyContent: 'center',
   },
   border: {
     position: 'absolute',

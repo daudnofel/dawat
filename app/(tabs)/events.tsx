@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Dimensions, Pressable, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SPACING } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
@@ -96,53 +98,30 @@ export default function EventsScreen() {
 
   const onRefresh = () => { setRefreshing(true); fetchMyEvents(); };
 
-  const renderCard = (e: any, label: string) => {
+  const renderCard = (e: any, label: string, index: number) => {
     const rsvps = Array.isArray(e.rsvps) ? e.rsvps : [];
     const yesRsvps = rsvps.filter((r: any) => r.status === 'yes');
     const yesCount = yesRsvps.reduce((sum: number, r: any) => sum + 1 + (r.children_count ?? 0) + (r.plus_one_names?.length ?? 0), 0);
     const inshallahCount = rsvps.filter((r: any) => r.status === 'inshallah').length;
     return (
-      <EventCard
-        key={e.id} id={e.id} title={e.title} theme_id={e.theme_id}
-        poster_url={e.poster_url}
-        description={e.description}
-        variant="horizontal"
-        org_name={label}
-        date_label={e.date_time ? new Date(e.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD'}
-        location_name={e.location_name ?? 'TBD'} price={e.price}
-        gender_mode={e.gender_mode as GenderMode} is_halal_venue={e.is_halal_venue}
-        yes_count={yesCount} inshallah_count={inshallahCount} capacity={e.capacity}
-      />
+      <Animated.View key={e.id} entering={FadeInDown.delay(index * 60).duration(300)}>
+        <EventCard
+          id={e.id} title={e.title} theme_id={e.theme_id}
+          poster_url={e.poster_url}
+          description={e.description}
+          variant="horizontal"
+          org_name={label}
+          date_label={e.date_time ? new Date(e.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD'}
+          location_name={e.location_name ?? 'TBD'} price={e.price}
+          gender_mode={e.gender_mode as GenderMode} is_halal_venue={e.is_halal_venue}
+          yes_count={yesCount} inshallah_count={inshallahCount} capacity={e.capacity}
+        />
+      </Animated.View>
     );
   };
 
-  const renderContent = () => {
-    if (loading) {
-      return <><SkeletonCard /><SkeletonCard /></>;
-    }
-    if (noAuth) {
-      return <EmptyState emoji="🔐" title="Sign in to see your events" subtitle="Your hosted and attending events will appear here" />;
-    }
-
-    if (activeTab === 'hosting') {
-      return hosting.length > 0
-        ? hosting.map((e) => renderCard(e, 'You'))
-        : <EmptyState emoji="✨" title="No events hosted yet" subtitle="Tap the + button to create your first event" />;
-    }
-
-    if (activeTab === 'attending') {
-      return attending.length > 0
-        ? attending.map((e) => renderCard(e, "RSVP'd"))
-        : <EmptyState emoji="🌙" title="No upcoming events" subtitle="Explore what's on and RSVP to events near you" />;
-    }
-
-    // Past tab
-    return past.length > 0
-      ? past.map((e) => renderCard(e, 'Past'))
-      : <EmptyState emoji="📖" title="No past events yet" subtitle="Events you've hosted or attended will appear here" />;
-  };
-
   const handleTabPress = (tab: Tab) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setActiveTab(tab);
     const idx = TABS_LIST.findIndex((t) => t.key === tab);
     pagerRef.current?.scrollTo({ x: idx * SCREEN_WIDTH, animated: true });
@@ -168,7 +147,7 @@ export default function EventsScreen() {
       };
       return <EmptyState {...empty[tab]} />;
     }
-    return data.map((e: any) => renderCard(e, label));
+    return data.map((e: any, index: number) => renderCard(e, label, index));
   };
 
   return (

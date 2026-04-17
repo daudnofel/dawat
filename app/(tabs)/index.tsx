@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, Dimensions } from 'react-native';
+import Animated, { useSharedValue, useAnimatedScrollHandler } from 'react-native-reanimated';
 import Svg, { Defs, RadialGradient, Stop, Rect, Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +17,7 @@ import HomeSection from '../../components/HomeSection';
 import HomeChipPrompts from '../../components/HomeChipPrompts';
 import HomeThemeCarousel from '../../components/HomeThemeCarousel';
 import HomeFeaturedCollections from '../../components/HomeFeaturedCollections';
+import ProgressiveBlurHeader, { useBlurHeaderHeight } from '../../components/ProgressiveBlurHeader';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -46,6 +48,11 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const scrollY = useSharedValue(0);
+  const headerHeight = useBlurHeaderHeight(48);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => { scrollY.value = e.contentOffset.y; },
+  });
 
   // Fetch greeting name from cached user
   const fetchProfile = useCallback(async () => {
@@ -226,74 +233,81 @@ export default function HomeScreen() {
         </Svg>
       </View>
 
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Header — logo + bell + message icon */}
-        <View style={styles.header}>
-          <View style={styles.brandRow}>
-            <Text style={styles.brandEnglish}>DAWAT</Text>
-            <Text style={styles.brandPipe}>|</Text>
-            <Text style={styles.brandArabic}>دعوت</Text>
+      {/* Progressive blur header — renders OUTSIDE SafeAreaView, handles insets itself */}
+      <ProgressiveBlurHeader
+        scrollY={scrollY}
+        contentHeight={48}
+        headerContent={
+          <View style={styles.header}>
+            <View style={styles.brandRow}>
+              <Text style={styles.brandEnglish}>DAWAT</Text>
+              <Text style={styles.brandPipe}>|</Text>
+              <Text style={styles.brandArabic}>دعوت</Text>
+            </View>
+            <View style={styles.headerActions}>
+              <Pressable
+                style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.7 }]}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/notifications'); }}
+              >
+                <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d="M18 16v-5a6 6 0 1 0-12 0v5l-1.5 2.5h15L18 16z"
+                    stroke="#FFFFFF"
+                    strokeWidth={1.8}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <Path
+                    d="M10 21a2 2 0 0 0 4 0"
+                    stroke="#FFFFFF"
+                    strokeWidth={1.8}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+                {unreadCount > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                  </View>
+                )}
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.7 }]}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/inbox'); }}
+              >
+                <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d="M16 11.5a4.5 4.5 0 0 1-4.5 4.5H9l-3 2.5V16h-.5A2.5 2.5 0 0 1 3 13.5v-6A2.5 2.5 0 0 1 5.5 5h6A4.5 4.5 0 0 1 16 9.5z"
+                    stroke="#FFFFFF"
+                    strokeWidth={1.8}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <Path
+                    d="M9 11.5a6.5 6.5 0 0 1 6.5-6.5h3A2.5 2.5 0 0 1 21 7.5v6a2.5 2.5 0 0 1-2.5 2.5H18v2.5l-3-2.5h-2"
+                    stroke="#FFFFFF"
+                    strokeWidth={1.8}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+                {unreadMessages > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{unreadMessages > 9 ? '9+' : unreadMessages}</Text>
+                  </View>
+                )}
+              </Pressable>
+            </View>
           </View>
-          <View style={styles.headerActions}>
-            <Pressable
-              style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.7 }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/notifications'); }}
-            >
-              <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M18 16v-5a6 6 0 1 0-12 0v5l-1.5 2.5h15L18 16z"
-                  stroke="#FFFFFF"
-                  strokeWidth={1.8}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <Path
-                  d="M10 21a2 2 0 0 0 4 0"
-                  stroke="#FFFFFF"
-                  strokeWidth={1.8}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-              {unreadCount > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-                </View>
-              )}
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.7 }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/inbox'); }}
-            >
-              <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M16 11.5a4.5 4.5 0 0 1-4.5 4.5H9l-3 2.5V16h-.5A2.5 2.5 0 0 1 3 13.5v-6A2.5 2.5 0 0 1 5.5 5h6A4.5 4.5 0 0 1 16 9.5z"
-                  stroke="#FFFFFF"
-                  strokeWidth={1.8}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <Path
-                  d="M9 11.5a6.5 6.5 0 0 1 6.5-6.5h3A2.5 2.5 0 0 1 21 7.5v6a2.5 2.5 0 0 1-2.5 2.5H18v2.5l-3-2.5h-2"
-                  stroke="#FFFFFF"
-                  strokeWidth={1.8}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-              {unreadMessages > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{unreadMessages > 9 ? '9+' : unreadMessages}</Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
-        </View>
+        }
+      />
 
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+      <Animated.ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight }]}
+        showsVerticalScrollIndicator={false}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gold} />
           }
@@ -414,8 +428,7 @@ export default function HomeScreen() {
           )}
 
           <View style={{ height: 120 }} />
-        </ScrollView>
-      </SafeAreaView>
+        </Animated.ScrollView>
     </View>
   );
 }
@@ -444,9 +457,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: SPACING.lg,
-    paddingBottom: SPACING.md,
     paddingHorizontal: SPACING.xl,
+    height: 48,
+    paddingTop: SPACING.xs,
   },
   brandRow: {
     flexDirection: 'row',

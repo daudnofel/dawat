@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, SPACING } from '../../lib/theme';
+import SkeletonCard from '../../components/SkeletonCard';
 import { Toast } from '../../components/Toast';
 import { RsvpStatus, GenderMode } from '../../types';
 import { supabase } from '../../lib/supabase';
@@ -374,7 +375,9 @@ export default function EventDetailScreen() {
   if (loading || !event) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <ActivityIndicator size="large" color={COLORS.gold} style={{ marginTop: 100 }} />
+        <View style={{ paddingHorizontal: 24, paddingTop: 100 }}>
+          <SkeletonCard />
+        </View>
       </SafeAreaView>
     );
   }
@@ -393,7 +396,7 @@ export default function EventDetailScreen() {
   // new editor can reuse the exact same canvas.
   const topBarJsx = (
     <View style={styles.topBar}>
-      <Pressable onPress={() => router.back()}>
+      <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }}>
         <Text style={[styles.backText, { color: barTextColor }]}>← Back</Text>
       </Pressable>
       <View style={styles.topBarRight}>
@@ -403,6 +406,7 @@ export default function EventDetailScreen() {
         {isHost && (
           <Pressable
             onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               Alert.alert('Manage Event', '', [
                 { text: 'Edit Event', onPress: handleEdit },
                 { text: 'Cancel Event', style: 'destructive', onPress: handleCancelEvent },

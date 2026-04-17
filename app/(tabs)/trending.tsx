@@ -8,6 +8,7 @@ import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -115,6 +116,7 @@ export default function DiscoverScreen() {
   };
 
   const clearSearch = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSearchQuery('');
     setSearchResults(null);
   }, []);

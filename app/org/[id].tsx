@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { GenderMode } from '../../types';
@@ -64,6 +65,7 @@ export default function OrgPage() {
   };
 
   const handleFollow = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -89,7 +91,7 @@ export default function OrgPage() {
   if (!org) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <Pressable style={{ padding: SPACING.xl }} onPress={() => router.back()}>
+        <Pressable style={{ padding: SPACING.xl }} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }}>
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
         <Text style={{ color: COLORS.muted, textAlign: 'center', marginTop: 60, fontSize: 16 }}>Organisation not found</Text>
@@ -100,7 +102,7 @@ export default function OrgPage() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
+        <Pressable style={styles.backBtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }}>
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
 
@@ -140,7 +142,7 @@ export default function OrgPage() {
 
           <View style={styles.tabRow}>
             {(['upcoming', 'past'] as const).map((tab) => (
-              <Pressable key={tab} style={[styles.tab, activeTab === tab && styles.tabActive]} onPress={() => setActiveTab(tab)}>
+              <Pressable key={tab} style={[styles.tab, activeTab === tab && styles.tabActive]} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveTab(tab); }}>
                 <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
                   {tab === 'upcoming' ? 'Upcoming' : 'Past'}
                 </Text>

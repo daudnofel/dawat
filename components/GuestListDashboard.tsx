@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import * as Sharing from 'expo-sharing';
+import { cacheDirectory, writeAsStringAsync } from 'expo-file-system/legacy';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
 import { Toast } from './Toast';
 import { RsvpStatus } from '../types';
@@ -96,6 +98,39 @@ export default function GuestListDashboard({ eventId, visible, refreshKey }: Gue
     fetchGuests();
   };
 
+  const handleExportCSV = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (guests.length === 0) {
+      Toast.info('No guests to export');
+      return;
+    }
+
+    const header = 'Name,Status,Children,Plus Ones,RSVP Date';
+    const rows = guests.map((g) => {
+      const name = (g.display_name || 'Guest').replace(/,/g, ' ');
+      const status = {
+        [RsvpStatus.Yes]: 'Going',
+        [RsvpStatus.Inshallah]: 'Inshallah',
+        [RsvpStatus.No]: 'Declined',
+        [RsvpStatus.Waitlist]: 'Waitlisted',
+      }[g.status] ?? g.status;
+      const plusOnes = g.plus_one_names.join('; ').replace(/,/g, ' ');
+      const date = new Date(g.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return `${name},${status},${g.children_count},"${plusOnes}",${date}`;
+    });
+
+    const csv = [header, ...rows].join('\n');
+    const fileUri = `${cacheDirectory}dawat-guests.csv`;
+
+    try {
+      await writeAsStringAsync(fileUri, csv);
+      await Sharing.shareAsync(fileUri, { mimeType: 'text/csv', UTI: 'public.comma-separated-values-text' });
+      Toast.success('Guest list exported');
+    } catch (e: any) {
+      Toast.error(e?.message ?? 'Could not export');
+    }
+  };
+
   if (!visible) return null;
 
   const filtered = activeTab === 'all' ? guests : guests.filter((g) => g.status === activeTab);
@@ -114,8 +149,9 @@ export default function GuestListDashboard({ eventId, visible, refreshKey }: Gue
 
   return (
     <View style={styles.container}>
-      {/* Clean summary line — no colored cards */}
-      <Text style={styles.summaryText}>
+      {/* Summary + export */}
+      <View style={styles.summaryRow}>
+        <Text style={styles.summaryText}>
         <Text style={{ color: COLORS.green }}>{yesCount}</Text> going
         {inshallahCount > 0 && <> · <Text style={{ color: COLORS.amber }}>{inshallahCount}</Text> inshallah</>}
         {waitlistCount > 0 && <> · <Text style={{ color: COLORS.blue }}>{waitlistCount}</Text> waitlist</>}
@@ -124,6 +160,14 @@ export default function GuestListDashboard({ eventId, visible, refreshKey }: Gue
           <>  ·  {totalHeadcount} total</>
         )}
       </Text>
+        <Pressable
+          onPress={handleExportCSV}
+          style={({ pressed }) => [styles.exportButton, pressed && { opacity: 0.7 }]}
+          hitSlop={8}
+        >
+          <Text style={styles.exportText}>Export CSV</Text>
+        </Pressable>
+      </View>
 
       {/* Filter tabs */}
       <View style={styles.tabRow}>
@@ -219,11 +263,26 @@ const styles = StyleSheet.create({
   container: {
     marginTop: SPACING.md,
   },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
   summaryText: {
     fontSize: 14,
     color: COLORS.muted,
     ...FONTS.medium,
-    marginBottom: SPACING.md,
+    flex: 1,
+  },
+  exportButton: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+  },
+  exportText: {
+    fontSize: 13,
+    color: COLORS.gold,
+    ...FONTS.semibold,
   },
   tabRow: {
     flexDirection: 'row',

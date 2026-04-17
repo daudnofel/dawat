@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import * as Sharing from 'expo-sharing';
-import { cacheDirectory, writeAsStringAsync } from 'expo-file-system/legacy';
+import { Share } from 'react-native';
 import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
 import { Toast } from './Toast';
 import { RsvpStatus } from '../types';
@@ -120,12 +119,10 @@ export default function GuestListDashboard({ eventId, visible, refreshKey }: Gue
     });
 
     const csv = [header, ...rows].join('\n');
-    const fileUri = `${cacheDirectory}dawat-guests.csv`;
 
     try {
-      await writeAsStringAsync(fileUri, csv);
-      await Sharing.shareAsync(fileUri, { mimeType: 'text/csv', UTI: 'public.comma-separated-values-text' });
-      Toast.success('Guest list exported');
+      await Share.share({ message: csv, title: 'Dawat Guest List' });
+      Toast.success('Guest list shared');
     } catch (e: any) {
       Toast.error(e?.message ?? 'Could not export');
     }

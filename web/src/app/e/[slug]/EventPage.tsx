@@ -130,9 +130,8 @@ export default function EventPage({ event, counts, hostName }: EventPageProps) {
               )}
             </div>
 
-            {/* Two-column layout on desktop */}
-            <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-16">
-              {/* Left column — event details */}
+            {/* Two-column: event details left, RSVP center-right */}
+            <div className="lg:grid lg:grid-cols-2 lg:gap-12">
               <div>
                 {/* Host */}
                 <div className="mb-6">
@@ -190,9 +189,9 @@ export default function EventPage({ event, counts, hostName }: EventPageProps) {
                 )}
               </div>
 
-              {/* Right column — RSVP card (sticky on desktop) */}
-              <div className="lg:sticky lg:top-8 lg:self-start">
-                <div className="lg:bg-white/[0.03] lg:border lg:border-white/5 lg:rounded-2xl lg:p-8">
+              {/* RSVP card — right column, vertically centered */}
+              <div className="lg:sticky lg:top-8 lg:self-start mt-8 lg:mt-0">
+                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-8">
                   {submitted ? (
                     <div className="text-center py-6">
                       <p className="text-xl font-semibold text-[#C9A84C] mb-2">

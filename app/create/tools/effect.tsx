@@ -9,7 +9,6 @@
 
 import React from 'react';
 import { Text, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
 
 import ToolSheet from '../../../components/ToolSheet';
 import EffectGrid from '../../../components/EffectGrid';
@@ -17,13 +16,16 @@ import { useEventStore } from '../../../store/useEventStore';
 import { EffectId } from '../../../types';
 import { COLORS, FONTS, SPACING } from '../../../lib/theme';
 
-export default function EffectToolScreen() {
-  const router = useRouter();
+interface Props {
+  onClose?: () => void;
+}
+
+export default function EffectToolScreen({ onClose }: Props = {}) {
   const { draft, updateDraft, closeTool } = useEventStore();
 
   const handleClose = () => {
     closeTool();
-    router.back();
+    onClose?.();
   };
 
   return (

@@ -166,6 +166,12 @@ export interface Event {
   is_published: boolean;
   is_cancelled: boolean;
   stripe_account_id: string | null;
+  // DAW-6 — simple external payment link (Venmo/CashApp/PayPal URL)
+  payment_link: string | null;
+  // DAW-6 — guest list privacy controls
+  hide_guest_list: boolean;
+  hide_headcount: boolean;
+  anonymize_guests: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -385,6 +391,12 @@ export interface EventDraft {
   effect_id: EffectId | null;
   // DAW-56 — title typography
   title_style: string | null;
+  // DAW-6 — simple external payment link (Venmo/CashApp/PayPal URL)
+  payment_link: string;
+  // DAW-6 — guest list privacy controls
+  hide_guest_list: boolean;
+  hide_headcount: boolean;
+  anonymize_guests: boolean;
 }
 
 // ─── Poster Library (DAW-22) ─────────────────────────────────

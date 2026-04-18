@@ -1,6 +1,8 @@
-import { View, Text, StyleSheet } from 'react-native';
-import { COLORS, FONTS, RADIUS, SPACING } from '../lib/theme';
+// DAW-61 — thin wrapper that delegates to DBadge. Kept for existing imports.
+
+import { COLORS } from '../lib/theme';
 import { GenderMode } from '../types';
+import DBadge from './ui/DBadge';
 
 const CONFIG = {
   [GenderMode.Mixed]: { label: 'Mixed', color: COLORS.gold, emoji: '🌟' },
@@ -11,20 +13,5 @@ const CONFIG = {
 
 export default function GenderBadge({ mode }: { mode: GenderMode }) {
   const { label, color, emoji } = CONFIG[mode];
-  return (
-    <View style={[styles.badge, { backgroundColor: `${color}20`, borderColor: `${color}40` }]}>
-      <Text style={styles.emoji}>{emoji}</Text>
-      <Text style={[styles.text, { color }]}>{label}</Text>
-    </View>
-  );
+  return <DBadge label={label} color={color} emoji={emoji} />;
 }
-
-const styles = StyleSheet.create({
-  badge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: SPACING.sm + 2, paddingVertical: 3,
-    borderRadius: RADIUS.full, borderWidth: 1,
-  },
-  emoji: { fontSize: 10 },
-  text: { fontSize: 11, ...FONTS.semibold },
-});

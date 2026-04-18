@@ -24,6 +24,10 @@ interface EventPageProps {
     gender_mode: string;
     is_halal_venue: boolean;
     capacity: number | null;
+    // DAW-6
+    virtual_link: string | null;
+    payment_link: string | null;
+    hide_headcount: boolean;
   };
   counts: { yes: number; inshallah: number; total: number };
   hostName: string;
@@ -174,12 +178,40 @@ export default function EventPage({ event, counts, hostName }: EventPageProps) {
                   )}
                 </div>
 
-                {/* Going count */}
-                <p className="text-white/40 text-sm mb-6">
-                  {counts.total > 0
-                    ? `${counts.yes} going${counts.inshallah > 0 ? ` · ${counts.inshallah} inshallah` : ''}`
-                    : 'Be the first to RSVP'}
-                </p>
+                {/* Going count — hidden if host toggled hide_headcount */}
+                {!event.hide_headcount && (
+                  <p className="text-white/40 text-sm mb-6">
+                    {counts.total > 0
+                      ? `${counts.yes} going${counts.inshallah > 0 ? ` · ${counts.inshallah} inshallah` : ''}`
+                      : 'Be the first to RSVP'}
+                  </p>
+                )}
+
+                {/* DAW-6 — external action links */}
+                {(event.payment_link || (event.virtual_link && submitted && rsvpChoice === 'yes')) && (
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {event.payment_link && (
+                      <a
+                        href={/^https?:\/\//i.test(event.payment_link) ? event.payment_link : `https://${event.payment_link}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2.5 rounded-full border border-white/15 bg-white/[0.05] text-sm font-semibold text-white hover:bg-white/10 transition-colors"
+                      >
+                        💸 Pay here
+                      </a>
+                    )}
+                    {event.virtual_link && submitted && rsvpChoice === 'yes' && (
+                      <a
+                        href={/^https?:\/\//i.test(event.virtual_link) ? event.virtual_link : `https://${event.virtual_link}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2.5 rounded-full border border-white/15 bg-white/[0.05] text-sm font-semibold text-white hover:bg-white/10 transition-colors"
+                      >
+                        🎥 Join virtually
+                      </a>
+                    )}
+                  </div>
+                )}
 
                 {/* Description */}
                 {event.description && (

@@ -1,10 +1,10 @@
 /**
  * TitleStylePicker (DAW-56).
  *
- * Horizontal scroll of style cards. Each card renders the host's actual
- * event title in that font so the choice is immediately tangible — not a
- * static "Aa" placeholder. Selected card gets a gold border + subtle
- * checkmark. Haptic on every tap.
+ * Vertical list of style cards. Each card renders the host's actual event
+ * title in that font so the choice is immediately tangible — not a static
+ * "Aa" placeholder. Selected card gets a gold border + subtle checkmark.
+ * Haptic on every tap.
  *
  * Used inside `app/create/tools/title-style.tsx` via ToolSheet.
  */
@@ -14,9 +14,7 @@ import {
   View,
   Text,
   Pressable,
-  ScrollView,
   StyleSheet,
-  Dimensions,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
@@ -26,10 +24,6 @@ import {
   getTitleTextStyle,
   TitleStyleId,
 } from '../lib/title-styles';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const CARD_WIDTH = SCREEN_WIDTH * 0.68;
-const CARD_HEIGHT = 140;
 
 interface TitleStylePickerProps {
   /** The host's actual event title, rendered in each card. */
@@ -48,17 +42,10 @@ export default function TitleStylePicker({
   const displayTitle = title.trim() || 'Your Event Title';
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.scrollContent}
-      decelerationRate="fast"
-      snapToInterval={CARD_WIDTH + SPACING.md}
-      snapToAlignment="start"
-    >
+    <View style={styles.listContent}>
+
       {TITLE_STYLES.map((style) => {
-        const isSelected =
-          (selectedId ?? 'classic') === style.id;
+        const isSelected = (selectedId ?? 'classic') === style.id;
         const titleTextStyle = getTitleTextStyle(style.id);
 
         return (
@@ -74,14 +61,12 @@ export default function TitleStylePicker({
               pressed && styles.cardPressed,
             ]}
           >
-            {/* Title preview */}
             <View style={styles.titleWrap}>
               <Text
                 style={[
                   styles.previewText,
                   titleTextStyle,
-                  // Cap the preview size for cards
-                  { fontSize: Math.min(titleTextStyle.fontSize ?? 32, 26) },
+                  { fontSize: Math.min(titleTextStyle.fontSize ?? 32, 30) },
                 ]}
                 numberOfLines={2}
               >
@@ -89,7 +74,6 @@ export default function TitleStylePicker({
               </Text>
             </View>
 
-            {/* Label + vibe */}
             <View style={styles.labelRow}>
               <View style={styles.labelLeft}>
                 <Text style={styles.labelText}>{style.label}</Text>
@@ -104,26 +88,21 @@ export default function TitleStylePicker({
           </Pressable>
         );
       })}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.lg,
+  listContent: {
     gap: SPACING.md,
   },
   card: {
-    width: CARD_WIDTH,
-    height: CARD_HEIGHT,
     backgroundColor: COLORS.card2,
     borderRadius: RADIUS.lg,
     borderWidth: 1.5,
     borderColor: COLORS.border,
     overflow: 'hidden',
-    justifyContent: 'space-between',
+    minHeight: 140,
   },
   cardSelected: {
     borderColor: COLORS.gold,
@@ -134,10 +113,9 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   titleWrap: {
-    flex: 1,
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.lg,
-    justifyContent: 'center',
+    paddingBottom: SPACING.md,
   },
   previewText: {
     color: COLORS.white,

@@ -61,6 +61,11 @@ interface EditableEvent {
   virtual_link: string;
   allow_plus_ones: boolean;
   max_plus_ones: number;
+  // DAW-6
+  payment_link: string;
+  hide_guest_list: boolean;
+  hide_headcount: boolean;
+  anonymize_guests: boolean;
 }
 
 export default function EditEventScreen() {
@@ -85,6 +90,10 @@ export default function EditEventScreen() {
     virtual_link: '',
     allow_plus_ones: false,
     max_plus_ones: 0,
+    payment_link: '',
+    hide_guest_list: false,
+    hide_headcount: false,
+    anonymize_guests: false,
   });
   const [customPrice, setCustomPrice] = useState('');
   const [showCustom, setShowCustom] = useState(false);
@@ -140,6 +149,10 @@ export default function EditEventScreen() {
       virtual_link: data.virtual_link ?? '',
       allow_plus_ones: data.allow_plus_ones ?? false,
       max_plus_ones: data.max_plus_ones ?? 0,
+      payment_link: data.payment_link ?? '',
+      hide_guest_list: data.hide_guest_list ?? false,
+      hide_headcount: data.hide_headcount ?? false,
+      anonymize_guests: data.anonymize_guests ?? false,
     });
 
     setLoading(false);
@@ -204,6 +217,11 @@ export default function EditEventScreen() {
       virtual_link: event.virtual_link || null,
       allow_plus_ones: event.allow_plus_ones,
       max_plus_ones: event.max_plus_ones,
+      // DAW-6 — payment link + guest list privacy
+      payment_link: event.payment_link || null,
+      hide_guest_list: event.hide_guest_list,
+      hide_headcount: event.hide_headcount,
+      anonymize_guests: event.anonymize_guests,
       updated_at: new Date().toISOString(),
     };
 
@@ -360,6 +378,18 @@ export default function EditEventScreen() {
           keyboardType="url"
         />
 
+        {/* DAW-6 — Payment Link */}
+        <Text style={styles.label}>Payment link (optional)</Text>
+        <TextInput
+          style={styles.input}
+          value={event.payment_link}
+          onChangeText={(t) => update({ payment_link: t })}
+          placeholder="Venmo, CashApp, PayPal URL"
+          placeholderTextColor={COLORS.hint}
+          autoCapitalize="none"
+          keyboardType="url"
+        />
+
         {/* Price */}
         <Text style={styles.label}>Price</Text>
         <View style={styles.priceRow}>
@@ -503,6 +533,48 @@ export default function EditEventScreen() {
           <Switch
             value={event.is_id_required}
             onValueChange={(v) => update({ is_id_required: v })}
+            trackColor={{ false: COLORS.border, true: COLORS.gold }}
+            thumbColor={COLORS.white}
+          />
+        </View>
+
+        {/* DAW-6 — Guest list privacy */}
+        <Text style={[styles.label, { marginTop: SPACING.xl }]}>Guest list privacy</Text>
+
+        <View style={styles.toggleRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.toggleLabel}>Hide guest list</Text>
+            <Text style={styles.toggleHint}>Only you see who's going</Text>
+          </View>
+          <Switch
+            value={event.hide_guest_list}
+            onValueChange={(v) => update({ hide_guest_list: v })}
+            trackColor={{ false: COLORS.border, true: COLORS.gold }}
+            thumbColor={COLORS.white}
+          />
+        </View>
+
+        <View style={styles.toggleRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.toggleLabel}>Hide headcount</Text>
+            <Text style={styles.toggleHint}>Don't show the "X going" count to guests</Text>
+          </View>
+          <Switch
+            value={event.hide_headcount}
+            onValueChange={(v) => update({ hide_headcount: v })}
+            trackColor={{ false: COLORS.border, true: COLORS.gold }}
+            thumbColor={COLORS.white}
+          />
+        </View>
+
+        <View style={styles.toggleRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.toggleLabel}>Anonymize names</Text>
+            <Text style={styles.toggleHint}>Show first name + last initial</Text>
+          </View>
+          <Switch
+            value={event.anonymize_guests}
+            onValueChange={(v) => update({ anonymize_guests: v })}
             trackColor={{ false: COLORS.border, true: COLORS.gold }}
             thumbColor={COLORS.white}
           />

@@ -16,14 +16,11 @@
  * The "Publish event" button is only enabled when the *required* rows are
  * green. Optional warnings never block publish.
  *
- * On success we reset the `activeTool` via `closeTool()` BEFORE navigating
- * so the editor store is clean when the user eventually creates another
- * event. Navigation uses `router.replace` so the publish sheet cannot be
- * swiped back to.
+ * DAW-61 — migrated to Dawat primitives (DText, DButton).
  */
 
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
@@ -34,7 +31,12 @@ import { Toast } from '../../../components/Toast';
 import { getCurrentUserId } from '../../../lib/auth-cache';
 import { publishEvent, PublishEventError } from '../../../lib/publishEvent';
 import { GenderMode } from '../../../types';
+import { DText, DButton } from '../../../components/ui';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../../lib/theme';
+
+interface Props {
+  onClose?: () => void;
+}
 
 interface ChecklistRow {
   label: string;
@@ -56,7 +58,7 @@ function genderLabel(mode: GenderMode): string {
   }
 }
 
-export default function PublishToolScreen() {
+export default function PublishToolScreen({ onClose }: Props = {}) {
   const router = useRouter();
   const { draft, closeTool } = useEventStore();
   const [publishing, setPublishing] = useState(false);
@@ -64,7 +66,7 @@ export default function PublishToolScreen() {
   const handleClose = () => {
     if (publishing) return;
     closeTool();
-    router.back();
+    onClose?.();
   };
 
   // ── Checklist rows ──────────────────────────────────────────────────
@@ -124,7 +126,6 @@ export default function PublishToolScreen() {
   const handlePublish = async () => {
     if (!requiredReady || publishing) return;
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setPublishing(true);
 
     try {
@@ -158,9 +159,9 @@ export default function PublishToolScreen() {
 
   return (
     <ToolSheet title="Review & publish" onClose={handleClose}>
-      <Text style={styles.intro}>
+      <DText variant="meta" color={COLORS.muted} style={styles.intro}>
         Take one last look — you can still edit anything after publishing.
-      </Text>
+      </DText>
 
       <View style={styles.card}>
         {rows.map((row, idx) => (
@@ -181,64 +182,68 @@ export default function PublishToolScreen() {
                     : styles.badgeWarn,
               ]}
             >
-              <Text
+              <DText
                 style={[
                   styles.badgeMark,
-                  row.ok
-                    ? styles.badgeMarkOk
-                    : row.required
-                      ? styles.badgeMarkMissing
-                      : styles.badgeMarkWarn,
+                  {
+                    color: row.ok
+                      ? COLORS.green
+                      : row.required
+                        ? COLORS.red
+                        : COLORS.amber,
+                  },
                 ]}
               >
                 {row.ok ? '✓' : row.required ? '!' : '⚠'}
-              </Text>
+              </DText>
             </View>
             <View style={styles.rowText}>
-              <Text style={styles.rowLabel}>{row.label}</Text>
-              <Text
-                style={[
-                  styles.rowValue,
-                  !row.ok && !row.required && styles.rowValueWarn,
-                  !row.ok && row.required && styles.rowValueMissing,
-                ]}
+              <DText variant="kicker" color={COLORS.muted} style={{ marginBottom: 2 }}>
+                {row.label}
+              </DText>
+              <DText
+                variant="meta"
+                color={
+                  !row.ok && !row.required
+                    ? COLORS.amber
+                    : !row.ok && row.required
+                      ? COLORS.red
+                      : COLORS.white
+                }
+                style={{ fontSize: 15 }}
                 numberOfLines={2}
               >
                 {row.value}
-              </Text>
+              </DText>
             </View>
           </View>
         ))}
       </View>
 
-      <Text style={styles.bismillah}>
-        Bismillah — let's put this out into the world.
-      </Text>
-
-      <Pressable
-        onPress={handlePublish}
-        disabled={!requiredReady || publishing}
-        style={({ pressed }) => [
-          styles.publishBtn,
-          (!requiredReady || publishing) && styles.publishBtnDisabled,
-          pressed && requiredReady && !publishing && styles.publishBtnPressed,
-        ]}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !requiredReady || publishing }}
+      <DText
+        color={COLORS.gold}
+        style={styles.bismillah}
       >
-        {publishing ? (
+        Bismillah — let's put this out into the world.
+      </DText>
+
+      {publishing ? (
+        <View style={styles.loadingBtn}>
           <ActivityIndicator color={COLORS.dark} />
-        ) : (
-          <Text style={styles.publishBtnText}>
-            {requiredReady ? 'Publish event' : 'Fill the required fields'}
-          </Text>
-        )}
-      </Pressable>
+        </View>
+      ) : (
+        <DButton
+          title={requiredReady ? 'Publish event' : 'Fill the required fields'}
+          variant="gold"
+          onPress={handlePublish}
+          disabled={!requiredReady}
+        />
+      )}
 
       {!requiredReady && (
-        <Text style={styles.hint}>
+        <DText variant="hint" style={styles.hint}>
           Tap the red rows above to jump back and finish them.
-        </Text>
+        </DText>
       )}
     </ToolSheet>
   );
@@ -246,9 +251,6 @@ export default function PublishToolScreen() {
 
 const styles = StyleSheet.create({
   intro: {
-    fontSize: 14,
-    color: COLORS.muted,
-    ...FONTS.regular,
     marginBottom: SPACING.lg,
     lineHeight: 20,
   },
@@ -281,59 +283,25 @@ const styles = StyleSheet.create({
   badgeMissing: { backgroundColor: 'rgba(239,68,68,0.18)' },
   badgeWarn: { backgroundColor: 'rgba(245,158,11,0.18)' },
   badgeMark: { fontSize: 13, ...FONTS.bold },
-  badgeMarkOk: { color: COLORS.green },
-  badgeMarkMissing: { color: COLORS.red },
-  badgeMarkWarn: { color: COLORS.amber },
   rowText: { flex: 1 },
-  rowLabel: {
-    color: COLORS.muted,
-    fontSize: 12,
-    ...FONTS.medium,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 2,
-  },
-  rowValue: {
-    color: COLORS.white,
-    fontSize: 15,
-    ...FONTS.medium,
-  },
-  rowValueWarn: { color: COLORS.amber },
-  rowValueMissing: { color: COLORS.red },
   bismillah: {
     marginTop: SPACING.xl,
     marginBottom: SPACING.lg,
-    color: COLORS.gold,
     fontSize: 14,
-    ...FONTS.medium,
     textAlign: 'center',
     fontStyle: 'italic',
+    ...FONTS.medium,
   },
-  publishBtn: {
+  loadingBtn: {
     backgroundColor: COLORS.gold,
     borderRadius: RADIUS.md,
     paddingVertical: SPACING.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 56,
-  },
-  publishBtnDisabled: {
-    backgroundColor: 'rgba(201,168,76,0.28)',
-  },
-  publishBtnPressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.985 }],
-  },
-  publishBtnText: {
-    color: COLORS.dark,
-    fontSize: 16,
-    ...FONTS.bold,
+    minHeight: 52,
   },
   hint: {
     marginTop: SPACING.md,
-    color: COLORS.hint,
-    fontSize: 12,
-    ...FONTS.regular,
     textAlign: 'center',
   },
 });

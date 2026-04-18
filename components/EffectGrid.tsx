@@ -43,13 +43,15 @@ const EFFECTS: EffectOption[] = [
 ];
 
 // Width is computed against the tool sheet's horizontal padding
-// (SPACING.xl on each side) rather than the full screen, so tiles stay
-// proportional whether the sheet is 80% or full-height.
+// (SPACING.xl on each side). `Math.floor - 1` leaves a pixel of breathing
+// room so subpixel rounding can't knock the last column onto its own row.
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const TILE_GAP = SPACING.sm;
 const COLS = 3;
 const TILE_WIDTH =
-  (SCREEN_WIDTH - SPACING.xl * 2 - TILE_GAP * (COLS - 1)) / COLS;
+  Math.floor(
+    (SCREEN_WIDTH - SPACING.xl * 2 - TILE_GAP * (COLS - 1)) / COLS,
+  ) - 1;
 
 export interface EffectGridProps {
   value: EffectId | null;

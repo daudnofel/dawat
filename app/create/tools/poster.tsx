@@ -25,7 +25,6 @@ import {
   Alert,
   Linking,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 
@@ -39,8 +38,11 @@ import { COLORS, FONTS, SPACING, RADIUS } from '../../../lib/theme';
 const BUCKET_BASE =
   'https://gwjhsbadranzzculpitm.supabase.co/storage/v1/object/public/poster-library';
 
-export default function PosterToolScreen() {
-  const router = useRouter();
+interface Props {
+  onClose?: () => void;
+}
+
+export default function PosterToolScreen({ onClose }: Props = {}) {
   const { draft, updateDraft, closeTool } = useEventStore();
   const [picking, setPicking] = useState(false);
 
@@ -48,7 +50,7 @@ export default function PosterToolScreen() {
 
   const handleClose = () => {
     closeTool();
-    router.back();
+    onClose?.();
   };
 
   const handlePickPoster = async () => {

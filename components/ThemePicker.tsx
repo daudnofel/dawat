@@ -17,22 +17,66 @@ import { DawatTheme } from '../types';
 // ─── Sizing ──────────────────────────────────────────────────
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_GAP = SPACING.sm;
-const CARD_WIDTH = (SCREEN_WIDTH - SPACING.xl * 2 - CARD_GAP) / 2;
+const CARD_WIDTH =
+  Math.floor((SCREEN_WIDTH - SPACING.xl * 2 - CARD_GAP) / 2) - 1;
 const CARD_HEIGHT = Math.round(CARD_WIDTH * 1.25);
+
+// ─── ThemeCategoryPills — exported for use in the ToolSheet subheader ──
+
+interface PillsProps {
+  activeCategory: string;
+  onChange: (category: string) => void;
+}
+
+export function ThemeCategoryPills({ activeCategory, onChange }: PillsProps) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.pillRow}
+    >
+      {THEME_CATEGORIES.map((cat) => (
+        <Pressable
+          key={cat}
+          style={[styles.pill, activeCategory === cat && styles.pillActive]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onChange(cat);
+          }}
+        >
+          <Text style={[styles.pillText, activeCategory === cat && styles.pillTextActive]}>
+            {cat}
+          </Text>
+        </Pressable>
+      ))}
+    </ScrollView>
+  );
+}
+
+// ─── ThemePicker — the grid. Category state can be lifted to parent ──
 
 interface ThemePickerProps {
   selectedId: string;
   onSelect: (theme: DawatTheme) => void;
+  /** Lift state to parent if you want the pills rendered elsewhere. */
+  activeCategory?: string;
+  onCategoryChange?: (category: string) => void;
+  /** Render the pills inline above the grid (default: true). Set false
+   *  when parent renders the pills itself (e.g. as a ToolSheet subheader). */
+  showPills?: boolean;
 }
 
-/**
- * DAW-22 Phase 2 — Theme Picker with live previews.
- * Each tile renders the theme's actual gradient, emoji, name, and
- * accent color so hosts can see what they're picking instead of
- * tapping through 20 identical dark tiles.
- */
-export default function ThemePicker({ selectedId, onSelect }: ThemePickerProps) {
-  const [activeCategory, setActiveCategory] = useState('Trending');
+export default function ThemePicker({
+  selectedId,
+  onSelect,
+  activeCategory: externalActive,
+  onCategoryChange,
+  showPills = true,
+}: ThemePickerProps) {
+  const [internalActive, setInternalActive] = useState('Trending');
+
+  const activeCategory = externalActive ?? internalActive;
+  const setActiveCategory = onCategoryChange ?? setInternalActive;
 
   const filteredThemes = activeCategory === 'All'
     ? THEMES
@@ -40,29 +84,13 @@ export default function ThemePicker({ selectedId, onSelect }: ThemePickerProps) 
 
   return (
     <View style={styles.container}>
-      {/* Category pills — horizontal scroll */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.pillRow}
-      >
-        {THEME_CATEGORIES.map((cat) => (
-          <Pressable
-            key={cat}
-            style={[styles.pill, activeCategory === cat && styles.pillActive]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setActiveCategory(cat);
-            }}
-          >
-            <Text style={[styles.pillText, activeCategory === cat && styles.pillTextActive]}>
-              {cat}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+      {showPills && (
+        <ThemeCategoryPills
+          activeCategory={activeCategory}
+          onChange={setActiveCategory}
+        />
+      )}
 
-      {/* Live preview grid — 2 columns, each tile renders the theme */}
       <View style={styles.grid}>
         {filteredThemes.map((t) => (
           <ThemeTile
@@ -91,7 +119,6 @@ function ThemeTile({ theme, selected, onPress }: ThemeTileProps) {
   const onAccent = theme.accents?.onAccent ?? '#FFFFFF';
   const titleColor = theme.textColor;
 
-  // Build a unique gradient id so multiple tiles don't collide on SVG defs
   const gradId = `themeTile_${theme.id}`;
 
   return (
@@ -100,7 +127,6 @@ function ThemeTile({ theme, selected, onPress }: ThemeTileProps) {
       scaleValue={0.96}
       onPress={onPress}
     >
-      {/* Gradient background — full bleed */}
       <Svg style={StyleSheet.absoluteFill}>
         <Defs>
           <LinearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
@@ -116,22 +142,18 @@ function ThemeTile({ theme, selected, onPress }: ThemeTileProps) {
         <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${gradId})`} />
       </Svg>
 
-      {/* Content: emoji + name + accent pill */}
       <View style={styles.tileContent}>
-        <Text style={styles.tileEmoji}>{theme.defaultEmoji}</Text>
         <Text
           style={[styles.tileName, { color: titleColor }]}
           numberOfLines={2}
         >
           {theme.name}
         </Text>
-        {/* Small accent pill at bottom-left to hint at the accent color */}
         <View style={[styles.accentPill, { backgroundColor: primary }]}>
           <View style={[styles.accentDot, { backgroundColor: onAccent }]} />
         </View>
       </View>
 
-      {/* Selection overlay — thin gold border + checkmark */}
       {selected && (
         <>
           <View style={styles.selectedBorder} pointerEvents="none" />
@@ -147,10 +169,9 @@ function ThemeTile({ theme, selected, onPress }: ThemeTileProps) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
-  // Pills
   pillRow: {
     paddingHorizontal: SPACING.xl,
-    paddingBottom: SPACING.lg,
+    paddingBottom: SPACING.sm,
     gap: SPACING.sm,
   },
   pill: {
@@ -168,15 +189,12 @@ const styles = StyleSheet.create({
   pillText: { color: COLORS.muted, fontSize: 13, ...FONTS.medium },
   pillTextActive: { color: COLORS.gold },
 
-  // Grid
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: SPACING.xl,
     gap: CARD_GAP,
   },
 
-  // Tile — live gradient preview
   tile: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
@@ -186,9 +204,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.08)',
     position: 'relative',
   },
-  tileSelected: {
-    // Real selection shown via selectedBorder so we can layer on top of SVG
-  },
+  tileSelected: {},
   tileContent: {
     flex: 1,
     padding: SPACING.lg,
@@ -220,7 +236,6 @@ const styles = StyleSheet.create({
     borderRadius: 1.5,
   },
 
-  // Selection markers
   selectedBorder: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: RADIUS.lg,

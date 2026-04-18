@@ -12,19 +12,18 @@
  * essentials sheet and are considered "already committed" by the time a
  * host reaches the editor. If they change their mind, they re-open
  * essentials (via the editor's title zone tap, eventually).
+ *
+ * DAW-61 — migrated to Dawat primitives (DText, DInput).
  */
 
 import React, { useState } from 'react';
 import {
   View,
-  Text,
-  TextInput,
   Pressable,
   StyleSheet,
   Switch,
   Modal,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
@@ -32,7 +31,12 @@ import * as Haptics from 'expo-haptics';
 import ToolSheet from '../../../components/ToolSheet';
 import { useEventStore } from '../../../store/useEventStore';
 import { Toast } from '../../../components/Toast';
-import { COLORS, FONTS, SPACING, RADIUS } from '../../../lib/theme';
+import { DText, DInput } from '../../../components/ui';
+import { COLORS, SPACING, RADIUS } from '../../../lib/theme';
+
+interface Props {
+  onClose?: () => void;
+}
 
 const PRICE_OPTIONS = [
   { label: 'Free', value: 0 },
@@ -44,8 +48,7 @@ const PRICE_OPTIONS = [
 
 type PickerMode = 'date' | 'time' | 'deadline' | null;
 
-export default function DetailsToolScreen() {
-  const router = useRouter();
+export default function DetailsToolScreen({ onClose }: Props = {}) {
   const { draft, updateDraft, closeTool } = useEventStore();
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
   const [tempDate, setTempDate] = useState<Date>(new Date());
@@ -54,7 +57,7 @@ export default function DetailsToolScreen() {
 
   const handleClose = () => {
     closeTool();
-    router.back();
+    onClose?.();
   };
 
   const openPicker = (mode: 'date' | 'time') => {
@@ -127,9 +130,9 @@ export default function DetailsToolScreen() {
   return (
     <ToolSheet title="Details" onClose={handleClose}>
       {/* ── Date & time ── */}
-      <Text style={styles.label}>When is it?</Text>
+      <DText variant="label" style={styles.sectionLabel}>When is it?</DText>
       <View style={styles.toggleRow}>
-        <Text style={styles.toggleLabel}>Date TBD</Text>
+        <DText variant="meta" color={COLORS.white}>Date TBD</DText>
         <Switch
           value={draft.date_tbd}
           onValueChange={(v) => {
@@ -154,13 +157,13 @@ export default function DetailsToolScreen() {
             ]}
             onPress={() => openPicker('date')}
           >
-            <Text style={styles.dateIcon}>📅</Text>
-            <Text style={styles.dateText}>
+            <DText style={styles.dateIcon}>📅</DText>
+            <DText variant="meta" color={COLORS.white} style={{ flex: 1, fontSize: 15 }}>
               {draft.date_time
                 ? format(draft.date_time, 'EEEE, MMMM d, yyyy')
                 : 'Select date'}
-            </Text>
-            <Text style={styles.chevron}>›</Text>
+            </DText>
+            <DText color={COLORS.hint} style={styles.chevron}>›</DText>
           </Pressable>
 
           <Pressable
@@ -170,29 +173,27 @@ export default function DetailsToolScreen() {
             ]}
             onPress={() => openPicker('time')}
           >
-            <Text style={styles.dateIcon}>⏰</Text>
-            <Text style={styles.dateText}>
+            <DText style={styles.dateIcon}>⏰</DText>
+            <DText variant="meta" color={COLORS.white} style={{ flex: 1, fontSize: 15 }}>
               {draft.date_time
                 ? format(draft.date_time, 'h:mm a')
                 : 'Select time'}
-            </Text>
-            <Text style={styles.chevron}>›</Text>
+            </DText>
+            <DText color={COLORS.hint} style={styles.chevron}>›</DText>
           </Pressable>
         </View>
       )}
 
       {/* ── Location ── */}
-      <Text style={styles.label}>Where?</Text>
-      <TextInput
-        style={styles.input}
+      <DText variant="label" style={styles.sectionLabel}>Where?</DText>
+      <DInput
         value={draft.location_name}
         onChangeText={(t) => updateDraft({ location_name: t })}
         placeholder="Venue or address"
-        placeholderTextColor={COLORS.hint}
       />
 
       <View style={styles.toggleRow}>
-        <Text style={styles.toggleLabel}>Hide address from non-RSVPs</Text>
+        <DText variant="meta" color={COLORS.white}>Hide address from non-RSVPs</DText>
         <Switch
           value={draft.is_location_hidden}
           onValueChange={(v) => updateDraft({ is_location_hidden: v })}
@@ -202,7 +203,7 @@ export default function DetailsToolScreen() {
       </View>
 
       <View style={styles.toggleRow}>
-        <Text style={styles.toggleLabel}>Halal-certified venue</Text>
+        <DText variant="meta" color={COLORS.white}>Halal-certified venue</DText>
         <Switch
           value={draft.is_halal_venue}
           onValueChange={(v) => updateDraft({ is_halal_venue: v })}
@@ -212,19 +213,17 @@ export default function DetailsToolScreen() {
       </View>
 
       {/* ── Virtual link ── */}
-      <Text style={styles.label}>Virtual event link (optional)</Text>
-      <TextInput
-        style={styles.input}
+      <DText variant="label" style={styles.sectionLabel}>Virtual event link (optional)</DText>
+      <DInput
         value={draft.virtual_link}
         onChangeText={(t) => updateDraft({ virtual_link: t })}
         placeholder="Zoom, Google Meet, etc."
-        placeholderTextColor={COLORS.hint}
         autoCapitalize="none"
         keyboardType="url"
       />
 
       {/* ── Price ── */}
-      <Text style={styles.label}>How much?</Text>
+      <DText variant="label" style={styles.sectionLabel}>How much?</DText>
       <View style={styles.priceRow}>
         {PRICE_OPTIONS.map((opt) => {
           const active = draft.price === opt.value && !showCustomPrice;
@@ -234,11 +233,13 @@ export default function DetailsToolScreen() {
               onPress={() => handlePriceSelect(opt.value)}
               style={[styles.pricePill, active && styles.pricePillActive]}
             >
-              <Text
-                style={[styles.priceText, active && styles.priceTextActive]}
+              <DText
+                variant="meta"
+                color={active ? COLORS.gold : COLORS.muted}
+                style={{ fontSize: 14 }}
               >
                 {opt.label}
-              </Text>
+              </DText>
             </Pressable>
           );
         })}
@@ -252,41 +253,47 @@ export default function DetailsToolScreen() {
             showCustomPrice && styles.pricePillActive,
           ]}
         >
-          <Text
-            style={[
-              styles.priceText,
-              showCustomPrice && styles.priceTextActive,
-            ]}
+          <DText
+            variant="meta"
+            color={showCustomPrice ? COLORS.gold : COLORS.muted}
+            style={{ fontSize: 14 }}
           >
             Custom
-          </Text>
+          </DText>
         </Pressable>
       </View>
 
       {showCustomPrice && (
-        <TextInput
-          style={[styles.input, { marginTop: SPACING.sm }]}
+        <DInput
+          style={{ marginTop: SPACING.sm }}
           value={customPriceText}
           onChangeText={handleCustomPrice}
           placeholder="Enter price"
-          placeholderTextColor={COLORS.hint}
           keyboardType="decimal-pad"
         />
       )}
 
+      {/* ── Payment link ── */}
+      <DText variant="label" style={styles.sectionLabel}>Payment link (optional)</DText>
+      <DInput
+        value={draft.payment_link}
+        onChangeText={(t) => updateDraft({ payment_link: t })}
+        placeholder="Venmo, CashApp, PayPal URL"
+        autoCapitalize="none"
+        keyboardType="url"
+      />
+
       {/* ── Capacity ── */}
-      <Text style={styles.label}>How many spots? (optional)</Text>
-      <TextInput
-        style={styles.input}
+      <DText variant="label" style={styles.sectionLabel}>How many spots? (optional)</DText>
+      <DInput
         value={draft.capacity ? String(draft.capacity) : ''}
         onChangeText={handleCapacity}
         placeholder="Leave empty for unlimited"
-        placeholderTextColor={COLORS.hint}
         keyboardType="number-pad"
       />
 
       {/* ── RSVP deadline ── */}
-      <Text style={styles.label}>RSVP deadline (optional)</Text>
+      <DText variant="label" style={styles.sectionLabel}>RSVP deadline (optional)</DText>
       <Pressable
         style={({ pressed }) => [
           styles.dateButton,
@@ -294,21 +301,21 @@ export default function DetailsToolScreen() {
         ]}
         onPress={openDeadlinePicker}
       >
-        <Text style={styles.dateIcon}>⏳</Text>
-        <Text style={styles.dateText}>
+        <DText style={styles.dateIcon}>⏳</DText>
+        <DText variant="meta" color={COLORS.white} style={{ flex: 1, fontSize: 15 }}>
           {draft.rsvp_deadline
             ? format(draft.rsvp_deadline, 'MMM d, yyyy h:mm a')
             : 'No deadline'}
-        </Text>
+        </DText>
         {draft.rsvp_deadline && (
           <Pressable
             onPress={() => updateDraft({ rsvp_deadline: null })}
             hitSlop={8}
           >
-            <Text style={styles.clearX}>✕</Text>
+            <DText color={COLORS.red} style={{ fontSize: 14 }}>✕</DText>
           </Pressable>
         )}
-        <Text style={styles.chevron}>›</Text>
+        <DText color={COLORS.hint} style={styles.chevron}>›</DText>
       </Pressable>
 
       {/* Date/time picker modal */}
@@ -325,17 +332,17 @@ export default function DetailsToolScreen() {
         <View style={styles.modalSheet}>
           <View style={styles.modalHeader}>
             <Pressable onPress={() => setPickerMode(null)}>
-              <Text style={styles.modalCancel}>Cancel</Text>
+              <DText variant="meta" color={COLORS.muted} style={{ fontSize: 15 }}>Cancel</DText>
             </Pressable>
-            <Text style={styles.modalTitle}>
+            <DText variant="label" style={{ fontSize: 17 }}>
               {pickerMode === 'date'
                 ? 'Select Date'
                 : pickerMode === 'deadline'
                   ? 'RSVP Deadline'
                   : 'Select Time'}
-            </Text>
+            </DText>
             <Pressable onPress={confirmPicker}>
-              <Text style={styles.modalDone}>Done</Text>
+              <DText variant="label" color={COLORS.gold} style={{ fontSize: 15 }}>Done</DText>
             </Pressable>
           </View>
           {pickerMode && (
@@ -363,23 +370,9 @@ export default function DetailsToolScreen() {
 }
 
 const styles = StyleSheet.create({
-  label: {
-    fontSize: 14,
-    color: COLORS.white,
-    ...FONTS.semibold,
+  sectionLabel: {
     marginTop: SPACING.xl,
     marginBottom: SPACING.sm,
-  },
-  input: {
-    backgroundColor: COLORS.input,
-    borderRadius: RADIUS.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 223, 161, 0.10)',
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md + 2,
-    color: COLORS.white,
-    fontSize: 16,
-    ...FONTS.medium,
   },
   dateButton: {
     flexDirection: 'row',
@@ -393,9 +386,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.lg,
   },
   dateIcon: { fontSize: 18 },
-  dateText: { flex: 1, fontSize: 15, color: COLORS.white, ...FONTS.medium },
-  chevron: { fontSize: 20, color: COLORS.hint, ...FONTS.regular },
-  clearX: { color: COLORS.red, fontSize: 14, ...FONTS.bold },
+  chevron: { fontSize: 20 },
   pressed: { opacity: 0.85 },
 
   toggleRow: {
@@ -405,7 +396,6 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
     marginTop: SPACING.sm,
   },
-  toggleLabel: { color: COLORS.white, fontSize: 14, ...FONTS.medium },
 
   priceRow: {
     flexDirection: 'row',
@@ -424,8 +414,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.gold,
     backgroundColor: COLORS.card2,
   },
-  priceText: { color: COLORS.muted, fontSize: 14, ...FONTS.medium },
-  priceTextActive: { color: COLORS.gold },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
   modalSheet: {
@@ -443,7 +431,4 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(255, 223, 161, 0.10)',
   },
-  modalCancel: { color: COLORS.muted, fontSize: 15, ...FONTS.medium },
-  modalTitle: { fontSize: 17, color: COLORS.white, ...FONTS.bold },
-  modalDone: { fontSize: 15, color: COLORS.gold, ...FONTS.bold },
 });

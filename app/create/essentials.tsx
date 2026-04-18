@@ -16,13 +16,13 @@
  * floats over the tab layer. On submit we replace the route with
  * /create/editor so the back gesture never returns here — users should
  * re-open the editor to tweak essentials, not this sheet.
+ *
+ * DAW-61 — migrated to Dawat primitives (DText, DInput, DButton).
  */
 
 import { useState } from 'react';
 import {
   View,
-  Text,
-  TextInput,
   Pressable,
   StyleSheet,
   KeyboardAvoidingView,
@@ -36,9 +36,9 @@ import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
-import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
+import { DText, DInput, DButton } from '../../components/ui';
 import { useEventStore } from '../../store/useEventStore';
 import { GenderMode } from '../../types';
 
@@ -93,7 +93,6 @@ export default function EssentialsScreen() {
 
   const handleContinue = () => {
     if (!canContinue) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.replace('/create/editor');
   };
 
@@ -113,9 +112,11 @@ export default function EssentialsScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Text style={styles.cancelText}>Cancel</Text>
+          <DText variant="label" color={COLORS.gold} style={FONTS.medium}>
+            Cancel
+          </DText>
         </Pressable>
-        <Text style={styles.kicker}>NEW EVENT</Text>
+        <DText variant="kicker" color={COLORS.muted}>NEW EVENT</DText>
         <View style={{ width: 48 }} />
       </View>
 
@@ -129,25 +130,29 @@ export default function EssentialsScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.headline}>Name the gathering</Text>
-          <Text style={styles.subhead}>
+          <DText variant="headline" style={{ marginTop: SPACING.md }}>
+            Name the gathering
+          </DText>
+          <DText variant="meta" style={{ marginTop: SPACING.xs, lineHeight: 20 }}>
             A few essentials and we'll drop you into the editor.
-          </Text>
+          </DText>
 
           {/* ── Title ── */}
-          <Text style={styles.label}>Event title</Text>
-          <TextInput
-            style={styles.titleInput}
+          <DText variant="kicker" color={COLORS.muted} style={styles.fieldLabel}>
+            EVENT TITLE
+          </DText>
+          <DInput
+            variant="title"
             value={draft.title}
             onChangeText={(t) => updateDraft({ title: t })}
             placeholder="Eid Gala, Sisters Halaqa…"
-            placeholderTextColor={COLORS.hint}
             maxLength={60}
-            autoFocus
           />
 
           {/* ── Date & time ── */}
-          <Text style={styles.label}>Date & time</Text>
+          <DText variant="kicker" color={COLORS.muted} style={styles.fieldLabel}>
+            DATE & TIME
+          </DText>
           <View style={styles.dateRow}>
             <Pressable
               onPress={() => openPicker('date')}
@@ -158,10 +163,10 @@ export default function EssentialsScreen() {
                 pressed && !draft.date_tbd && styles.pressed,
               ]}
             >
-              <Text style={styles.dateButtonLabel}>Date</Text>
-              <Text style={styles.dateButtonValue} numberOfLines={1}>
+              <DText variant="kicker" color={COLORS.muted}>DATE</DText>
+              <DText variant="label" style={styles.dateButtonValue} numberOfLines={1}>
                 {dateLabel}
-              </Text>
+              </DText>
             </Pressable>
 
             <Pressable
@@ -173,15 +178,15 @@ export default function EssentialsScreen() {
                 pressed && !draft.date_tbd && styles.pressed,
               ]}
             >
-              <Text style={styles.dateButtonLabel}>Time</Text>
-              <Text style={styles.dateButtonValue} numberOfLines={1}>
+              <DText variant="kicker" color={COLORS.muted}>TIME</DText>
+              <DText variant="label" style={styles.dateButtonValue} numberOfLines={1}>
                 {timeLabel}
-              </Text>
+              </DText>
             </Pressable>
           </View>
 
           <View style={styles.tbdRow}>
-            <Text style={styles.tbdLabel}>Date not set yet</Text>
+            <DText variant="meta" color={COLORS.muted}>Date not set yet</DText>
             <Switch
               value={draft.date_tbd}
               onValueChange={toggleTbd}
@@ -191,18 +196,20 @@ export default function EssentialsScreen() {
           </View>
 
           {/* ── Host ── */}
-          <Text style={styles.label}>Hosting as</Text>
-          <TextInput
-            style={styles.input}
+          <DText variant="kicker" color={COLORS.muted} style={styles.fieldLabel}>
+            HOSTING AS
+          </DText>
+          <DInput
             value={draft.host_name}
             onChangeText={(t) => updateDraft({ host_name: t })}
             placeholder="Your name or community"
-            placeholderTextColor={COLORS.hint}
             maxLength={60}
           />
 
           {/* ── Audience ── */}
-          <Text style={styles.label}>Audience</Text>
+          <DText variant="kicker" color={COLORS.muted} style={styles.fieldLabel}>
+            AUDIENCE
+          </DText>
           <View style={styles.audienceGrid}>
             {AUDIENCE_OPTIONS.map((opt) => {
               const selected = draft.gender_mode === opt.value;
@@ -216,15 +223,13 @@ export default function EssentialsScreen() {
                     pressed && styles.pressed,
                   ]}
                 >
-                  <Text style={styles.audienceEmoji}>{opt.emoji}</Text>
-                  <Text
-                    style={[
-                      styles.audienceLabel,
-                      selected && styles.audienceLabelSelected,
-                    ]}
+                  <DText style={styles.audienceEmoji}>{opt.emoji}</DText>
+                  <DText
+                    variant="meta"
+                    color={selected ? COLORS.white : COLORS.muted}
                   >
                     {opt.label}
-                  </Text>
+                  </DText>
                 </Pressable>
               );
             })}
@@ -234,27 +239,12 @@ export default function EssentialsScreen() {
 
       {/* ── CTA ── */}
       <View style={styles.bottomBar}>
-        <Pressable
+        <DButton
+          title="Start designing"
+          variant="gold"
           onPress={handleContinue}
           disabled={!canContinue}
-          style={({ pressed }) => [
-            styles.cta,
-            !canContinue && styles.ctaDisabled,
-            pressed && canContinue && { transform: [{ scale: 0.97 }] },
-          ]}
-        >
-          <Svg style={StyleSheet.absoluteFill}>
-            <Defs>
-              <LinearGradient id="essentialsCta" x1="0" y1="0" x2="1" y2="1">
-                <Stop offset="0" stopColor="#FFDFA1" />
-                <Stop offset="0.5" stopColor="#E6C27A" />
-                <Stop offset="1" stopColor="#FFDFA1" />
-              </LinearGradient>
-            </Defs>
-            <Rect x="0" y="0" width="100%" height="100%" rx={RADIUS.md} fill="url(#essentialsCta)" />
-          </Svg>
-          <Text style={styles.ctaLabel}>Start designing</Text>
-        </Pressable>
+        />
       </View>
 
       {/* ── Date/time picker modal ── */}
@@ -268,13 +258,13 @@ export default function EssentialsScreen() {
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
               <Pressable onPress={() => setPickerMode(null)}>
-                <Text style={styles.modalCancel}>Cancel</Text>
+                <DText variant="label" color={COLORS.muted}>Cancel</DText>
               </Pressable>
-              <Text style={styles.modalTitle}>
+              <DText variant="label">
                 {pickerMode === 'date' ? 'Pick a date' : 'Pick a time'}
-              </Text>
+              </DText>
               <Pressable onPress={confirmPicker}>
-                <Text style={styles.modalDone}>Done</Text>
+                <DText variant="label" color={COLORS.gold}>Done</DText>
               </Pressable>
             </View>
             {pickerMode && (
@@ -304,61 +294,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.md,
   },
-  cancelText: { color: COLORS.gold, fontSize: 15, ...FONTS.medium },
-  kicker: {
-    color: COLORS.muted,
-    fontSize: 11,
-    ...FONTS.bold,
-    letterSpacing: 1.5,
-  },
   scrollContent: {
     paddingHorizontal: SPACING.xl,
     paddingBottom: SPACING.xxl,
   },
-  headline: {
-    fontSize: 28,
-    ...FONTS.bold,
-    color: COLORS.white,
-    letterSpacing: -0.4,
-    marginTop: SPACING.md,
-  },
-  subhead: {
-    fontSize: 15,
-    ...FONTS.regular,
-    color: COLORS.muted,
-    marginTop: SPACING.xs,
-    lineHeight: 20,
-  },
-  label: {
-    fontSize: 13,
-    color: COLORS.muted,
-    ...FONTS.semibold,
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
+  fieldLabel: {
     marginBottom: SPACING.sm,
     marginTop: SPACING.xl,
-  },
-  titleInput: {
-    backgroundColor: COLORS.input,
-    borderRadius: RADIUS.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,223,161,0.10)',
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md + 2,
-    color: COLORS.white,
-    fontSize: 18,
-    ...FONTS.bold,
-  },
-  input: {
-    backgroundColor: COLORS.input,
-    borderRadius: RADIUS.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,223,161,0.10)',
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md + 2,
-    color: COLORS.white,
-    fontSize: 16,
-    ...FONTS.medium,
   },
   dateRow: {
     flexDirection: 'row',
@@ -372,31 +314,15 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,223,161,0.10)',
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
+    gap: 4,
   },
   dateButtonDisabled: { opacity: 0.4 },
-  dateButtonLabel: {
-    fontSize: 11,
-    ...FONTS.medium,
-    color: COLORS.muted,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  dateButtonValue: {
-    fontSize: 16,
-    ...FONTS.bold,
-    color: COLORS.white,
-  },
+  dateButtonValue: { fontSize: 16 },
   tbdRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: SPACING.md,
-  },
-  tbdLabel: {
-    fontSize: 14,
-    ...FONTS.medium,
-    color: COLORS.muted,
   },
   audienceGrid: {
     flexDirection: 'row',
@@ -419,34 +345,12 @@ const styles = StyleSheet.create({
     borderColor: COLORS.gold,
   },
   audienceEmoji: { fontSize: 18 },
-  audienceLabel: {
-    fontSize: 14,
-    ...FONTS.medium,
-    color: COLORS.muted,
-  },
-  audienceLabelSelected: {
-    color: COLORS.white,
-  },
   bottomBar: {
     paddingHorizontal: SPACING.xl,
     paddingTop: SPACING.md,
     paddingBottom: SPACING.lg,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'rgba(255,223,161,0.10)',
-  },
-  cta: {
-    height: 52,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  ctaDisabled: { opacity: 0.4 },
-  ctaLabel: {
-    color: COLORS.dark,
-    fontSize: 16,
-    ...FONTS.bold,
-    letterSpacing: 0.3,
   },
   pressed: { opacity: 0.85 },
 
@@ -470,7 +374,4 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
-  modalCancel: { color: COLORS.muted, fontSize: 15, ...FONTS.medium },
-  modalTitle: { color: COLORS.white, fontSize: 15, ...FONTS.bold },
-  modalDone: { color: COLORS.gold, fontSize: 15, ...FONTS.bold },
 });

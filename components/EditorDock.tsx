@@ -1,22 +1,17 @@
 /**
  * EditorDock — the floating tool bar at the bottom of the creation editor
- * (DAW-37). Five tool buttons (Poster / Theme / Effect / Details / Audience)
- * laid out horizontally over the live event preview. Tapping any button
- * fires `onToolPress(tool)`.
+ * (DAW-37). Six tool buttons laid out horizontally over the live event
+ * preview. Tapping any button fires `onToolPress(tool)`.
  *
- * In DAW-37 (foundation) every button is rendered as an outlined pill with
- * a gold glyph + muted label. The screen that mounts the dock wires
- * `onToolPress` to a "Coming soon" toast until DAW-54 lights the tool
- * sheets up — the buttons themselves are not disabled, so haptics and press
- * feedback still fire and we can tell everything is wired correctly.
- *
- * Styling: dark card background at 90% alpha with a hairline gold border so
- * it feels like a floating glass bar — does not compete with the poster
- * hero above it. Safe-area aware: callers pass the bottom inset.
+ * Styling: matches the main app's GlassTabBar — an `expo-glass-effect`
+ * `GlassView` with a light dark tint, hairline white border, and a rounded
+ * pill silhouette. Sits over the preview and blurs whatever is underneath.
+ * Safe-area aware: callers pass the bottom inset.
  */
 
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { GlassView } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 
 import { COLORS, FONTS, SPACING, RADIUS } from '../lib/theme';
@@ -39,6 +34,11 @@ const TOOLS: ToolDef[] = [
   { id: 'details', glyph: '📍', label: 'Details' },
   { id: 'audience', glyph: '🌟', label: 'Audience' },
 ];
+
+// Matches GlassTabBar's proportions so the two bars read as a set:
+// full pill silhouette, ~64pt tall, white-tint active highlight.
+const DOCK_HEIGHT = 64;
+const DOCK_RADIUS = DOCK_HEIGHT / 2;
 
 export interface EditorDockProps {
   activeTool: EditorToolId | null;
@@ -65,39 +65,46 @@ export default function EditorDock({
       ]}
       pointerEvents="box-none"
     >
-      <View style={styles.bar}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.barContent}
+      <View style={styles.shadow}>
+        <GlassView
+          style={styles.bar}
+          glassEffectStyle="clear"
+          colorScheme="dark"
         >
-          {TOOLS.map((tool) => {
-            const isActive = activeTool === tool.id;
-            return (
-              <Pressable
-                key={tool.id}
-                onPress={() => handlePress(tool.id)}
-                style={({ pressed }) => [
-                  styles.toolButton,
-                  isActive && styles.toolButtonActive,
-                  pressed && styles.pressed,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={`${tool.label} tool`}
-              >
-                <Text style={styles.toolGlyph}>{tool.glyph}</Text>
-                <Text
-                  style={[
-                    styles.toolLabel,
-                    isActive && styles.toolLabelActive,
+          <View style={styles.barTint} pointerEvents="none" />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.barContent}
+          >
+            {TOOLS.map((tool) => {
+              const isActive = activeTool === tool.id;
+              return (
+                <Pressable
+                  key={tool.id}
+                  onPress={() => handlePress(tool.id)}
+                  style={({ pressed }) => [
+                    styles.toolButton,
+                    isActive && styles.toolButtonActive,
+                    pressed && styles.pressed,
                   ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${tool.label} tool`}
                 >
-                  {tool.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+                  <Text style={styles.toolGlyph}>{tool.glyph}</Text>
+                  <Text
+                    style={[
+                      styles.toolLabel,
+                      isActive && styles.toolLabelActive,
+                    ]}
+                  >
+                    {tool.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </GlassView>
       </View>
     </View>
   );
@@ -112,39 +119,51 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.sm,
   },
+  shadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 12,
+    borderRadius: DOCK_RADIUS,
+  },
   bar: {
-    backgroundColor: 'rgba(22,22,22,0.92)',
-    borderRadius: RADIUS.xl,
+    height: DOCK_HEIGHT,
+    borderRadius: DOCK_RADIUS,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(201,168,76,0.24)',
+    borderColor: 'rgba(255,255,255,0.12)',
     overflow: 'hidden',
   },
+  barTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
   barContent: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    gap: SPACING.sm,
+    paddingHorizontal: SPACING.sm,
     alignItems: 'center',
+    gap: 2,
   },
   toolButton: {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.md,
+    height: DOCK_HEIGHT - 8,
+    borderRadius: (DOCK_HEIGHT - 8) / 2,
     minWidth: 64,
-    gap: 4,
+    gap: 3,
   },
+  // Same white-tint highlight the main tab bar uses for the focused tab.
   toolButtonActive: {
-    backgroundColor: 'rgba(201,168,76,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.10)',
   },
   toolGlyph: {
-    fontSize: 20,
+    fontSize: 18,
   },
   toolLabel: {
-    fontSize: 11,
+    fontSize: 10,
     ...FONTS.medium,
-    color: COLORS.muted,
+    color: 'rgba(255,255,255,0.35)',
     letterSpacing: 0.2,
   },
   toolLabelActive: {

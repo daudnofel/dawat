@@ -64,6 +64,11 @@ const INITIAL_DRAFT: EventDraft = {
   effect_id: null,
   // DAW-56 — title typography
   title_style: 'classic',
+  // DAW-6 — payment link + privacy defaults (off by default)
+  payment_link: '',
+  hide_guest_list: false,
+  hide_headcount: false,
+  anonymize_guests: false,
 };
 
 export const useEventStore = create<EventStoreState>((set) => ({

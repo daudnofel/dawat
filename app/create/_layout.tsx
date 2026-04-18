@@ -2,18 +2,17 @@ import { Stack } from 'expo-router';
 import { COLORS } from '../../lib/theme';
 
 /**
- * Creation stack (DAW-37 — Creation V2, extended in DAW-54).
+ * Creation stack.
  *
  * Routes:
- *   - essentials — the 4-field bottom-sheet form (modal presentation)
- *   - editor     — the preview-led canvas editor
- *   - tools/*    — nested transparent-modal stack for the 5 editor tool
- *                  sheets (poster / theme / effect / details / audience),
- *                  layered over the editor canvas. See
- *                  `app/create/tools/_layout.tsx`.
- *   - success    — post-publish celebration (unchanged from V1)
+ *   - essentials — first-tap sheet: title / date / host / audience
+ *   - editor     — preview-led canvas editor. Hosts EditorToolSheet
+ *                  (a @gorhom/bottom-sheet) which renders all tool
+ *                  content inline — tools are NOT routes.
+ *   - success    — post-publish celebration
  *
- * The 6 legacy wizard step routes were deleted in DAW-55.
+ * Files under app/create/tools/* remain on disk but are never navigated
+ * to; they're imported by EditorToolSheet as regular React components.
  */
 export default function CreateLayout() {
   return (
@@ -37,18 +36,6 @@ export default function CreateLayout() {
         options={{
           animation: 'fade',
           gestureEnabled: false,
-        }}
-      />
-      <Stack.Screen
-        name="tools"
-        options={{
-          // The nested `tools/_layout.tsx` stack declares each tool as a
-          // transparentModal; this outer shell just needs to let the
-          // nested group take over without its own transition.
-          headerShown: false,
-          animation: 'none',
-          presentation: 'transparentModal',
-          contentStyle: { backgroundColor: 'transparent' },
         }}
       />
     </Stack>

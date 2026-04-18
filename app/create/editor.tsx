@@ -1,22 +1,17 @@
 /**
- * Editor — the preview-led event editor (DAW-37 + DAW-54).
+ * Editor — the preview-led event editor.
  *
- * Full-bleed live preview of the in-progress draft rendered via
- * `EventPreview`, with `EditorChrome` as the top slot and `EditorDock`
- * floating over the bottom. Tapping any canvas zone (poster / title /
- * details / audience) OR any dock button calls `handleToolPress(...)`,
- * which routes to the matching tool sheet at `/create/tools/<id>`. The
- * tool routes are `transparentModal`s so the canvas stays visible and
- * re-renders live as `updateDraft` fires from inside each sheet.
+ * Full-bleed live preview of the in-progress draft with the EditorDock
+ * glass bar floating at the bottom. Tapping a dock button (or a zone on
+ * the canvas) sets `activeTool` in the store; `EditorToolSheet` — a
+ * `@gorhom/bottom-sheet` mounted below — reacts by opening to its 55%
+ * detent. No navigation involved: the sheet is a component, not a route.
  *
- * The screen is guarded: if a user lands here with an empty draft (e.g.
- * a deep link or a hot reload while the store is clean), we bounce them
- * back to /create/essentials. There is no valid state where the editor
- * has no title + no host.
+ * The screen is guarded: if a user lands here with an empty draft, we
+ * bounce them back to /create/essentials.
  *
- * Publish opens the publish tool sheet (DAW-55) which runs the final
- * readiness checklist and calls `publishEvent(...)` to insert into
- * Supabase, then replaces to the success screen.
+ * Publish opens the publish tool in the same sheet. On success, that tool
+ * itself calls router.replace('/create/success') to leave the editor.
  */
 
 import { useEffect } from 'react';
@@ -31,6 +26,7 @@ import { getThemeById } from '../../lib/themes';
 import EventPreview, { PreviewZone } from '../../components/EventPreview';
 import EditorChrome from '../../components/EditorChrome';
 import EditorDock from '../../components/EditorDock';
+import EditorToolSheet from '../../components/EditorToolSheet';
 
 // Map a preview-zone tap to the tool it should open. The editor canvas
 // and the editor dock funnel through the same openTool call so the store
@@ -40,7 +36,6 @@ function zoneToTool(zone: PreviewZone): EditorToolId {
     case 'poster':
       return 'poster';
     case 'title':
-      // DAW-56: tapping the title opens the title style picker.
       return 'title-style';
     case 'details':
       return 'details';
@@ -58,9 +53,6 @@ export default function EditorScreen() {
   const hostOk = draft.host_name.trim().length >= 2;
   const essentialsReady = titleOk && hostOk;
 
-  // Guard: no essentials → bounce to the essentials sheet. Only fires
-  // when the screen is focused, so hot-reload while typing on the
-  // essentials sheet doesn't kick the user around.
   useFocusEffect(
     useCallback(() => {
       if (!essentialsReady) {
@@ -69,8 +61,6 @@ export default function EditorScreen() {
     }, [essentialsReady, router]),
   );
 
-  // Also guard synchronously on first mount so the empty-preview frame
-  // never flashes in.
   useEffect(() => {
     if (!essentialsReady) {
       router.replace('/create/essentials');
@@ -83,7 +73,6 @@ export default function EditorScreen() {
 
   const handleToolPress = (tool: EditorToolId) => {
     openTool(tool);
-    router.push(`/create/tools/${tool}`);
   };
 
   const handleZoneTap = (zone: PreviewZone) => {
@@ -97,7 +86,6 @@ export default function EditorScreen() {
   const handlePublish = () => {
     if (!essentialsReady) return;
     openTool('publish');
-    router.push('/create/tools/publish');
   };
 
   return (
@@ -143,6 +131,8 @@ export default function EditorScreen() {
         onToolPress={handleToolPress}
         bottomInset={insets.bottom}
       />
+
+      <EditorToolSheet />
     </SafeAreaView>
   );
 }

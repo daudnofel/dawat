@@ -6,17 +6,23 @@
  * the publish logic stripped out — publish lives in DAW-55's publish
  * sheet, not here. Sisters/Brothers-only modes show a contextual hint
  * recommending ID verification.
+ *
+ * DAW-61 — migrated to Dawat primitives (DText).
  */
 
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Switch } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Pressable, StyleSheet, Switch } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 import ToolSheet from '../../../components/ToolSheet';
 import { useEventStore } from '../../../store/useEventStore';
 import { GenderMode } from '../../../types';
+import { DText } from '../../../components/ui';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../../lib/theme';
+
+interface Props {
+  onClose?: () => void;
+}
 
 interface GenderOption {
   label: string;
@@ -52,13 +58,12 @@ const GENDER_OPTIONS: GenderOption[] = [
   },
 ];
 
-export default function AudienceToolScreen() {
-  const router = useRouter();
+export default function AudienceToolScreen({ onClose }: Props = {}) {
   const { draft, updateDraft, closeTool } = useEventStore();
 
   const handleClose = () => {
     closeTool();
-    router.back();
+    onClose?.();
   };
 
   const handleSelectMode = (mode: GenderMode) => {
@@ -91,7 +96,9 @@ export default function AudienceToolScreen() {
 
   return (
     <ToolSheet title="Audience" onClose={handleClose}>
-      <Text style={styles.sectionLabel}>Who's this gathering for?</Text>
+      <DText variant="label" style={{ marginBottom: SPACING.lg }}>
+        Who's this gathering for?
+      </DText>
 
       <View style={styles.genderGrid}>
         {GENDER_OPTIONS.map((opt) => {
@@ -109,19 +116,17 @@ export default function AudienceToolScreen() {
               accessibilityLabel={`${opt.label} — ${opt.subtitle}`}
               accessibilityState={{ selected }}
             >
-              <Text style={styles.genderEmoji}>{opt.emoji}</Text>
-              <Text
-                style={[
-                  styles.genderLabel,
-                  selected && styles.genderLabelSelected,
-                ]}
+              <DText style={styles.genderEmoji}>{opt.emoji}</DText>
+              <DText
+                color={selected ? COLORS.gold : COLORS.white}
+                style={styles.genderLabel}
               >
                 {opt.label}
-              </Text>
-              <Text style={styles.genderSubtitle}>{opt.subtitle}</Text>
+              </DText>
+              <DText variant="hint" color={COLORS.muted}>{opt.subtitle}</DText>
               {selected && (
                 <View style={styles.check}>
-                  <Text style={styles.checkMark}>✓</Text>
+                  <DText color={COLORS.dark} style={styles.checkMark}>✓</DText>
                 </View>
               )}
             </Pressable>
@@ -130,9 +135,13 @@ export default function AudienceToolScreen() {
       </View>
 
       {needsIdNote && (
-        <Text style={styles.idNote}>
+        <DText
+          variant="meta"
+          color={COLORS.amber}
+          style={{ marginTop: SPACING.lg }}
+        >
           ID verification recommended for gender-only events
-        </Text>
+        </DText>
       )}
 
       {/* ── Plus ones ── */}
@@ -140,10 +149,12 @@ export default function AudienceToolScreen() {
 
       <View style={styles.toggleRow}>
         <View style={styles.toggleTextWrap}>
-          <Text style={styles.toggleLabel}>Allow plus-ones?</Text>
-          <Text style={styles.toggleHint}>
+          <DText variant="meta" color={COLORS.white} style={{ fontSize: 15 }}>
+            Allow plus-ones?
+          </DText>
+          <DText variant="hint" style={{ marginTop: SPACING.xs }}>
             Guests can bring additional people
-          </Text>
+          </DText>
         </View>
         <Switch
           value={draft.allow_plus_ones}
@@ -155,7 +166,7 @@ export default function AudienceToolScreen() {
 
       {draft.allow_plus_ones && (
         <View style={styles.spinnerRow}>
-          <Text style={styles.spinnerLabel}>Max plus-ones per guest</Text>
+          <DText variant="meta" color={COLORS.white}>Max plus-ones per guest</DText>
           <View style={styles.spinnerControls}>
             <Pressable
               onPress={() => bumpPlusOnes(-1)}
@@ -165,9 +176,9 @@ export default function AudienceToolScreen() {
                 draft.max_plus_ones <= 1 && styles.spinnerBtnDisabled,
               ]}
             >
-              <Text style={styles.spinnerBtnText}>−</Text>
+              <DText color={COLORS.gold} style={styles.spinnerBtnText}>−</DText>
             </Pressable>
-            <Text style={styles.spinnerCount}>{draft.max_plus_ones}</Text>
+            <DText style={styles.spinnerCount}>{draft.max_plus_ones}</DText>
             <Pressable
               onPress={() => bumpPlusOnes(1)}
               disabled={draft.max_plus_ones >= 10}
@@ -176,7 +187,7 @@ export default function AudienceToolScreen() {
                 draft.max_plus_ones >= 10 && styles.spinnerBtnDisabled,
               ]}
             >
-              <Text style={styles.spinnerBtnText}>+</Text>
+              <DText color={COLORS.gold} style={styles.spinnerBtnText}>+</DText>
             </Pressable>
           </View>
         </View>
@@ -187,14 +198,83 @@ export default function AudienceToolScreen() {
 
       <View style={styles.toggleRow}>
         <View style={styles.toggleTextWrap}>
-          <Text style={styles.toggleLabel}>Require ID verification?</Text>
-          <Text style={styles.toggleHint}>
+          <DText variant="meta" color={COLORS.white} style={{ fontSize: 15 }}>
+            Require ID verification?
+          </DText>
+          <DText variant="hint" style={{ marginTop: SPACING.xs }}>
             Guests must verify government ID via Stripe Identity
-          </Text>
+          </DText>
         </View>
         <Switch
           value={draft.is_id_required}
           onValueChange={toggleId}
+          trackColor={{ false: COLORS.border, true: COLORS.gold }}
+          thumbColor={COLORS.white}
+        />
+      </View>
+
+      {/* ── Guest list privacy (DAW-6) ── */}
+      <View style={styles.sectionDivider} />
+
+      <DText variant="kicker" color={COLORS.muted} style={{ marginTop: SPACING.lg, marginBottom: SPACING.sm }}>
+        GUEST LIST PRIVACY
+      </DText>
+
+      <View style={styles.toggleRow}>
+        <View style={styles.toggleTextWrap}>
+          <DText variant="meta" color={COLORS.white} style={{ fontSize: 15 }}>
+            Hide guest list
+          </DText>
+          <DText variant="hint" style={{ marginTop: SPACING.xs }}>
+            Only you see who's going
+          </DText>
+        </View>
+        <Switch
+          value={draft.hide_guest_list}
+          onValueChange={(v) => {
+            Haptics.selectionAsync();
+            updateDraft({ hide_guest_list: v });
+          }}
+          trackColor={{ false: COLORS.border, true: COLORS.gold }}
+          thumbColor={COLORS.white}
+        />
+      </View>
+
+      <View style={styles.toggleRow}>
+        <View style={styles.toggleTextWrap}>
+          <DText variant="meta" color={COLORS.white} style={{ fontSize: 15 }}>
+            Hide headcount
+          </DText>
+          <DText variant="hint" style={{ marginTop: SPACING.xs }}>
+            Don't show the "X going" count to guests
+          </DText>
+        </View>
+        <Switch
+          value={draft.hide_headcount}
+          onValueChange={(v) => {
+            Haptics.selectionAsync();
+            updateDraft({ hide_headcount: v });
+          }}
+          trackColor={{ false: COLORS.border, true: COLORS.gold }}
+          thumbColor={COLORS.white}
+        />
+      </View>
+
+      <View style={styles.toggleRow}>
+        <View style={styles.toggleTextWrap}>
+          <DText variant="meta" color={COLORS.white} style={{ fontSize: 15 }}>
+            Anonymize names
+          </DText>
+          <DText variant="hint" style={{ marginTop: SPACING.xs }}>
+            Show first names + last initial to other guests
+          </DText>
+        </View>
+        <Switch
+          value={draft.anonymize_guests}
+          onValueChange={(v) => {
+            Haptics.selectionAsync();
+            updateDraft({ anonymize_guests: v });
+          }}
           trackColor={{ false: COLORS.border, true: COLORS.gold }}
           thumbColor={COLORS.white}
         />
@@ -204,12 +284,6 @@ export default function AudienceToolScreen() {
 }
 
 const styles = StyleSheet.create({
-  sectionLabel: {
-    fontSize: 14,
-    color: COLORS.white,
-    ...FONTS.semibold,
-    marginBottom: SPACING.lg,
-  },
   genderGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -233,12 +307,9 @@ const styles = StyleSheet.create({
   genderEmoji: { fontSize: 28, marginBottom: SPACING.sm },
   genderLabel: {
     fontSize: 15,
-    color: COLORS.white,
     ...FONTS.bold,
     marginBottom: SPACING.xs,
   },
-  genderLabelSelected: { color: COLORS.gold },
-  genderSubtitle: { fontSize: 12, color: COLORS.muted, ...FONTS.regular },
   check: {
     position: 'absolute',
     top: SPACING.sm,
@@ -250,13 +321,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkMark: { color: COLORS.dark, fontSize: 12, ...FONTS.bold },
-  idNote: {
-    color: COLORS.amber,
-    fontSize: 13,
-    ...FONTS.regular,
-    marginTop: SPACING.lg,
-  },
+  checkMark: { fontSize: 12, ...FONTS.bold },
   sectionDivider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: 'rgba(255,223,161,0.10)',
@@ -269,20 +334,12 @@ const styles = StyleSheet.create({
     gap: SPACING.lg,
   },
   toggleTextWrap: { flex: 1 },
-  toggleLabel: { color: COLORS.white, fontSize: 15, ...FONTS.medium },
-  toggleHint: {
-    color: COLORS.hint,
-    fontSize: 12,
-    ...FONTS.regular,
-    marginTop: SPACING.xs,
-  },
   spinnerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: SPACING.md,
   },
-  spinnerLabel: { color: COLORS.white, fontSize: 14, ...FONTS.medium },
   spinnerControls: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -299,7 +356,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   spinnerBtnDisabled: { opacity: 0.3 },
-  spinnerBtnText: { fontSize: 18, color: COLORS.gold, ...FONTS.bold },
+  spinnerBtnText: { fontSize: 18, ...FONTS.bold },
   spinnerCount: {
     fontSize: 18,
     color: COLORS.white,

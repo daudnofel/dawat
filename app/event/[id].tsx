@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -44,6 +44,11 @@ interface EventDetail {
   virtual_link: string | null;
   allow_plus_ones: boolean;
   max_plus_ones: number;
+  // DAW-6
+  payment_link: string | null;
+  hide_guest_list: boolean;
+  hide_headcount: boolean;
+  anonymize_guests: boolean;
 }
 
 export default function EventDetailScreen() {
@@ -421,7 +426,11 @@ export default function EventDetailScreen() {
     </View>
   );
 
-  const hostedBySlotJsx = (
+  // DAW-6 — host always sees everyone; guests respect privacy flags.
+  const hideGuestList = event.hide_guest_list && !isHost;
+  const hideHeadcount = event.hide_headcount && !isHost;
+
+  const hostedBySlotJsx = hideGuestList ? null : (
     <GuestAvatars eventId={id!} refreshKey={guestRefreshKey} />
   );
 
@@ -443,12 +452,58 @@ export default function EventDetailScreen() {
           .filter(Boolean)
           .join(' · ');
 
+  // DAW-6 — external action links. Virtual link is access-gated (only
+  // after an RSVP'd-yes or host sees it — like a doorlist). Payment link
+  // is visible to anyone considering RSVP'ing.
+  const hasActions = !!event.virtual_link || !!event.payment_link;
+  const showVirtualLink =
+    !!event.virtual_link && (isHost || rsvpStatus === RsvpStatus.Yes);
+
+  const openLink = async (url: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const prefixed = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    const ok = await Linking.canOpenURL(prefixed);
+    if (ok) await Linking.openURL(prefixed);
+    else Toast.error('Could not open link');
+  };
+
   const afterBodySlotJsx = (
     <>
-      <View style={styles.guestSection}>
-        <Text style={[styles.guestHeading, { color: guestHeadingColor }]}>Guest List</Text>
-        <Text style={[styles.attendance, { color: attendanceColor }]}>{attendanceText}</Text>
-      </View>
+      {hasActions && (
+        <View style={styles.actionRow}>
+          {showVirtualLink && event.virtual_link && (
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionBtn,
+                pressed && styles.actionBtnPressed,
+              ]}
+              onPress={() => openLink(event.virtual_link!)}
+            >
+              <Text style={styles.actionBtnText}>🎥  Join virtually</Text>
+            </Pressable>
+          )}
+          {event.payment_link && (
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionBtn,
+                pressed && styles.actionBtnPressed,
+              ]}
+              onPress={() => openLink(event.payment_link!)}
+            >
+              <Text style={styles.actionBtnText}>💸  Pay here</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+
+      {!hideGuestList && (
+        <View style={styles.guestSection}>
+          <Text style={[styles.guestHeading, { color: guestHeadingColor }]}>Guest List</Text>
+          {!hideHeadcount && (
+            <Text style={[styles.attendance, { color: attendanceColor }]}>{attendanceText}</Text>
+          )}
+        </View>
+      )}
 
       <GuestListDashboard eventId={id!} visible={isHost} refreshKey={guestRefreshKey} />
 
@@ -549,5 +604,31 @@ const styles = StyleSheet.create({
     fontSize: 15,
     ...FONTS.regular,
     marginBottom: SPACING.md,
+  },
+
+  // DAW-6 — external link action buttons (Join virtually / Pay here)
+  actionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.md,
+  },
+  actionBtn: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  actionBtnPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.97 }],
+  },
+  actionBtnText: {
+    color: COLORS.white,
+    fontSize: 14,
+    ...FONTS.semibold,
   },
 });

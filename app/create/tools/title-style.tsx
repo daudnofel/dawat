@@ -1,28 +1,30 @@
 /**
  * Title style tool sheet (DAW-56).
  *
- * Lets the host pick a typography style for their event title. Mounts
- * TitleStylePicker inside ToolSheet. Writes `title_style` to the draft
- * store — EventPreview re-renders the title in the chosen font live.
+ * Scrollable via ToolSheet's default scroll. TitleStylePicker renders
+ * inline (no internal scroll) so the outer sheet scroll owns all the
+ * gesture coordination.
  */
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Text, StyleSheet } from 'react-native';
 
 import ToolSheet from '../../../components/ToolSheet';
 import TitleStylePicker from '../../../components/TitleStylePicker';
 import { useEventStore } from '../../../store/useEventStore';
 import { TitleStyleId } from '../../../lib/title-styles';
-import { COLORS, FONTS, SPACING } from '../../../lib/theme';
+import { COLORS, FONTS } from '../../../lib/theme';
 
-export default function TitleStyleToolScreen() {
-  const router = useRouter();
+interface Props {
+  onClose?: () => void;
+}
+
+export default function TitleStyleToolScreen({ onClose }: Props = {}) {
   const { draft, updateDraft, closeTool } = useEventStore();
 
   const handleClose = () => {
     closeTool();
-    router.back();
+    onClose?.();
   };
 
   const handleSelect = (id: TitleStyleId) => {
@@ -30,32 +32,25 @@ export default function TitleStyleToolScreen() {
   };
 
   return (
-    <ToolSheet title="Title style" onClose={handleClose} scrollable={false}>
-      <View style={styles.container}>
-        <Text style={styles.hint}>
-          Choose how your event title looks. Each style updates the preview live.
-        </Text>
-        <TitleStylePicker
-          title={draft.title}
-          selectedId={draft.title_style}
-          onSelect={handleSelect}
-        />
-      </View>
+    <ToolSheet title="Title style" onClose={handleClose}>
+      <Text style={styles.hint}>
+        Choose how your event title looks. Each style updates the preview live.
+      </Text>
+      <TitleStylePicker
+        title={draft.title}
+        selectedId={draft.title_style}
+        onSelect={handleSelect}
+      />
     </ToolSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: SPACING.lg,
-  },
   hint: {
     fontSize: 14,
     color: COLORS.muted,
     ...FONTS.regular,
-    paddingHorizontal: SPACING.xl,
-    marginBottom: SPACING.md,
+    marginBottom: 12,
     lineHeight: 20,
   },
 });

@@ -31,20 +31,9 @@ const RAW_THEMES: DawatTheme[] = [
     // DAW-57 — arabesque + grain for a serene spiritual feel
     background: { pattern: 'arabesque', overlayOpacity: 0.07, texture: 'grain', textureOpacity: 0.04 },
   },
-  {
-    id: 'eid_gala',
-    name: 'Eid Gala',
-    categories: ['Trending', 'Eid'],
-    bannerBg: '#0D0D0D',
-    bannerBgImage: 'linear-gradient(135deg, #0D0D0D 0%, #1A1A1A 40%, #2A1F0A 100%)',
-    accentColor: '#F0C040',
-    textColor: '#FFFFFF',
-    tagBg: '#2A1F0A',
-    tagColor: '#F0C040',
-    defaultEmoji: '✨',
-    // DAW-57 — geometric stars for a festive celebratory feel
-    background: { pattern: 'geometric-stars', overlayOpacity: 0.06, texture: 'grain', textureOpacity: 0.03 },
-  },
+  // DAW-65 — Eid Gala replaced by the premium layered version further
+  // down. Existing events on theme_id='eid_gala' auto-upgrade to the
+  // richer design.
   {
     id: 'iftar_party',
     name: 'Iftar Party',
@@ -508,6 +497,95 @@ const APP_CARD = '#161616';
  * fields. Themes that already define a token keep their override.
  */
 /**
+ * DAW-65 — per-theme typography personality.
+ *
+ * Without this, every legacy theme defaults to ManropeExtraBold with a
+ * tight -0.5 tracking, so "Ramadan Kareem" and "Brothers Night" render
+ * their titles in the exact same type. The map assigns each theme a
+ * weight + letter-spacing that matches its mood:
+ *
+ *   Ceremonial (nikah, walima, ornate)  → Light + loose tracking (airy, script-adjacent)
+ *   Spiritual (ramadan, laylatul qadr)  → Light + moderate tracking (serene)
+ *   Editorial (eid, hajj, cream)        → SemiBold + balanced tracking (magazine)
+ *   Digital (brothers, geometric)       → Bold + tight tracking (modern, confident)
+ *   Eclectic (desert, iftar)            → Bold / ExtraBold + expressive tracking
+ *   Minimal (minimal_crescent, sky_blue)→ Regular / SemiBold + neutral tracking
+ *
+ * Premium themes set `typography` directly on the raw object and bypass
+ * this map. Themes not listed here fall back to the ExtraBold default.
+ */
+/**
+ * DAW-65 — background pattern defaults for themes that don't declare one.
+ *
+ * Pattern + overlayOpacity picks a subtle Islamic texture that plays to
+ * each theme's mood. Light pastel themes use low opacity (0.03–0.04) so
+ * the pattern whispers rather than shouts; dark themes can handle a bit
+ * more (0.05–0.07). Themes that want to stay visually quiet get
+ * `'none'` explicitly, which skips the pattern overlay.
+ *
+ * Themes whose raw definition already includes a `background` block
+ * bypass this map entirely.
+ */
+const THEME_BACKGROUND_MAP: Record<string, DawatTheme['background']> = {
+  iftar_party:       { pattern: 'geometric-stars', overlayOpacity: 0.06, texture: 'grain',  textureOpacity: 0.03 },
+  desert_sunset:     { pattern: 'geometric-stars', overlayOpacity: 0.05 },
+  brothers_night:    { pattern: 'geometric-stars', overlayOpacity: 0.05 },
+  scholar_talk:      { pattern: 'zellige',         overlayOpacity: 0.05 },
+  geometric_blue:    { pattern: 'geometric-stars', overlayOpacity: 0.08 },
+  hajj_journey:      { pattern: 'zellige',         overlayOpacity: 0.05, texture: 'paper',  textureOpacity: 0.04 },
+  eid_adha:          { pattern: 'geometric-stars', overlayOpacity: 0.06, texture: 'grain',  textureOpacity: 0.03 },
+  cream_elegance:    { pattern: 'zellige',         overlayOpacity: 0.04, texture: 'paper',  textureOpacity: 0.05 },
+  blush_rose:        { pattern: 'arabesque',       overlayOpacity: 0.04, texture: 'paper',  textureOpacity: 0.05 },
+  lavender_mist:     { pattern: 'arabesque',       overlayOpacity: 0.04 },
+
+  // Keep these clean — pattern would fight the mood
+  family_picnic:     { pattern: 'none' },
+  minimal_crescent:  { pattern: 'none' },
+  sky_blue:          { pattern: 'none' },
+  sage_garden:       { pattern: 'none' },
+};
+
+const THEME_TYPOGRAPHY_MAP: Record<string, DawatTheme['typography']> = {
+  // Ceremonial — airy, script-adjacent
+  nikah:              { titleFont: 'ManropeLight',     titleLetterSpacing: 2.0 },
+  walima:             { titleFont: 'ManropeLight',     titleLetterSpacing: 1.8 },
+  ornate_invitation:  { titleFont: 'ManropeLight',     titleLetterSpacing: 2.0 },
+  blush_rose:         { titleFont: 'ManropeLight',     titleLetterSpacing: 1.5 },
+
+  // Spiritual — serene, reflective
+  ramadan_kareem:     { titleFont: 'ManropeLight',     titleLetterSpacing: 1.3 },
+  dark_ramadan:       { titleFont: 'ManropeLight',     titleLetterSpacing: 1.5 },
+  laylatul_qadr:      { titleFont: 'ManropeLight',     titleLetterSpacing: 1.8 },
+  sisters_halaqa:     { titleFont: 'ManropeRegular',   titleLetterSpacing: 0.8 },
+  scholar_talk:       { titleFont: 'ManropeRegular',   titleLetterSpacing: 0.5 },
+
+  // Editorial — luxe, magazine
+  eid_adha:           { titleFont: 'ManropeSemiBold',  titleLetterSpacing: 0.2 },
+  arabic_nights:      { titleFont: 'ManropeSemiBold',  titleLetterSpacing: 1.2 },
+  hajj_journey:       { titleFont: 'ManropeSemiBold',  titleLetterSpacing: 1.0 },
+  cream_elegance:     { titleFont: 'ManropeRegular',   titleLetterSpacing: 0.8 },
+  islamic_stars:      { titleFont: 'ManropeExtraBold', titleLetterSpacing: -0.4 },
+
+  // Minimal — neutral, breathing
+  minimal_crescent:   { titleFont: 'ManropeRegular',   titleLetterSpacing: 0.3 },
+
+  // Digital — tech, modern
+  brothers_night:     { titleFont: 'ManropeBold',      titleLetterSpacing: -0.5 },
+  geometric_blue:     { titleFont: 'ManropeBold',      titleLetterSpacing: -0.5 },
+  sky_blue:           { titleFont: 'ManropeSemiBold',  titleLetterSpacing: -0.3 },
+
+  // Eclectic — trendy, expressive
+  desert_sunset:      { titleFont: 'ManropeExtraBold', titleLetterSpacing: -1.0 },
+  family_picnic:      { titleFont: 'ManropeSemiBold',  titleLetterSpacing: 0.2 },
+  sage_garden:        { titleFont: 'ManropeRegular',   titleLetterSpacing: 0.3 },
+  lavender_mist:      { titleFont: 'ManropeLight',     titleLetterSpacing: 0.8 },
+  iftar_party:        { titleFont: 'ManropeSemiBold',  titleLetterSpacing: 0.5 },
+
+  // Community — neutral, friendly
+  masjid_event:       { titleFont: 'ManropeSemiBold',  titleLetterSpacing: 0 },
+};
+
+/**
  * DAW-58 — art-directed title style defaults per theme.
  * When a host selects a theme, the editor auto-applies the suggested
  * title style (unless the host already manually chose one).
@@ -567,12 +645,17 @@ function enrichTheme(t: DawatTheme): DawatTheme {
     angle,
   };
 
+  // DAW-65: themes without their own `background` block fall back to a
+  // mood-specific pattern from THEME_BACKGROUND_MAP, then to the parsed
+  // gradient base. Themes that DO define their own background still win.
+  const patternDefaults = THEME_BACKGROUND_MAP[t.id] ?? {};
+
   return {
     ...t,
     // DAW-58: apply art-directed title style default if not set on the raw theme
     defaultTitleStyle: t.defaultTitleStyle ?? DEFAULT_TITLE_STYLE_MAP[t.id] ?? 'classic',
-    background: { ...baseBackground, ...(t.background ?? {}) },
-    typography: t.typography ?? {
+    background: { ...baseBackground, ...patternDefaults, ...(t.background ?? {}) },
+    typography: t.typography ?? THEME_TYPOGRAPHY_MAP[t.id] ?? {
       titleFont: 'ManropeExtraBold',
       titleLetterSpacing: -0.5,
     },

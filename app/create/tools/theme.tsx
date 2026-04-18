@@ -1,57 +1,60 @@
 /**
  * Theme tool sheet (DAW-54 / DAW-58).
  *
- * Mounts the existing `ThemePicker` inside the shared `ToolSheet`. The
- * picker is already a pure value/onChange component so it writes straight
- * through to the draft — the editor canvas underneath re-renders on every
- * selection, giving hosts instant feedback on the new theme gradient +
- * emoji banner without having to close the sheet.
+ * Category pills render in ToolSheet's sticky subheader slot so they
+ * stay visible as the host scrolls through the theme grid underneath.
  *
- * DAW-58: selecting a theme also auto-applies its `defaultTitleStyle`
- * to the draft, so the title font cascades from the theme choice. The
- * host can always override via the title style picker afterward.
+ * DAW-58: selecting a theme auto-applies its `defaultTitleStyle` to the
+ * draft, so title font cascades from the theme unless the host has
+ * manually overridden it.
  */
 
-import React, { useRef } from 'react';
-import { useRouter } from 'expo-router';
+import React, { useRef, useState } from 'react';
 
 import ToolSheet from '../../../components/ToolSheet';
-import ThemePicker from '../../../components/ThemePicker';
+import ThemePicker, { ThemeCategoryPills } from '../../../components/ThemePicker';
 import { useEventStore } from '../../../store/useEventStore';
 import { DawatTheme } from '../../../types';
 
-export default function ThemeToolScreen() {
-  const router = useRouter();
-  const { draft, updateDraft, closeTool } = useEventStore();
+interface Props {
+  onClose?: () => void;
+}
 
-  // Track whether the host has manually set a title style in this session.
-  // If they picked a title style *before* changing the theme, we respect
-  // their choice and don't overwrite it. If they haven't touched the title
-  // style tool yet (still on default or whatever the previous theme set),
-  // we cascade the new theme's default.
+export default function ThemeToolScreen({ onClose }: Props = {}) {
+  const { draft, updateDraft, closeTool } = useEventStore();
+  const [activeCategory, setActiveCategory] = useState('Trending');
   const userOverrodeTitleStyle = useRef(false);
 
   const handleClose = () => {
     closeTool();
-    router.back();
+    onClose?.();
   };
 
   const handleSelect = (theme: DawatTheme) => {
     const updates: Record<string, string | null> = { theme_id: theme.id };
-
-    // DAW-58: cascade theme → title style unless user explicitly overrode
     if (!userOverrodeTitleStyle.current && theme.defaultTitleStyle) {
       updates.title_style = theme.defaultTitleStyle;
     }
-
     updateDraft(updates);
   };
 
   return (
-    <ToolSheet title="Theme" onClose={handleClose}>
+    <ToolSheet
+      title="Theme"
+      onClose={handleClose}
+      subheader={
+        <ThemeCategoryPills
+          activeCategory={activeCategory}
+          onChange={setActiveCategory}
+        />
+      }
+    >
       <ThemePicker
         selectedId={draft.theme_id}
         onSelect={handleSelect}
+        activeCategory={activeCategory}
+        onCategoryChange={setActiveCategory}
+        showPills={false}
       />
     </ToolSheet>
   );

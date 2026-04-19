@@ -17,6 +17,9 @@ export enum RsvpStatus {
   Inshallah = 'inshallah',
   No = 'no',
   Waitlist = 'waitlist',
+  /** DAW-6 — guest tapped Yes on an event with `requires_approval`;
+   *  awaiting host approve/decline. Doesn't count toward capacity. */
+  Pending = 'pending',
 }
 
 export enum OrgType {
@@ -174,6 +177,8 @@ export interface Event {
   anonymize_guests: boolean;
   // DAW-6 — poster as full page background
   use_poster_as_bg: boolean;
+  // DAW-6 — host manually approves each Yes RSVP
+  requires_approval: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -402,6 +407,8 @@ export interface EventDraft {
   // DAW-6 — let the uploaded poster fill the entire page background
   // instead of just the hero slot
   use_poster_as_bg: boolean;
+  // DAW-6 — host manually approves each Yes RSVP before it's confirmed
+  requires_approval: boolean;
 }
 
 // ─── Poster Library (DAW-22) ─────────────────────────────────

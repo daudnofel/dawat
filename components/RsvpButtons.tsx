@@ -26,6 +26,12 @@ export default function RsvpButtons({ currentStatus, onSelect }: RsvpButtonsProp
           You're on the waitlist — the host will admit you when a spot opens
         </Text>
       )}
+      {/* DAW-6 — host approval mode: show pending state to the guest */}
+      {currentStatus === RsvpStatus.Pending && (
+        <Text style={styles.pendingBanner}>
+          Awaiting host approval — you'll get a notification when it's confirmed
+        </Text>
+      )}
 
       <View style={styles.pill}>
         {OPTIONS.map((opt, i) => {
@@ -71,6 +77,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: SPACING.md,
     backgroundColor: `${COLORS.blue}15`,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.md,
+  },
+  pendingBanner: {
+    fontSize: 13,
+    color: COLORS.amber,
+    ...FONTS.medium,
+    textAlign: 'center',
+    marginBottom: SPACING.md,
+    backgroundColor: `${COLORS.amber}15`,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
     borderRadius: RADIUS.md,

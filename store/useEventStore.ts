@@ -70,6 +70,7 @@ const INITIAL_DRAFT: EventDraft = {
   hide_headcount: false,
   anonymize_guests: false,
   use_poster_as_bg: false,
+  requires_approval: false,
 };
 
 export const useEventStore = create<EventStoreState>((set) => ({

@@ -200,6 +200,27 @@ export default function AudienceToolScreen({ onClose }: Props = {}) {
         />
       </View>
 
+      {/* ── Host approval mode (DAW-6) ── */}
+      <View style={styles.toggleRow}>
+        <View style={styles.toggleTextWrap}>
+          <DText variant="meta" color={COLORS.white} style={{ fontSize: 15 }}>
+            Require host approval?
+          </DText>
+          <DText variant="hint" style={{ marginTop: SPACING.xs }}>
+            You approve each RSVP before it's confirmed. Like a doorlist.
+          </DText>
+        </View>
+        <Switch
+          value={draft.requires_approval}
+          onValueChange={(v) => {
+            Haptics.selectionAsync();
+            updateDraft({ requires_approval: v });
+          }}
+          trackColor={{ false: COLORS.border, true: COLORS.gold }}
+          thumbColor={COLORS.white}
+        />
+      </View>
+
       {/* ── Guest list privacy (DAW-6) ── */}
       <View style={styles.sectionDivider} />
 

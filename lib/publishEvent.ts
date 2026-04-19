@@ -165,6 +165,7 @@ export async function publishEvent(
         hide_headcount: draft.hide_headcount,
         anonymize_guests: draft.anonymize_guests,
         use_poster_as_bg: draft.use_poster_as_bg,
+        requires_approval: draft.requires_approval,
         slug,
         is_published: true,
       }),

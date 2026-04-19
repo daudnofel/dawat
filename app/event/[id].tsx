@@ -51,6 +51,7 @@ interface EventDetail {
   hide_headcount: boolean;
   anonymize_guests: boolean;
   use_poster_as_bg: boolean;
+  requires_approval: boolean;
 }
 
 export default function EventDetailScreen() {
@@ -62,6 +63,9 @@ export default function EventDetailScreen() {
   const [yesCount, setYesCount] = useState(0);
   const [inshallahCount, setInshallahCount] = useState(0);
   const [waitlistCount, setWaitlistCount] = useState(0);
+  const [pendingApprovals, setPendingApprovals] = useState<
+    { user_id: string; display_name: string | null; avatar_url: string | null }[]
+  >([]);
   const [showFamilyModal, setShowFamilyModal] = useState(false);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
@@ -111,7 +115,7 @@ export default function EventDetailScreen() {
     // Fetch RSVPs with full details to compute headcount
     const { data: allRsvps } = await supabase
       .from('rsvps')
-      .select('status, children_count, plus_one_names')
+      .select('status, children_count, plus_one_names, user_id')
       .eq('event_id', id);
 
     const yesRsvps = (allRsvps ?? []).filter((r) => r.status === 'yes');
@@ -120,6 +124,26 @@ export default function EventDetailScreen() {
     );
     const ic = (allRsvps ?? []).filter((r) => r.status === 'inshallah').length;
     const wc = (allRsvps ?? []).filter((r) => r.status === 'waitlist').length;
+
+    // DAW-6 — pending approvals: hydrate user info for the host queue
+    const pendingUserIds = (allRsvps ?? [])
+      .filter((r) => r.status === 'pending' && r.user_id)
+      .map((r) => r.user_id as string);
+    if (pendingUserIds.length > 0) {
+      const { data: pendingUsers } = await supabase
+        .from('users')
+        .select('id, display_name, avatar_url')
+        .in('id', pendingUserIds);
+      setPendingApprovals(
+        (pendingUsers ?? []).map((u) => ({
+          user_id: u.id,
+          display_name: u.display_name,
+          avatar_url: u.avatar_url,
+        })),
+      );
+    } else {
+      setPendingApprovals([]);
+    }
 
     setYesCount(yesHeadcount);
     setInshallahCount(ic);
@@ -153,7 +177,7 @@ export default function EventDetailScreen() {
 
     const { data: allRsvps } = await supabase
       .from('rsvps')
-      .select('status, children_count, plus_one_names')
+      .select('status, children_count, plus_one_names, user_id')
       .eq('event_id', id);
     const yesRsvps = (allRsvps ?? []).filter((r) => r.status === 'yes');
     const yesHeadcount = yesRsvps.reduce(
@@ -162,6 +186,27 @@ export default function EventDetailScreen() {
     setYesCount(yesHeadcount);
     setInshallahCount((allRsvps ?? []).filter((r) => r.status === 'inshallah').length);
     setWaitlistCount((allRsvps ?? []).filter((r) => r.status === 'waitlist').length);
+
+    // DAW-6 — refresh pending approvals queue
+    const pendingUserIds = (allRsvps ?? [])
+      .filter((r) => r.status === 'pending' && r.user_id)
+      .map((r) => r.user_id as string);
+    if (pendingUserIds.length > 0) {
+      const { data: pendingUsers } = await supabase
+        .from('users')
+        .select('id, display_name, avatar_url')
+        .in('id', pendingUserIds);
+      setPendingApprovals(
+        (pendingUsers ?? []).map((u) => ({
+          user_id: u.id,
+          display_name: u.display_name,
+          avatar_url: u.avatar_url,
+        })),
+      );
+    } else {
+      setPendingApprovals([]);
+    }
+
     setGuestRefreshKey((k) => k + 1);
   };
 
@@ -244,6 +289,13 @@ export default function EventDetailScreen() {
     childrenCount: number,
     plusOneNames: string[],
   ) => {
+    // DAW-6 — Host approval mode: a Yes RSVP on an event with
+    // `requires_approval` enters Pending state until the host approves.
+    const effectiveStatus =
+      status === RsvpStatus.Yes && event?.requires_approval && event?.host_id !== userId
+        ? RsvpStatus.Pending
+        : status;
+
     await supabase
       .from('rsvps')
       .delete()
@@ -255,7 +307,7 @@ export default function EventDetailScreen() {
       .insert({
         event_id: id,
         user_id: userId,
-        status,
+        status: effectiveStatus,
         children_count: childrenCount,
         plus_one_names: plusOneNames.length > 0 ? plusOneNames : [],
       });
@@ -265,16 +317,25 @@ export default function EventDetailScreen() {
       return;
     }
 
-    setRsvpStatus(status);
+    setRsvpStatus(effectiveStatus);
     setGuestRefreshKey((k) => k + 1);
     fetchEventSilent();
 
-    // Push notification to host (fire-and-forget) — only on Yes / Inshallah
-    if (event && event.host_id !== userId && (status === RsvpStatus.Yes || status === RsvpStatus.Inshallah)) {
+    if (effectiveStatus === RsvpStatus.Pending) {
+      Toast.success('Request sent — waiting for the host to approve.');
+    }
+
+    // Push notification to host (fire-and-forget)
+    if (event && event.host_id !== userId && (effectiveStatus === RsvpStatus.Yes || effectiveStatus === RsvpStatus.Inshallah || effectiveStatus === RsvpStatus.Pending)) {
       void (async () => {
         const { data: guest } = await supabase.from('users').select('display_name').eq('id', userId).single();
         const guestName = guest?.display_name?.split(' ')[0] ?? 'Someone';
-        const statusLabel = status === RsvpStatus.Yes ? 'is going' : 'said Inshallah';
+        const statusLabel =
+          effectiveStatus === RsvpStatus.Pending
+            ? 'wants to attend'
+            : effectiveStatus === RsvpStatus.Yes
+              ? 'is going'
+              : 'said Inshallah';
         await triggerPush(
           event.host_id,
           `${guestName} ${statusLabel}`,
@@ -283,6 +344,38 @@ export default function EventDetailScreen() {
         );
       })();
     }
+  };
+
+  // DAW-6 — host approves a pending RSVP → status becomes 'yes' and the
+  // guest gets a push notification. Decline → 'no'.
+  const handleApproval = async (rsvpUserId: string, approve: boolean) => {
+    if (!isHost || !event) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    const newStatus = approve ? RsvpStatus.Yes : RsvpStatus.No;
+    const { error } = await supabase
+      .from('rsvps')
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .eq('event_id', id)
+      .eq('user_id', rsvpUserId);
+
+    if (error) {
+      Toast.error('Could not update RSVP');
+      return;
+    }
+
+    setGuestRefreshKey((k) => k + 1);
+    fetchEventSilent();
+
+    // Push notification to the guest
+    void triggerPush(
+      rsvpUserId,
+      approve ? 'You\'re in 🎉' : 'RSVP update',
+      approve
+        ? `${event.title} — see you there.`
+        : `Sorry, the host couldn't fit you in this time.`,
+      { type: 'rsvp', event_id: id },
+    );
   };
 
   const handleFamilySubmit = async (childrenCount: number, plusOneNames: string[]) => {
@@ -496,6 +589,47 @@ export default function EventDetailScreen() {
         </View>
       )}
 
+      {/* DAW-6 — Pending approvals queue (host only) */}
+      {isHost && pendingApprovals.length > 0 && (
+        <View style={styles.pendingSection}>
+          <Text style={[styles.guestHeading, { color: guestHeadingColor }]}>
+            Pending approvals ({pendingApprovals.length})
+          </Text>
+          {pendingApprovals.map((p) => (
+            <View key={p.user_id} style={styles.pendingRow}>
+              <View style={styles.pendingAvatar}>
+                <Text style={styles.pendingAvatarText}>
+                  {(p.display_name?.[0] ?? '?').toUpperCase()}
+                </Text>
+              </View>
+              <Text style={[styles.pendingName, { color: barTextColor }]} numberOfLines={1}>
+                {p.display_name ?? 'Someone'}
+              </Text>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.pendingBtn,
+                  styles.pendingDecline,
+                  pressed && styles.actionBtnPressed,
+                ]}
+                onPress={() => handleApproval(p.user_id, false)}
+              >
+                <Text style={styles.pendingDeclineText}>Decline</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.pendingBtn,
+                  styles.pendingApprove,
+                  pressed && styles.actionBtnPressed,
+                ]}
+                onPress={() => handleApproval(p.user_id, true)}
+              >
+                <Text style={styles.pendingApproveText}>Approve</Text>
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      )}
+
       {!hideGuestList && (
         <View style={styles.guestSection}>
           <Text style={[styles.guestHeading, { color: guestHeadingColor }]}>Guest List</Text>
@@ -605,6 +739,64 @@ const styles = StyleSheet.create({
     fontSize: 15,
     ...FONTS.regular,
     marginBottom: SPACING.md,
+  },
+
+  // DAW-6 — pending approvals queue (host only)
+  pendingSection: {
+    marginTop: SPACING.xxl,
+    marginBottom: SPACING.lg,
+    padding: SPACING.lg,
+    borderRadius: 16,
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(245, 158, 11, 0.30)',
+  },
+  pendingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+  },
+  pendingAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pendingAvatarText: {
+    color: COLORS.white,
+    fontSize: 14,
+    ...FONTS.bold,
+  },
+  pendingName: {
+    flex: 1,
+    fontSize: 15,
+    ...FONTS.semibold,
+  },
+  pendingBtn: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: 999,
+  },
+  pendingDecline: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  pendingDeclineText: {
+    color: COLORS.muted,
+    fontSize: 13,
+    ...FONTS.semibold,
+  },
+  pendingApprove: {
+    backgroundColor: COLORS.green,
+  },
+  pendingApproveText: {
+    color: COLORS.white,
+    fontSize: 13,
+    ...FONTS.bold,
   },
 
   // DAW-6 — external link action buttons (Join virtually / Pay here)

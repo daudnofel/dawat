@@ -68,6 +68,7 @@ interface EditableEvent {
   hide_headcount: boolean;
   anonymize_guests: boolean;
   use_poster_as_bg: boolean;
+  requires_approval: boolean;
 }
 
 export default function EditEventScreen() {
@@ -97,6 +98,7 @@ export default function EditEventScreen() {
     hide_headcount: false,
     anonymize_guests: false,
     use_poster_as_bg: false,
+    requires_approval: false,
   });
   const [customPrice, setCustomPrice] = useState('');
   const [showCustom, setShowCustom] = useState(false);
@@ -157,6 +159,7 @@ export default function EditEventScreen() {
       hide_headcount: data.hide_headcount ?? false,
       anonymize_guests: data.anonymize_guests ?? false,
       use_poster_as_bg: data.use_poster_as_bg ?? false,
+      requires_approval: data.requires_approval ?? false,
     });
 
     setLoading(false);
@@ -227,6 +230,7 @@ export default function EditEventScreen() {
       hide_headcount: event.hide_headcount,
       anonymize_guests: event.anonymize_guests,
       use_poster_as_bg: event.use_poster_as_bg,
+      requires_approval: event.requires_approval,
       updated_at: new Date().toISOString(),
     };
 
@@ -536,6 +540,20 @@ export default function EditEventScreen() {
           <Switch
             value={event.is_id_required}
             onValueChange={(v) => update({ is_id_required: v })}
+            trackColor={{ false: COLORS.border, true: COLORS.gold }}
+            thumbColor={COLORS.white}
+          />
+        </View>
+
+        {/* DAW-6 — Host approval mode */}
+        <View style={styles.toggleRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.toggleLabel}>Require host approval?</Text>
+            <Text style={styles.toggleHint}>You approve each RSVP before it's confirmed</Text>
+          </View>
+          <Switch
+            value={event.requires_approval}
+            onValueChange={(v) => update({ requires_approval: v })}
             trackColor={{ false: COLORS.border, true: COLORS.gold }}
             thumbColor={COLORS.white}
           />

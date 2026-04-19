@@ -112,6 +112,7 @@ export default function EditorScreen() {
           price: draft.price,
           capacity: draft.capacity,
           rsvp_deadline: draft.rsvp_deadline,
+          use_poster_as_bg: draft.use_poster_as_bg,
         }}
         onZoneTap={handleZoneTap}
         showTitle

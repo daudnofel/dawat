@@ -82,6 +82,9 @@ export interface EventPreviewData {
   price: number;
   capacity: number | null;
   rsvp_deadline: Date | string | null;
+  /** DAW-6 — when true and a poster is set, the poster fills the entire
+   *  page background instead of just the hero slot. */
+  use_poster_as_bg?: boolean;
 }
 
 export interface EventPreviewProps {
@@ -228,30 +231,35 @@ export default function EventPreview({
 
   // Default gradient when no theme is picked yet. Front-loaded:
   // the warm gold → dark transition all happens in the top ~half of the
-  // screen, then it stays a stable dark from the midpoint down. Less
-  // bright start than the brand gold and an extra duplicate dark stop
-  // so the bottom half doesn't keep shifting.
+  // screen, then it stays a stable dark from the midpoint down.
   const DEFAULT_GOLD_STOPS = ['#8B6914', '#3A2A0F', '#0D0D0D', '#0D0D0D', '#0D0D0D'];
   const pageStops = theme?.background?.stops ?? DEFAULT_GOLD_STOPS;
 
+  // DAW-6 — when the host has uploaded a poster AND turned on
+  // "Use as page background", the poster fills the full page instead of
+  // the theme gradient. A dark gradient overlay on top keeps text legible.
+  const usePosterBg = !!data.use_poster_as_bg && !!data.poster_url;
+
   return (
     <View style={[styles.container, { backgroundColor: pageBg }]}>
-      {/* Full-bleed gradient as the page background — uses the theme's
-          stops if a theme is picked, otherwise the brand gold gradient. */}
-      <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
-        <Defs>
-          <LinearGradient id="pagePreviewGrad" x1="0" y1="0" x2="0" y2="1">
-            {pageStops.map((stop, i, arr) => (
-              <Stop
-                key={`pg-${i}`}
-                offset={arr.length === 1 ? '0' : (i / (arr.length - 1)).toString()}
-                stopColor={stop}
-              />
-            ))}
-          </LinearGradient>
-        </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" fill="url(#pagePreviewGrad)" />
-      </Svg>
+      {usePosterBg ? (
+        <PosterBackground uri={data.poster_url!} />
+      ) : (
+        <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Defs>
+            <LinearGradient id="pagePreviewGrad" x1="0" y1="0" x2="0" y2="1">
+              {pageStops.map((stop, i, arr) => (
+                <Stop
+                  key={`pg-${i}`}
+                  offset={arr.length === 1 ? '0' : (i / (arr.length - 1)).toString()}
+                  stopColor={stop}
+                />
+              ))}
+            </LinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width="100%" height="100%" fill="url(#pagePreviewGrad)" />
+        </Svg>
+      )}
 
       {/* DAW-57 — Islamic geometric pattern overlay */}
       {theme?.background?.pattern && theme.background.pattern !== 'none' && (
@@ -290,7 +298,7 @@ export default function EventPreview({
             for a separate banner rectangle when the host hasn't uploaded
             a poster. Gender + halal badges moved out of the hero into
             the body row stack below "Hosted by". */}
-        {data.poster_url && (
+        {data.poster_url && !usePosterBg && (
           <Zone zone="poster">
             <PosterHero uri={data.poster_url} />
           </Zone>
@@ -424,6 +432,37 @@ const PosterHero = React.memo(
             </LinearGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#posterFadePreview)" />
+        </Svg>
+      </View>
+    );
+  },
+  (prev, next) => prev.uri === next.uri,
+);
+
+// ─── PosterBackground ───────────────────────────────────────
+// DAW-6 "use poster as page background" — full-bleed Image with a dark
+// gradient overlay (transparent at top → 70% black at bottom) so titles
+// and body text stay legible against any photo. Memoized for the same
+// reasons as PosterHero — unrelated state changes shouldn't reload it.
+
+const PosterBackground = React.memo(
+  function PosterBackground({ uri }: { uri: string }) {
+    return (
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <Image
+          source={{ uri }}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
+        />
+        <Svg style={StyleSheet.absoluteFill}>
+          <Defs>
+            <LinearGradient id="posterBgFade" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={COLORS.dark} stopOpacity="0.20" />
+              <Stop offset="0.5" stopColor={COLORS.dark} stopOpacity="0.50" />
+              <Stop offset="1" stopColor={COLORS.dark} stopOpacity="0.85" />
+            </LinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width="100%" height="100%" fill="url(#posterBgFade)" />
         </Svg>
       </View>
     );

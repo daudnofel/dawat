@@ -159,11 +159,12 @@ export async function publishEvent(
         virtual_link: draft.virtual_link || null,
         allow_plus_ones: draft.allow_plus_ones,
         max_plus_ones: draft.max_plus_ones,
-        // DAW-6 — external payment link + guest list privacy
+        // DAW-6 — external payment link + guest list privacy + poster bg
         payment_link: draft.payment_link || null,
         hide_guest_list: draft.hide_guest_list,
         hide_headcount: draft.hide_headcount,
         anonymize_guests: draft.anonymize_guests,
+        use_poster_as_bg: draft.use_poster_as_bg,
         slug,
         is_published: true,
       }),

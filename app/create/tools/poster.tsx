@@ -24,6 +24,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Switch,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -129,24 +130,45 @@ export default function PosterToolScreen({ onClose }: Props = {}) {
     <ToolSheet title="Poster" onClose={handleClose}>
       {/* Current poster preview (if any) */}
       {hasPoster && (
-        <View style={styles.previewRow}>
-          <Image
-            source={{ uri: draft.poster_url! }}
-            style={styles.previewImage}
-            resizeMode="cover"
-          />
-          <View style={styles.previewMeta}>
-            <Text style={styles.previewKicker}>CURRENT POSTER</Text>
-            <Text style={styles.previewLabel}>
-              {draft.poster_type === PosterType.Upload
-                ? 'Uploaded from photos'
-                : 'From library'}
-            </Text>
-            <Pressable onPress={handleRemovePoster} hitSlop={8}>
-              <Text style={styles.removeText}>Remove</Text>
-            </Pressable>
+        <>
+          <View style={styles.previewRow}>
+            <Image
+              source={{ uri: draft.poster_url! }}
+              style={styles.previewImage}
+              resizeMode="cover"
+            />
+            <View style={styles.previewMeta}>
+              <Text style={styles.previewKicker}>CURRENT POSTER</Text>
+              <Text style={styles.previewLabel}>
+                {draft.poster_type === PosterType.Upload
+                  ? 'Uploaded from photos'
+                  : 'From library'}
+              </Text>
+              <Pressable onPress={handleRemovePoster} hitSlop={8}>
+                <Text style={styles.removeText}>Remove</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
+
+          {/* DAW-6 — fill the whole event page background with the poster */}
+          <View style={styles.bgToggleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.bgToggleLabel}>Use as page background</Text>
+              <Text style={styles.bgToggleHint}>
+                The poster fills the entire event page instead of just the hero
+              </Text>
+            </View>
+            <Switch
+              value={draft.use_poster_as_bg}
+              onValueChange={(v) => {
+                Haptics.selectionAsync();
+                updateDraft({ use_poster_as_bg: v });
+              }}
+              trackColor={{ false: COLORS.border, true: COLORS.gold }}
+              thumbColor={COLORS.white}
+            />
+          </View>
+        </>
       )}
 
       {/* Upload row */}
@@ -219,6 +241,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.white,
     ...FONTS.semibold,
+  },
+  bgToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.lg,
+    gap: SPACING.lg,
+  },
+  bgToggleLabel: {
+    color: COLORS.white,
+    fontSize: 14,
+    ...FONTS.semibold,
+  },
+  bgToggleHint: {
+    color: COLORS.muted,
+    fontSize: 12,
+    marginTop: 2,
   },
   removeText: {
     fontSize: 13,

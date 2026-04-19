@@ -172,6 +172,8 @@ export interface Event {
   hide_guest_list: boolean;
   hide_headcount: boolean;
   anonymize_guests: boolean;
+  // DAW-6 — poster as full page background
+  use_poster_as_bg: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -397,6 +399,9 @@ export interface EventDraft {
   hide_guest_list: boolean;
   hide_headcount: boolean;
   anonymize_guests: boolean;
+  // DAW-6 — let the uploaded poster fill the entire page background
+  // instead of just the hero slot
+  use_poster_as_bg: boolean;
 }
 
 // ─── Poster Library (DAW-22) ─────────────────────────────────

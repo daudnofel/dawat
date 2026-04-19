@@ -3,6 +3,28 @@
 
 ---
 
+## ⚠️ READ THIS BEFORE TOUCHING ANY UI
+
+**Use the `building-native-ui` skill from Expo for ALL UI/native-component work.**
+
+It lives at `.claude/skills/building-native-ui/` (project-level, auto-loaded by Claude Code) and is maintained by the Expo team. Consult it BEFORE writing or editing anything in `app/`, `components/`, or any file that uses Expo Router, Reanimated, expo-glass-effect, expo-blur, expo-symbols, NativeTabs, form sheets, BottomSheetScrollView, or any iOS 26 API.
+
+The skill has reference files for: animations, controls (Switch/Slider/SegmentedControl/DateTimePicker/Picker), form-sheet, gradients, icons (SF Symbols via expo-image), media, route-structure, search bar, storage (SQLite/SecureStore), tabs (NativeTabs / iOS 26), toolbar-and-headers, visual-effects (blur + liquid glass), zoom-transitions (Apple Zoom).
+
+If you skip this and write UI code from training-data memory, you will use deprecated APIs (Animated.\*, RN ScrollView for sheets, hand-rolled tab bars instead of NativeTabs, etc.). Half of this session's hardest bugs (formSheet failure, sticky headers, gorhom scroll, ngrok v2/v3) would have been answered by checking the relevant reference file first.
+
+**Workflow:**
+1. About to write/edit a UI file? `Read .claude/skills/building-native-ui/SKILL.md`
+2. Pick the matching `references/<topic>.md` and read it
+3. Then write code
+
+To install on a fresh machine:
+```bash
+npx skills add expo/skills --skill building-native-ui --agent claude-code -y
+```
+
+---
+
 ## Who You Are and What We Are Building
 
 You are the lead engineer on Dawat (دعوت) — a Muslim community events platform.

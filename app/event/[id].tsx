@@ -50,6 +50,7 @@ interface EventDetail {
   hide_guest_list: boolean;
   hide_headcount: boolean;
   anonymize_guests: boolean;
+  use_poster_as_bg: boolean;
 }
 
 export default function EventDetailScreen() {
@@ -533,6 +534,7 @@ export default function EventDetailScreen() {
           price: event.price,
           capacity: event.capacity,
           rsvp_deadline: event.rsvp_deadline,
+          use_poster_as_bg: event.use_poster_as_bg,
         }}
         topBar={topBarJsx}
         hostedBySlot={hostedBySlotJsx}

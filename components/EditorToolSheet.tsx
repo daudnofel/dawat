@@ -7,16 +7,18 @@
  *
  * Flow:
  *   - EditorDock fires `openTool('theme')` → store's `activeTool` becomes 'theme'
- *   - This component's effect sees the change and calls `snapToIndex(0)`
- *   - BottomSheet animates up to the 55% snap point
- *   - Content inside switches based on `activeTool`
- *   - User drags down or taps Done → `closeTool()` clears state → effect
- *     calls `close()` → sheet animates down
- *   - User taps a DIFFERENT tool while sheet is open → activeTool swaps,
- *     content re-renders, sheet stays at current snap
+ *   - The `index` prop of <BottomSheet> is bound to a derived value:
+ *       activeTool == null  →  index = -1 (closed)
+ *       activeTool != null  →  index =  0 (medium snap)
+ *     So the sheet opens declaratively from state — no imperative
+ *     `sheetRef.current?.snapToIndex(0)` race on the very first tap.
+ *   - User drags down → onChange fires with index=-1, we sync the store
+ *     so the dock highlight clears.
+ *   - User taps a different tool while sheet is open → activeTool swaps,
+ *     content re-renders, sheet stays at current snap.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import BottomSheet, {
   BottomSheetBackdrop,
@@ -37,31 +39,18 @@ import PublishToolScreen from '../app/create/tools/publish';
 
 export default function EditorToolSheet() {
   const { activeTool, closeTool } = useEventStore();
-  const sheetRef = useRef<BottomSheet>(null);
   const insets = useSafeAreaInsets();
 
-  // Cap how high the sheet can travel in PIXELS, not percent. The safe-area
-  // inset gives us the status bar / Dynamic Island height for whichever
-  // iPhone is running the app; a small breathing buffer keeps the sheet
-  // from butting up against it. With topInset set, '100%' means "from the
-  // top inset down to the bottom of the screen" — scales correctly across
-  // every device (SE through 16 Pro Max).
+  // Cap how high the sheet can travel in PIXELS — safe-area inset gives
+  // us status bar / Dynamic Island height per device.
   const topInset = insets.top + 12;
 
   const snapPoints = useMemo(() => ['55%', '100%'], []);
 
-  // Drive the sheet from store state. Opening a tool snaps to index 0;
-  // clearing the tool closes.
-  useEffect(() => {
-    if (activeTool) {
-      sheetRef.current?.snapToIndex(0);
-    } else {
-      sheetRef.current?.close();
-    }
-  }, [activeTool]);
+  // Declarative open/close — no ref, no race on first tap.
+  const sheetIndex = activeTool ? 0 : -1;
 
-  // If the user drags the sheet closed (index -1), sync the store so the
-  // dock's active-tool highlight clears.
+  // If the user drags the sheet closed, sync the store.
   const handleSheetChange = useCallback(
     (index: number) => {
       if (index === -1 && activeTool) {
@@ -71,7 +60,6 @@ export default function EditorToolSheet() {
     [activeTool, closeTool],
   );
 
-  // Backdrop fades in as the sheet rises. Tapping it dismisses.
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop
@@ -89,7 +77,7 @@ export default function EditorToolSheet() {
     closeTool();
   }, [closeTool]);
 
-  const content = () => {
+  const renderContent = () => {
     switch (activeTool) {
       case 'poster':
         return <PosterToolScreen onClose={handleClose} />;
@@ -112,11 +100,11 @@ export default function EditorToolSheet() {
 
   return (
     <BottomSheet
-      ref={sheetRef}
-      index={-1}
+      index={sheetIndex}
       snapPoints={snapPoints}
       topInset={topInset}
       enablePanDownToClose
+      animateOnMount={false}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       onChange={handleSheetChange}
@@ -124,7 +112,7 @@ export default function EditorToolSheet() {
       backgroundStyle={styles.background}
       handleIndicatorStyle={styles.handle}
     >
-      {content()}
+      {renderContent()}
     </BottomSheet>
   );
 }
@@ -137,8 +125,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(201,168,76,0.55)',
     width: 44,
     height: 5,
-  },
-  content: {
-    flex: 1,
   },
 });

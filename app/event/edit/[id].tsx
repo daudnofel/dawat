@@ -67,6 +67,7 @@ interface EditableEvent {
   hide_guest_list: boolean;
   hide_headcount: boolean;
   anonymize_guests: boolean;
+  use_poster_as_bg: boolean;
 }
 
 export default function EditEventScreen() {
@@ -95,6 +96,7 @@ export default function EditEventScreen() {
     hide_guest_list: false,
     hide_headcount: false,
     anonymize_guests: false,
+    use_poster_as_bg: false,
   });
   const [customPrice, setCustomPrice] = useState('');
   const [showCustom, setShowCustom] = useState(false);
@@ -154,6 +156,7 @@ export default function EditEventScreen() {
       hide_guest_list: data.hide_guest_list ?? false,
       hide_headcount: data.hide_headcount ?? false,
       anonymize_guests: data.anonymize_guests ?? false,
+      use_poster_as_bg: data.use_poster_as_bg ?? false,
     });
 
     setLoading(false);
@@ -223,6 +226,7 @@ export default function EditEventScreen() {
       hide_guest_list: event.hide_guest_list,
       hide_headcount: event.hide_headcount,
       anonymize_guests: event.anonymize_guests,
+      use_poster_as_bg: event.use_poster_as_bg,
       updated_at: new Date().toISOString(),
     };
 

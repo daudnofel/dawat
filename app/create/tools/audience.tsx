@@ -12,132 +12,34 @@
 
 import React from 'react';
 import { View, Pressable, StyleSheet, Switch } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 
 import ToolSheet from '../../../components/ToolSheet';
 import { useEventStore } from '../../../store/useEventStore';
 import { GenderMode } from '../../../types';
 import { DText } from '../../../components/ui';
+import {
+  AUDIENCE_ICON,
+  AudienceIconProps,
+} from '../../../components/AudienceIcons';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../../lib/theme';
 
 interface Props {
   onClose?: () => void;
 }
 
-// ─── Audience SVG icons (thin line, white when active) ───────────────
-
-interface IconProps {
-  active: boolean;
-}
-
-const stroke = (active: boolean) => (active ? COLORS.gold : 'rgba(255,255,255,0.55)');
-
-function MixedIcon({ active }: IconProps) {
-  // Three overlapping people silhouettes — universal "everyone" mark.
-  return (
-    <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
-      <Circle cx="10" cy="11" r="3.5" stroke={stroke(active)} strokeWidth={1.8} />
-      <Circle cx="22" cy="11" r="3.5" stroke={stroke(active)} strokeWidth={1.8} />
-      <Path
-        d="M3 24V22.5C3 19.46 5.46 17 8.5 17H11.5C12.4 17 13.25 17.21 14 17.59"
-        stroke={stroke(active)}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M18 17.59C18.75 17.21 19.6 17 20.5 17H23.5C26.54 17 29 19.46 29 22.5V24"
-        stroke={stroke(active)}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
-}
-
-function SistersIcon({ active }: IconProps) {
-  // Single feminine silhouette with a soft head-cover suggestion.
-  return (
-    <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
-      <Path
-        d="M16 4C12.5 4 10 6.5 10 10C10 11.5 10.5 12.8 11.4 13.8C10 15 9 16.7 9 18.5"
-        stroke={stroke(active)}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M16 4C19.5 4 22 6.5 22 10C22 11.5 21.5 12.8 20.6 13.8C22 15 23 16.7 23 18.5"
-        stroke={stroke(active)}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-      />
-      <Circle cx="16" cy="11" r="3" stroke={stroke(active)} strokeWidth={1.8} />
-      <Path
-        d="M8 28V25C8 22.79 9.79 21 12 21H20C22.21 21 24 22.79 24 25V28"
-        stroke={stroke(active)}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
-}
-
-function BrothersIcon({ active }: IconProps) {
-  // Single masculine silhouette — clean head + shoulders.
-  return (
-    <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
-      <Circle cx="16" cy="10" r="4" stroke={stroke(active)} strokeWidth={1.8} />
-      <Path
-        d="M7 28V24C7 20.69 9.69 18 13 18H19C22.31 18 25 20.69 25 24V28"
-        stroke={stroke(active)}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
-}
-
-function FamilyIcon({ active }: IconProps) {
-  // Two adult silhouettes plus one small child silhouette.
-  return (
-    <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
-      <Circle cx="9" cy="9" r="3" stroke={stroke(active)} strokeWidth={1.8} />
-      <Circle cx="23" cy="9" r="3" stroke={stroke(active)} strokeWidth={1.8} />
-      <Circle cx="16" cy="18" r="2.2" stroke={stroke(active)} strokeWidth={1.6} />
-      <Path
-        d="M3 22V20.5C3 18.01 5.01 16 7.5 16H10.5C13 16 15 18 15 20.5"
-        stroke={stroke(active)}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M17 20.5C17 18 19 16 21.5 16H24.5C26.99 16 29 18.01 29 20.5V22"
-        stroke={stroke(active)}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M11 28V26C11 24.34 12.34 23 14 23H18C19.66 23 21 24.34 21 26V28"
-        stroke={stroke(active)}
-        strokeWidth={1.6}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
-}
-
 interface GenderOption {
   label: string;
   subtitle: string;
-  Icon: React.ComponentType<IconProps>;
+  Icon: React.ComponentType<AudienceIconProps>;
   value: GenderMode;
 }
 
 const GENDER_OPTIONS: GenderOption[] = [
-  { label: 'Mixed', subtitle: 'Open to all', Icon: MixedIcon, value: GenderMode.Mixed },
-  { label: 'Sisters Only', subtitle: 'Women only', Icon: SistersIcon, value: GenderMode.SistersOnly },
-  { label: 'Brothers', subtitle: 'Men only', Icon: BrothersIcon, value: GenderMode.BrothersOnly },
-  { label: 'Family', subtitle: 'Parents + kids', Icon: FamilyIcon, value: GenderMode.Family },
+  { label: 'Mixed', subtitle: 'Open to all', Icon: AUDIENCE_ICON[GenderMode.Mixed], value: GenderMode.Mixed },
+  { label: 'Sisters Only', subtitle: 'Women only', Icon: AUDIENCE_ICON[GenderMode.SistersOnly], value: GenderMode.SistersOnly },
+  { label: 'Brothers', subtitle: 'Men only', Icon: AUDIENCE_ICON[GenderMode.BrothersOnly], value: GenderMode.BrothersOnly },
+  { label: 'Family', subtitle: 'Parents + kids', Icon: AUDIENCE_ICON[GenderMode.Family], value: GenderMode.Family },
 ];
 
 export default function AudienceToolScreen({ onClose }: Props = {}) {

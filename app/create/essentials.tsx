@@ -41,18 +41,19 @@ import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
 import { DText, DInput, DButton, GlassCircleButton } from '../../components/ui';
 import { useEventStore } from '../../store/useEventStore';
 import { GenderMode } from '../../types';
+import { AUDIENCE_ICON, AudienceIconProps } from '../../components/AudienceIcons';
 
 interface AudienceOption {
   value: GenderMode;
   label: string;
-  emoji: string;
+  Icon: React.ComponentType<AudienceIconProps>;
 }
 
 const AUDIENCE_OPTIONS: AudienceOption[] = [
-  { value: GenderMode.Mixed, label: 'Mixed', emoji: '🌟' },
-  { value: GenderMode.SistersOnly, label: 'Sisters', emoji: '🌸' },
-  { value: GenderMode.BrothersOnly, label: 'Brothers', emoji: '💪' },
-  { value: GenderMode.Family, label: 'Family', emoji: '👨\u200d👩\u200d👧' },
+  { value: GenderMode.Mixed, label: 'Mixed', Icon: AUDIENCE_ICON[GenderMode.Mixed] },
+  { value: GenderMode.SistersOnly, label: 'Sisters', Icon: AUDIENCE_ICON[GenderMode.SistersOnly] },
+  { value: GenderMode.BrothersOnly, label: 'Brothers', Icon: AUDIENCE_ICON[GenderMode.BrothersOnly] },
+  { value: GenderMode.Family, label: 'Family', Icon: AUDIENCE_ICON[GenderMode.Family] },
 ];
 
 export default function EssentialsScreen() {
@@ -209,6 +210,7 @@ export default function EssentialsScreen() {
           <View style={styles.audienceGrid}>
             {AUDIENCE_OPTIONS.map((opt) => {
               const selected = draft.gender_mode === opt.value;
+              const Icon = opt.Icon;
               return (
                 <Pressable
                   key={opt.value}
@@ -219,7 +221,7 @@ export default function EssentialsScreen() {
                     pressed && styles.pressed,
                   ]}
                 >
-                  <DText style={styles.audienceEmoji}>{opt.emoji}</DText>
+                  <Icon active={selected} size={20} />
                   <DText
                     variant="meta"
                     color={selected ? COLORS.white : COLORS.muted}
@@ -340,7 +342,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(201,168,76,0.14)',
     borderColor: COLORS.gold,
   },
-  audienceEmoji: { fontSize: 18 },
   bottomBar: {
     paddingHorizontal: SPACING.xl,
     paddingTop: SPACING.md,

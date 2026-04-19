@@ -16,6 +16,7 @@ import MapPreview from '../../components/MapPreview';
 import EventComments from '../../components/EventComments';
 import ShareSheet from '../../components/ShareSheet';
 import EventPreview from '../../components/EventPreview';
+import { GlassCircleButton } from '../../components/ui';
 import { getThemeById } from '../../lib/themes';
 import { getCurrentUserId } from '../../lib/auth-cache';
 import { triggerPush } from '../../lib/push';
@@ -401,9 +402,7 @@ export default function EventDetailScreen() {
   // new editor can reuse the exact same canvas.
   const topBarJsx = (
     <View style={styles.topBar}>
-      <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }}>
-        <Text style={[styles.backText, { color: barTextColor }]}>← Back</Text>
-      </Pressable>
+      <GlassCircleButton icon="back" onPress={() => router.back()} />
       <View style={styles.topBarRight}>
         <Pressable onPress={handleShare}>
           <Text style={[styles.shareText, { color: barTextColor }]}>Share</Text>

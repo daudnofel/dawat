@@ -1,18 +1,13 @@
 /**
- * EditorChrome — the top bar that sits above the live EventPreview inside
- * the creation editor (DAW-37). Two elements only:
+ * EditorChrome — top bar above the live EventPreview in the creation
+ * editor. Two elements only:
  *
- *   - Back arrow (left): pops the editor back to the essentials sheet (or
- *     the tabs, depending on history). We leave the navigation decision to
- *     the screen that mounts us — the chrome just fires `onBack`.
+ *   - Back (left): circular liquid-glass button with a chevron. Pops the
+ *     editor back to essentials / tabs. The chrome fires `onBack`; the
+ *     screen that mounts us decides where to go.
  *
- *   - Publish pill (right): opens the publish tool sheet. Renders as a
- *     gold pill with "Publish" to keep it visually prominent. Disabled when
- *     essentials haven't been met.
- *
- * The chrome is rendered as the `topBar` slot of `EventPreview`, so it
- * inherits the event's theme text color naturally. We don't paint a
- * background — the chrome floats over the theme gradient.
+ *   - Publish pill (right): opens the publish tool sheet. Gold pill,
+ *     disabled when essentials haven't been met.
  */
 
 import React from 'react';
@@ -20,12 +15,14 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 import { COLORS, FONTS, SPACING, RADIUS } from '../lib/theme';
+import { GlassCircleButton } from './ui';
 
 export interface EditorChromeProps {
   onBack: () => void;
   onPublish: () => void;
   canPublish?: boolean;
-  /** Text color to use for the Back label (passed by caller to match theme). */
+  /** Text color to use for the Back label — unused now that Back is a
+   *  glass circle, kept in the signature for caller compat. */
   textColor?: string;
 }
 
@@ -33,13 +30,7 @@ export default function EditorChrome({
   onBack,
   onPublish,
   canPublish = true,
-  textColor = COLORS.white,
 }: EditorChromeProps) {
-  const handleBack = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onBack();
-  };
-
   const handlePublish = () => {
     if (!canPublish) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -48,14 +39,7 @@ export default function EditorChrome({
 
   return (
     <View style={styles.wrap}>
-      <Pressable
-        onPress={handleBack}
-        style={({ pressed }) => [styles.backHit, pressed && styles.pressed]}
-        accessibilityRole="button"
-        accessibilityLabel="Back"
-      >
-        <Text style={[styles.backLabel, { color: textColor }]}>← Back</Text>
-      </Pressable>
+      <GlassCircleButton icon="back" onPress={onBack} />
 
       <Pressable
         onPress={handlePublish}
@@ -89,14 +73,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.md,
-  },
-  backHit: {
-    paddingVertical: SPACING.xs,
-    paddingRight: SPACING.md,
-  },
-  backLabel: {
-    fontSize: 16,
-    ...FONTS.medium,
   },
   publishPill: {
     backgroundColor: COLORS.gold,

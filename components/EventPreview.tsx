@@ -46,6 +46,7 @@ import {
   Pressable,
 } from 'react-native';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
 import { COLORS, FONTS, SPACING, RADIUS } from '../lib/theme';
@@ -173,7 +174,9 @@ export default function EventPreview({
   mapSlot,
   afterBodySlot,
 }: EventPreviewProps) {
+  const insets = useSafeAreaInsets();
   const theme = getThemeById(data.theme_id);
+
   const textColor = theme?.textColor ?? COLORS.white;
   const mutedTextColor = theme?.textColor ? `${theme.textColor}AA` : COLORS.muted;
   const subtleTextColor = theme?.textColor ? `${theme.textColor}88` : COLORS.muted;
@@ -223,13 +226,22 @@ export default function EventPreview({
     );
   };
 
+  // Default gradient when no theme is picked yet. Front-loaded:
+  // the warm gold → dark transition all happens in the top ~half of the
+  // screen, then it stays a stable dark from the midpoint down. Less
+  // bright start than the brand gold and an extra duplicate dark stop
+  // so the bottom half doesn't keep shifting.
+  const DEFAULT_GOLD_STOPS = ['#8B6914', '#3A2A0F', '#0D0D0D', '#0D0D0D', '#0D0D0D'];
+  const pageStops = theme?.background?.stops ?? DEFAULT_GOLD_STOPS;
+
   return (
     <View style={[styles.container, { backgroundColor: pageBg }]}>
-      {/* Full-bleed theme gradient as the page background */}
+      {/* Full-bleed gradient as the page background — uses the theme's
+          stops if a theme is picked, otherwise the brand gold gradient. */}
       <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
         <Defs>
           <LinearGradient id="pagePreviewGrad" x1="0" y1="0" x2="0" y2="1">
-            {(theme?.background?.stops ?? [pageBg, pageBg]).map((stop, i, arr) => (
+            {pageStops.map((stop, i, arr) => (
               <Stop
                 key={`pg-${i}`}
                 offset={arr.length === 1 ? '0' : (i / (arr.length - 1)).toString()}
@@ -269,75 +281,20 @@ export default function EventPreview({
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
       >
-        {topBar}
+        {/* Pad for the iPhone status bar so back/Publish don't overlap
+            the clock + battery, while the gradient bleeds behind them. */}
+        {topBar && <View style={{ paddingTop: insets.top }}>{topBar}</View>}
 
-        {/* ── Hero: poster (DAW-22) OR theme emoji banner ── */}
-        <Zone zone="poster">
-          {data.poster_url ? (
-            <View style={styles.posterHero}>
-              <Image
-                source={{ uri: data.poster_url }}
-                style={styles.posterHeroImage}
-                resizeMode="cover"
-              />
-              {/* Bottom fade that blends the poster into the page bg */}
-              <Svg style={styles.posterFadeOverlay} pointerEvents="none">
-                <Defs>
-                  <LinearGradient id="posterFadePreview" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor={COLORS.dark} stopOpacity="0" />
-                    <Stop offset="1" stopColor={COLORS.dark} stopOpacity="0.95" />
-                  </LinearGradient>
-                </Defs>
-                <Rect x="0" y="0" width="100%" height="100%" fill="url(#posterFadePreview)" />
-              </Svg>
-              <View style={styles.badgeRow}>
-                <Zone zone="audience">
-                  <View style={styles.genderBadge}>
-                    <Text style={styles.genderBadgeText}>{genderLabel}</Text>
-                  </View>
-                </Zone>
-                {data.is_halal_venue && (
-                  <View style={styles.halalBadge}>
-                    <Text style={styles.halalBadgeText}>✅ Halal</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          ) : (
-            <View style={styles.banner}>
-              <Svg style={StyleSheet.absoluteFill} preserveAspectRatio="none">
-                <Defs>
-                  <LinearGradient id="bannerGradPreview" x1="0" y1="0" x2="1" y2="1">
-                    {(theme?.background?.stops ?? [
-                      theme?.bannerBg ?? COLORS.card2,
-                      COLORS.card,
-                    ]).map((stop, i, arr) => (
-                      <Stop
-                        key={`b-${i}`}
-                        offset={arr.length === 1 ? '0' : (i / (arr.length - 1)).toString()}
-                        stopColor={stop}
-                      />
-                    ))}
-                  </LinearGradient>
-                </Defs>
-                <Rect x="0" y="0" width="100%" height="100%" fill="url(#bannerGradPreview)" />
-              </Svg>
-              <Text style={styles.bannerEmoji}>{theme?.defaultEmoji ?? '🌙'}</Text>
-              <View style={styles.badgeRow}>
-                <Zone zone="audience">
-                  <View style={styles.genderBadge}>
-                    <Text style={styles.genderBadgeText}>{genderLabel}</Text>
-                  </View>
-                </Zone>
-                {data.is_halal_venue && (
-                  <View style={styles.halalBadge}>
-                    <Text style={styles.halalBadgeText}>✅ Halal</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          )}
-        </Zone>
+        {/* ── Hero: only render when there's a poster image to show. ──
+            The page gradient already provides the background — no need
+            for a separate banner rectangle when the host hasn't uploaded
+            a poster. Gender + halal badges moved out of the hero into
+            the body row stack below "Hosted by". */}
+        {data.poster_url && (
+          <Zone zone="poster">
+            <PosterHero uri={data.poster_url} />
+          </Zone>
+        )}
 
         <View style={styles.body}>
           {/* Title — editor-only render (see showTitle prop) */}
@@ -369,6 +326,13 @@ export default function EventPreview({
             </Text>
           </View>
           {hostedBySlot}
+
+          {/* Gender / audience — tap to change in editor mode */}
+          <Zone zone="audience" style={{ marginTop: 4 }}>
+            <Text style={[styles.audienceLine, { color: mutedTextColor }]}>
+              {genderLabel}{data.is_halal_venue ? '  ·  ✅ Halal' : ''}
+            </Text>
+          </Zone>
 
           {/* Location */}
           <Zone zone="details">
@@ -436,6 +400,36 @@ export default function EventPreview({
     </View>
   );
 }
+
+// ─── PosterHero ───────────────────────────────────────────────
+// Standalone, memoized so unrelated state changes (gender taps, theme
+// edits, etc.) don't reach the Image and trigger a reload. Only re-
+// renders when the URI string itself actually changes.
+
+const PosterHero = React.memo(
+  function PosterHero({ uri }: { uri: string }) {
+    return (
+      <View style={styles.posterHero}>
+        <Image
+          source={{ uri }}
+          style={styles.posterHeroImage}
+          resizeMode="cover"
+        />
+        {/* Bottom fade that blends the poster into the page bg */}
+        <Svg style={styles.posterFadeOverlay} pointerEvents="none">
+          <Defs>
+            <LinearGradient id="posterFadePreview" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={COLORS.dark} stopOpacity="0" />
+              <Stop offset="1" stopColor={COLORS.dark} stopOpacity="0.95" />
+            </LinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width="100%" height="100%" fill="url(#posterFadePreview)" />
+        </Svg>
+      </View>
+    );
+  },
+  (prev, next) => prev.uri === next.uri,
+);
 
 // ─── Styles (ported verbatim from app/event/[id].tsx for parity) ──────
 
@@ -519,6 +513,12 @@ const styles = StyleSheet.create({
   infoIcon: { fontSize: 18, width: 28 },
   infoLabel: { fontSize: 16, ...FONTS.medium },
   infoValue: { fontSize: 18, ...FONTS.bold },
+  audienceLine: {
+    fontSize: 14,
+    ...FONTS.medium,
+    marginLeft: 28 + 12, // align under "Hosted by" text (icon col + gap)
+    marginBottom: 4,
+  },
   locationAddress: {
     fontSize: 15,
     ...FONTS.regular,

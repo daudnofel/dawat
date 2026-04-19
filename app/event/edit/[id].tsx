@@ -29,6 +29,7 @@ import { Toast } from '../../../components/Toast';
 import { GenderMode } from '../../../types';
 import { supabase } from '../../../lib/supabase';
 import { generateSlug } from '../../../lib/slugify';
+import { GlassCircleButton } from '../../../components/ui';
 
 const PRICE_OPTIONS = [
   { label: 'Free', value: 0 },
@@ -260,11 +261,9 @@ export default function EditEventScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.cancelText}>Cancel</Text>
-        </Pressable>
+        <GlassCircleButton icon="close" onPress={() => router.back()} />
         <Text style={styles.headerTitle}>Edit Event</Text>
-        <View style={{ width: 60 }} />
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView

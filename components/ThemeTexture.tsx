@@ -56,7 +56,7 @@ function generateDots(type: TextureType): Dot[] {
 const GRAIN_DOTS = generateDots('grain');
 const PAPER_DOTS = generateDots('paper');
 
-export default function ThemeTexture({
+function ThemeTextureImpl({
   type,
   color,
   opacity,
@@ -87,3 +87,7 @@ export default function ThemeTexture({
     </Svg>
   );
 }
+
+// Memo so unrelated re-renders (audience tap, etc.) don't redraw the
+// 200-circle SVG noise pattern.
+export default React.memo(ThemeTextureImpl);

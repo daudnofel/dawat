@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { StyleSheet, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -201,7 +201,7 @@ interface EventEffectProps {
   effectId: EffectId;
 }
 
-export default function EventEffect({ effectId }: EventEffectProps) {
+function EventEffectImpl({ effectId }: EventEffectProps) {
   const config = EFFECT_CONFIGS[effectId];
   if (!config) return null;
 
@@ -218,6 +218,10 @@ export default function EventEffect({ effectId }: EventEffectProps) {
     </Animated.View>
   );
 }
+
+// Memo so unrelated re-renders of the parent (e.g. tapping an audience
+// option) don't reset the particle animations.
+export default React.memo(EventEffectImpl);
 
 const styles = StyleSheet.create({
   overlay: {

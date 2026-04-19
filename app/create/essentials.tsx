@@ -38,7 +38,7 @@ import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 
 import { COLORS, FONTS, SPACING, RADIUS } from '../../lib/theme';
-import { DText, DInput, DButton } from '../../components/ui';
+import { DText, DInput, DButton, GlassCircleButton } from '../../components/ui';
 import { useEventStore } from '../../store/useEventStore';
 import { GenderMode } from '../../types';
 
@@ -111,13 +111,9 @@ export default function EssentialsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <DText variant="label" color={COLORS.gold} style={FONTS.medium}>
-            Cancel
-          </DText>
-        </Pressable>
+        <GlassCircleButton icon="close" onPress={() => router.back()} />
         <DText variant="kicker" color={COLORS.muted}>NEW EVENT</DText>
-        <View style={{ width: 48 }} />
+        <View style={{ width: 40 }} />
       </View>
 
       <KeyboardAvoidingView

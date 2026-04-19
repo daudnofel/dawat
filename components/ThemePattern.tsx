@@ -121,7 +121,7 @@ function TileContent({ pattern, color }: { pattern: PatternId; color: string }) 
   }
 }
 
-export default function ThemePattern({
+function ThemePatternImpl({
   pattern,
   color,
   opacity,
@@ -152,3 +152,7 @@ export default function ThemePattern({
     </Svg>
   );
 }
+
+// Memo so unrelated parent re-renders (gender tap, title edit, etc.)
+// don't redraw the SVG pattern.
+export default React.memo(ThemePatternImpl);

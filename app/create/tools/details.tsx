@@ -415,12 +415,26 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card2,
   },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
+  // Transparent — keeps the tap-to-dismiss gesture but doesn't visually
+  // dim the editor canvas behind the date/time picker.
+  modalOverlay: { flex: 1, backgroundColor: 'transparent' },
   modalSheet: {
-    backgroundColor: COLORS.card,
+    // Slightly lighter than the Details sheet (COLORS.card) so the picker
+    // reads as elevated on top of it. Subtle gold-tinted top border adds
+    // a hairline separator for the same purpose.
+    backgroundColor: COLORS.card2,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(201,168,76,0.20)',
     paddingBottom: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 10,
   },
   modalHeader: {
     flexDirection: 'row',

@@ -16,7 +16,7 @@
 
 import { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 
@@ -89,10 +89,11 @@ export default function EditorScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: pageBg }]}
-      edges={['top']}
-    >
+    // No top safe-area edge — the background gradient bleeds behind the
+    // status bar (clock + battery). EventPreview renders the full-bleed
+    // gradient, and the topBar slot inside it pads its own status-bar
+    // height so the back/Publish buttons don't sit under the notch.
+    <View style={[styles.container, { backgroundColor: pageBg }]}>
       <EventPreview
         data={{
           title: draft.title,
@@ -133,7 +134,7 @@ export default function EditorScreen() {
       />
 
       <EditorToolSheet />
-    </SafeAreaView>
+    </View>
   );
 }
 

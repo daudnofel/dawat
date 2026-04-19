@@ -12,3 +12,6 @@ export { default as DCard } from './DCard';
 export type { DCardVariant } from './DCard';
 
 export { default as DBadge } from './DBadge';
+
+export { default as GlassCircleButton } from './GlassCircleButton';
+export type { GlassCircleButtonProps } from './GlassCircleButton';
